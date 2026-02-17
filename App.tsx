@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, Upload, Download, Play, Search, LayoutDashboard, Trash2, RefreshCw, BarChart3, Settings, AlertCircle, Clock, Moon, Sun, SortAsc, SortDesc, LogOut, Tag, FolderPlus, X, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Plus, Upload, Download, Play, Search, LayoutDashboard, Trash2, RefreshCw, BarChart3, Settings, AlertCircle, Clock, Moon, Sun, SortAsc, SortDesc, LogOut, FolderPlus, X, ArrowRight } from 'lucide-react';
 import { Domain, DomainStatus, DomainStats, StatusRecord, SortField, SortOrder, DomainGroup, SSLStatus } from './types';
-import { checkDomain, checkDomainWithSSL, normalizeUrl } from './services/domainService';
+import { checkDomainWithSSL, validateAndNormalizeUrl } from './services/domainService';
 import { parseCSV, exportToCSV } from './utils/csvHelper';
-import { loadDomains, saveDomains, loadSettings, saveSettings, AppSettings, defaultSettings, loadGroups, saveGroups, addGroup, removeGroup, updateGroup } from './utils/storage';
+import { loadDomains, saveDomains, loadSettings, saveSettings, AppSettings, loadGroups, saveGroups, addGroup, removeGroup, updateGroup } from './utils/storage';
 import { useNotification } from './components/NotificationProvider';
 import { useAuth } from './components/AuthProvider';
 import { StatsOverview, DistributionChart } from './components/StatsOverview';
 import { DomainTable } from './components/DomainTable';
 import { HistoryChart } from './components/HistoryChart';
 import { GroupManager } from './components/GroupManager';
-import { canSendNotifications, requestNotificationPermission, sendDomainDownNotification, sendDomainUpNotification, playAlertSound } from './services/notificationService';
+import { requestNotificationPermission, sendDomainDownNotification, sendDomainUpNotification, playAlertSound } from './services/notificationService';
 
 // Simple UUID generator
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -38,12 +38,32 @@ const App: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<DomainStatus | 'ALL'>('ALL');
   const [sslFilter, setSslFilter] = useState<SSLStatus | 'ALL'>('ALL');
   const [groupFilter, setGroupFilter] = useState<string | 'ALL'>('ALL');
-  const [viewingHistory, setViewingHistory] = useState<Domain | null>(null);
+  const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
   const [showGroupManager, setShowGroupManager] = useState(false);
   const [previousStatuses, setPreviousStatuses] = useState<Map<string, DomainStatus>>(new Map());
 
+  // Refs for auto-refresh to avoid dependency issues
+  const domainsRef = useRef(domains);
+  const viewingHistoryRef = useRef<Domain | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+
+  // Stabilize viewingHistory object to prevent infinite re-renders in charts
+  const viewingHistory = useMemo(() => {
+    if (!viewingHistoryId) return null;
+    const domain = domains.find(d => d.id === viewingHistoryId);
+    if (domain) {
+      viewingHistoryRef.current = domain;
+    }
+    return viewingHistoryRef.current;
+  }, [viewingHistoryId, domains]);
+  
   const { showSuccess, showError, showInfo } = useNotification();
   const { logout } = useAuth();
+
+  // Keep ref updated with latest domains
+  useEffect(() => {
+    domainsRef.current = domains;
+  }, [domains]);
 
   // Persist domains to localStorage whenever they change
   useEffect(() => {
@@ -65,16 +85,106 @@ const App: React.FC = () => {
     }
   }, [settings]);
 
-  // Auto-refresh
+  // Actions
+  const addHistoryRecord = useCallback((domainId: string, result: { status: DomainStatus; statusCode: number; latency: number }) => {
+    const newRecord: StatusRecord = {
+      timestamp: new Date(),
+      status: result.status,
+      statusCode: result.statusCode,
+      latency: result.latency
+    };
+
+    setDomains(prev => prev.map(d => {
+      if (d.id !== domainId) return d;
+      
+      const newHistory = [...d.history, newRecord];
+      // Keep only last N records
+      if (newHistory.length > settings.maxHistoryRecords) {
+        newHistory.shift();
+      }
+      
+      return { ...d, history: newHistory };
+    }));
+  }, [settings.maxHistoryRecords]);
+
+  const checkBatch = useCallback(async (domainsToProcess: Domain[]) => {
+    if (domainsToProcess.length === 0 || !workerRef.current) return;
+    
+    const idsToCheck = new Set(domainsToProcess.map(d => d.id));
+    
+    // Set all domains to Checking state first
+    setDomains(prev => prev.map(d => 
+      idsToCheck.has(d.id) ? { ...d, status: DomainStatus.Checking } : d
+    ));
+
+    // Send to worker
+    workerRef.current.postMessage({
+      type: 'CHECK_BATCH',
+      domains: domainsToProcess
+    });
+  }, []);
+
+  const checkAllDomains = useCallback(async (silent = false) => {
+    if (isCheckingAll) return;
+
+    if (!silent) setIsCheckingAll(true);
+
+    const domainsToCheck = domainsRef.current.filter(d => d.status !== DomainStatus.Checking);
+    await checkBatch(domainsToCheck);
+  }, [isCheckingAll, checkBatch]);
+
+  const checkAllDomainsRef = useRef<typeof checkAllDomains | null>(null);
+
+  // Initialize Worker
   useEffect(() => {
-    if (!settings.autoRefresh) return;
+    const MonitoringWorker = new Worker(new URL('./services/monitoring.worker.ts', import.meta.url), {
+      type: 'module'
+    });
+    
+    MonitoringWorker.onmessage = (e) => {
+      const { type, domainId, result } = e.data;
+      
+      if (type === 'DOMAIN_RESULT') {
+        setDomains(prev => 
+          prev.map(d =>
+            d.id === domainId ? {
+              ...d,
+              status: result.status,
+              statusCode: result.statusCode,
+              latency: result.latency,
+              ssl: result.ssl,
+              expiry: result.expiry,
+              lastChecked: new Date()
+            } : d
+          )
+        );
+        addHistoryRecord(domainId, result);
+      } else if (type === 'DOMAIN_ERROR') {
+        setDomains(prev => 
+          prev.map(d =>
+            d.id === domainId ? { ...d, status: DomainStatus.Error, lastChecked: new Date() } : d
+          )
+        );
+      } else if (type === 'BATCH_COMPLETE') {
+        setIsCheckingAll(false);
+        showSuccess('Domain check complete');
+      }
+    };
 
-    const intervalId = setInterval(() => {
-      checkAllDomains(true);
-    }, settings.refreshInterval);
+    // Configure worker with proxy URL
+    MonitoringWorker.postMessage({
+      type: 'CONFIG',
+      config: {
+        proxyUrl: import.meta.env.VITE_PROXY_URL || 'http://localhost:3001'
+      }
+    });
 
-    return () => clearInterval(intervalId);
-  }, [settings.autoRefresh, settings.refreshInterval, domains]);
+    workerRef.current = MonitoringWorker;
+
+    return () => {
+      MonitoringWorker.terminate();
+    };
+  }, [addHistoryRecord, showSuccess]);
 
   // Send notifications for status changes
   useEffect(() => {
@@ -105,7 +215,15 @@ const App: React.FC = () => {
     const newMap = new Map<string, DomainStatus>();
     domains.forEach(d => newMap.set(d.id, d.status));
     setPreviousStatuses(newMap);
-  }, [domains, settings.enableNotifications, settings.playSound]);
+  }, [domains, settings.enableNotifications, settings.playSound, previousStatuses, showInfo, showSuccess]);
+
+  const removeSelectedDomains = useCallback(() => {
+    if (window.confirm(`Are you sure you want to remove ${selectedIds.size} domains?`)) {
+      setDomains(prev => prev.filter(d => !selectedIds.has(d.id)));
+      setSelectedIds(new Set());
+      showInfo(`Removed ${selectedIds.size} domains`);
+    }
+  }, [selectedIds, showInfo]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -113,12 +231,12 @@ const App: React.FC = () => {
       // Cmd/Ctrl + K: Focus search
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        document.querySelector('input[placeholder*="Filter domains"]')?.focus();
+        (document.querySelector('input[placeholder*="Filter domains"]') as HTMLInputElement)?.focus();
       }
       // Cmd/Ctrl + Enter: Check all
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
-        checkAllDomains();
+        checkAllDomainsRef.current?.();
       }
       // Delete: Remove selected
       if (e.key === 'Delete' && selectedIds.size > 0) {
@@ -134,7 +252,7 @@ const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIds, settings.autoRefresh]);
+  }, [selectedIds, removeSelectedDomains]);
 
   // Computed Stats
   const stats: DomainStats = useMemo(() => {
@@ -158,41 +276,41 @@ const App: React.FC = () => {
     return { total, alive, down, unknown, avgLatency, uptime };
   }, [domains]);
 
-  // Add history record to domain
-  const addHistoryRecord = useCallback((domainId: string, result: { status: DomainStatus; statusCode: number; latency: number }) => {
-    const newRecord: StatusRecord = {
-      timestamp: new Date(),
-      status: result.status,
-      statusCode: result.statusCode,
-      latency: result.latency
-    };
+  const checkSingleDomain = useCallback(async (id: string, url: string) => {
+    setDomains(prev => prev.map(d => d.id === id ? { ...d, status: DomainStatus.Checking } : d));
 
-    setDomains(prev => prev.map(d => {
-      if (d.id !== domainId) return d;
-      
-      const newHistory = [...d.history, newRecord];
-      // Keep only last N records
-      if (newHistory.length > settings.maxHistoryRecords) {
-        newHistory.shift();
-      }
-      
-      return { ...d, history: newHistory };
-    }));
-  }, [settings.maxHistoryRecords]);
+    try {
+      const result = await checkDomainWithSSL(url);
+      setDomains(prev => prev.map(d =>
+        d.id === id ? {
+          ...d,
+          status: result.status,
+          statusCode: result.statusCode,
+          latency: result.latency,
+          ssl: result.ssl,
+          lastChecked: new Date()
+        } : d
+      ));
+      addHistoryRecord(id, result);
+    } catch (error) {
+      setDomains(prev => prev.map(d =>
+        d.id === id ? { ...d, status: DomainStatus.Error, lastChecked: new Date() } : d
+      ));
+    }
+  }, [addHistoryRecord]);
 
   // Actions
   const addDomain = (urlInput: string, groupId?: string, tags?: string[]) => {
     setInputError(null);
-    if (!urlInput.trim()) return;
-
-    const isValidDomain = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(urlInput.trim());
-
-    if (!isValidDomain) {
-      setInputError('Please enter a valid domain name (e.g. google.com)');
+    
+    const validation = validateAndNormalizeUrl(urlInput);
+    
+    if (!validation.valid || !validation.url) {
+      setInputError(validation.error || 'Invalid domain');
       return;
     }
 
-    const normalized = normalizeUrl(urlInput);
+    const normalized = validation.url;
 
     if (domains.some(d => d.url === normalized)) {
       setInputError('This domain is already being monitored.');
@@ -244,71 +362,15 @@ const App: React.FC = () => {
     e.target.value = '';
   };
 
-  const checkSingleDomain = async (id: string, url: string) => {
-    setDomains(prev => prev.map(d => d.id === id ? { ...d, status: DomainStatus.Checking } : d));
-
-    try {
-      const result = await checkDomainWithSSL(url);
-      setDomains(prev => prev.map(d =>
-        d.id === id ? {
-          ...d,
-          status: result.status,
-          statusCode: result.statusCode,
-          latency: result.latency,
-          ssl: result.ssl,
-          lastChecked: new Date()
-        } : d
-      ));
-      addHistoryRecord(id, result);
-    } catch (error) {
-      setDomains(prev => prev.map(d =>
-        d.id === id ? { ...d, status: DomainStatus.Error, lastChecked: new Date() } : d
-      ));
-    }
-  };
-
-  const checkBatch = async (domainsToProcess: Domain[]) => {
-    const idsToCheck = new Set(domainsToProcess.map(d => d.id));
-    setDomains(prev => prev.map(d => idsToCheck.has(d.id) ? { ...d, status: DomainStatus.Checking } : d));
-
-    const chunkSize = 5;
-    for (let i = 0; i < domainsToProcess.length; i += chunkSize) {
-      const chunk = domainsToProcess.slice(i, i + chunkSize);
-      await Promise.all(chunk.map(async (d) => {
-        const result = await checkDomainWithSSL(d.url);
-        setDomains(prev => prev.map(prevD =>
-          prevD.id === d.id ? {
-            ...prevD,
-            status: result.status,
-            statusCode: result.statusCode,
-            latency: result.latency,
-            ssl: result.ssl,
-            lastChecked: new Date()
-          } : prevD
-        ));
-        addHistoryRecord(d.id, result);
-      }));
-    }
-  };
-
-  const checkAllDomains = useCallback(async (silent = false) => {
-    if (isCheckingAll) return;
-    
-    if (!silent) setIsCheckingAll(true);
-    
-    const domainsToCheck = domains.filter(d => d.status !== DomainStatus.Checking);
-    await checkBatch(domainsToCheck);
-    
-    if (!silent) {
-      setIsCheckingAll(false);
-      showSuccess('All domains checked');
-    }
-  }, [isCheckingAll, domains, addHistoryRecord]);
+  // Store checkAllDomains in ref so it can be called from useEffect
+  useEffect(() => {
+    checkAllDomainsRef.current = checkAllDomains;
+  }, [checkAllDomains]);
 
   const checkSelectedDomains = async () => {
     if (isCheckingAll || selectedIds.size === 0) return;
     setIsCheckingAll(true);
-    const domainsToCheck = domains.filter(d => selectedIds.has(d.id) && d.status !== DomainStatus.Checking);
+    const domainsToCheck = domainsRef.current.filter(d => selectedIds.has(d.id) && d.status !== DomainStatus.Checking);
     await checkBatch(domainsToCheck);
     setIsCheckingAll(false);
     showSuccess(`Checked ${selectedIds.size} domains`);
@@ -324,16 +386,9 @@ const App: React.FC = () => {
     showInfo('Domain removed');
   };
 
-  const removeSelectedDomains = () => {
-    if (window.confirm(`Are you sure you want to remove ${selectedIds.size} domains?`)) {
-      setDomains(prev => prev.filter(d => !selectedIds.has(d.id)));
-      setSelectedIds(new Set());
-      showInfo(`Removed ${selectedIds.size} domains`);
-    }
-  };
-
   const updateDomain = (id: string, newUrl: string) => {
-    const normalized = normalizeUrl(newUrl);
+    const validation = validateAndNormalizeUrl(newUrl);
+    const normalized = validation.url || newUrl.trim().toLowerCase();
     setDomains(prev => prev.map(d =>
       d.id === id ? { 
         ...d, 
@@ -396,7 +451,7 @@ const App: React.FC = () => {
 
   // Filter and sort domains
   const displayDomains = useMemo(() => {
-    let filtered = domains.filter(d => {
+    const filtered = domains.filter(d => {
       const matchesSearch = d.url.includes(filter.toLowerCase());
       const matchesStatus = statusFilter === 'ALL' || d.status === statusFilter;
       const matchesSSL = sslFilter === 'ALL' || d.ssl?.status === sslFilter;
@@ -415,24 +470,28 @@ const App: React.FC = () => {
         case 'status':
           comparison = a.status.localeCompare(b.status);
           break;
-        case 'latency':
+        case 'latency': {
           const aLatency = a.latency || 0;
           const bLatency = b.latency || 0;
           comparison = aLatency - bLatency;
           break;
-        case 'lastChecked':
+        }
+        case 'lastChecked': {
           const aTime = a.lastChecked?.getTime() || 0;
           const bTime = b.lastChecked?.getTime() || 0;
           comparison = aTime - bTime;
           break;
-        case 'ssl':
+        }
+        case 'ssl': {
           const sslOrder = { [SSLStatus.Valid]: 0, [SSLStatus.Expiring]: 1, [SSLStatus.Expired]: 2, [SSLStatus.Invalid]: 3, [SSLStatus.Unknown]: 4 };
           comparison = (sslOrder[a.ssl?.status || SSLStatus.Unknown] || 4) - (sslOrder[b.ssl?.status || SSLStatus.Unknown] || 4);
           break;
-        case 'expiry':
+        }
+        case 'expiry': {
           const expiryOrder = { active: 0, expiring: 1, expired: 2, unknown: 3 };
           comparison = (expiryOrder[a.expiry?.status || 'unknown'] || 3) - (expiryOrder[b.expiry?.status || 'unknown'] || 3);
           break;
+        }
       }
 
       return sortOrder === 'asc' ? comparison : -comparison;
@@ -547,10 +606,16 @@ const App: React.FC = () => {
                       const checked = e.target.checked;
                       if (checked) {
                         requestNotificationPermission().then(granted => {
-                          if (!granted) {
+                          if (granted) {
+                            setSettings(prev => ({ ...prev, enableNotifications: true }));
+                            showSuccess('Notifications enabled');
+                          } else {
                             showError('Notification permission denied');
+                            setSettings(prev => ({ ...prev, enableNotifications: false }));
                           }
-                          setSettings(prev => ({ ...prev, enableNotifications: granted }));
+                        }).catch(() => {
+                          showError('Failed to enable notifications');
+                          setSettings(prev => ({ ...prev, enableNotifications: false }));
                         });
                       } else {
                         setSettings(prev => ({ ...prev, enableNotifications: false }));
@@ -759,40 +824,51 @@ const App: React.FC = () => {
                 <span className="text-sm text-slate-500 dark:text-slate-400">Sort:</span>
                 <button
                   onClick={() => handleSort('url')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortField === 'url' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${sortField === 'url' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  title={`Sort by name (${sortOrder === 'asc' ? 'ascending' : 'descending'})`}
                 >
                   Name
+                  {sortField === 'url' && (sortOrder === 'asc' ? <SortAsc size={14} /> : <SortDesc size={14} />)}
                 </button>
                 <button
                   onClick={() => handleSort('status')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortField === 'status' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${sortField === 'status' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  title={`Sort by status (${sortOrder === 'asc' ? 'ascending' : 'descending'})`}
                 >
                   Status
+                  {sortField === 'status' && (sortOrder === 'asc' ? <SortAsc size={14} /> : <SortDesc size={14} />)}
                 </button>
                 <button
                   onClick={() => handleSort('latency')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortField === 'latency' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${sortField === 'latency' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  title={`Sort by latency (${sortOrder === 'asc' ? 'ascending' : 'descending'})`}
                 >
                   Latency
+                  {sortField === 'latency' && (sortOrder === 'asc' ? <SortAsc size={14} /> : <SortDesc size={14} />)}
                 </button>
                 <button
                   onClick={() => handleSort('lastChecked')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortField === 'lastChecked' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${sortField === 'lastChecked' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  title={`Sort by last checked (${sortOrder === 'asc' ? 'ascending' : 'descending'})`}
                 >
                   Last Checked
+                  {sortField === 'lastChecked' && (sortOrder === 'asc' ? <SortAsc size={14} /> : <SortDesc size={14} />)}
+                </button>
+                <button
+                  onClick={() => handleSort('ssl')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${sortField === 'ssl' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  title={`Sort by SSL status (${sortOrder === 'asc' ? 'ascending' : 'descending'})`}
+                >
+                  SSL
+                  {sortField === 'ssl' && (sortOrder === 'asc' ? <SortAsc size={14} /> : <SortDesc size={14} />)}
                 </button>
                 <button
                   onClick={() => handleSort('expiry')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortField === 'expiry' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${sortField === 'expiry' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  title={`Sort by expiry (${sortOrder === 'asc' ? 'ascending' : 'descending'})`}
                 >
                   Expiry
-                </button>
-                <button
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                  title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
-                >
-                  {sortOrder === 'asc' ? <SortAsc size={16} /> : <SortDesc size={16} />}
+                  {sortField === 'expiry' && (sortOrder === 'asc' ? <SortAsc size={14} /> : <SortDesc size={14} />)}
                 </button>
               </div>
             </div>
@@ -811,7 +887,7 @@ const App: React.FC = () => {
                 const domain = domains.find(d => d.id === id);
                 if (domain) checkSingleDomain(id, domain.url);
               }}
-              onViewHistory={(domain) => setViewingHistory(domain)}
+              onViewHistory={(domain) => setViewingHistoryId(domain.id)}
             />
           </div>
 
@@ -872,7 +948,7 @@ const App: React.FC = () => {
 
       {/* History Modal */}
       {viewingHistory && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingHistory(null)}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingHistoryId(null)}>
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
               <div>
@@ -880,14 +956,14 @@ const App: React.FC = () => {
                 <p className="text-sm text-slate-500 dark:text-slate-400">{viewingHistory.history.length} checks recorded</p>
               </div>
               <button
-                onClick={() => setViewingHistory(null)}
+                onClick={() => setViewingHistoryId(null)}
                 className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 <X size={20} className="text-slate-500 dark:text-slate-400" />
               </button>
             </div>
             <div className="p-6">
-              <HistoryChart domain={viewingHistory} onClose={() => setViewingHistory(null)} />
+              <HistoryChart domain={viewingHistory} onClose={() => setViewingHistoryId(null)} />
             </div>
           </div>
         </div>

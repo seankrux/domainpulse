@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger';
+
 /**
  * Browser Notification Service
  * Handles permission requests and sending notifications for domain status changes.
@@ -15,7 +17,7 @@ export interface NotificationOptions {
  */
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!('Notification' in window)) {
-    console.warn('This browser does not support notifications');
+    logger.warn('This browser does not support notifications');
     return false;
   }
 
@@ -28,7 +30,7 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
       const permission = await Notification.requestPermission();
       return permission === 'granted';
     } catch (error) {
-      console.error('Error requesting notification permission:', error);
+      logger.error('Error requesting notification permission:', error);
       return false;
     }
   }
@@ -51,7 +53,7 @@ export const canSendNotifications = (): boolean => {
  */
 export const sendNotification = (options: NotificationOptions): void => {
   if (!canSendNotifications()) {
-    console.warn('Cannot send notification: permission not granted');
+    logger.warn('Cannot send notification: permission not granted');
     return;
   }
 
@@ -75,7 +77,7 @@ export const sendNotification = (options: NotificationOptions): void => {
     // Auto-close after 5 seconds
     setTimeout(() => notification.close(), 5000);
   } catch (error) {
-    console.error('Error sending notification:', error);
+    logger.error('Error sending notification:', error);
   }
 };
 
@@ -109,7 +111,13 @@ export const sendDomainUpNotification = (domainUrl: string, latency?: number): v
  */
 export const playAlertSound = (): void => {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) {
+      logger.warn('Web Audio API not supported');
+      return;
+    }
+
+    const audioContext = new AudioContextClass();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -125,6 +133,6 @@ export const playAlertSound = (): void => {
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.5);
   } catch (error) {
-    console.warn('Could not play alert sound:', error);
+    logger.warn('Could not play alert sound:', error);
   }
 };

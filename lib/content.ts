@@ -48,8 +48,8 @@ export async function loadPages(): Promise<ContentPage[]> {
           fetch('/content/pages/about.md').then(r => r.ok ? r.text() : null)
         ]);
 
-        if (homeRes) pages[0].content = parseMarkdownContent(homeRes, pages[0].title);
-        if (aboutRes) pages[1].content = parseMarkdownContent(aboutRes, pages[1].title);
+        if (homeRes) pages[0].content = parseMarkdownContent(homeRes);
+        if (aboutRes) pages[1].content = parseMarkdownContent(aboutRes);
       } catch {
         // Fallback to defaults if files not found
       }
@@ -156,7 +156,7 @@ function parseMarkdownPost(content: string, slug: string): BlogPost {
 /**
  * Parse simple markdown content (title + body)
  */
-function parseMarkdownContent(content: string, defaultTitle: string): string {
+function parseMarkdownContent(content: string): string {
   // Simple parsing - just return the content
   // Can be extended with a markdown library if needed
   return content;

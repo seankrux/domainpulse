@@ -12,12 +12,23 @@ const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT = 100; // requests per minute
 const RATE_WINDOW = 60 * 1000; // 1 minute
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json',
+// Allowed origins for CORS (configure via environment variable)
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
+
+// CORS headers - restricted in production
+const getCorsHeaders = (origin?: string) => {
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json',
+  };
+  
+  // In production, only allow specific origins
+  if (ALLOWED_ORIGINS.includes('*') || (origin && ALLOWED_ORIGINS.includes(origin))) {
+    headers['Access-Control-Allow-Origin'] = origin || '*';
+  }
+  
+  return headers;
 };
 
 // Rate limiting middleware
@@ -40,11 +51,12 @@ const checkRateLimit = (ip: string): boolean => {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const origin = req.headers.origin;
+  const corsHeaders = getCorsHeaders(origin);
+  
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.set(corsHeaders);
     return res.status(200).end();
   }
 
@@ -56,15 +68,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Rate limiting
   const ip = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
   if (!checkRateLimit(ip)) {
-    return res.status(429).json({ 
-      error: 'Rate limit exceeded', 
-      message: 'Too many requests. Please wait a minute.' 
+    res.set(corsHeaders);
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'Too many requests. Please wait a minute.'
     });
   }
 
   const url = req.query.url as string;
 
   if (!url) {
+    res.set(corsHeaders);
     return res.status(400).json({ error: 'URL is required' });
   }
 
@@ -93,13 +107,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       latency
     };
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.set(corsHeaders);
     res.status(200).json(result);
   } catch (error) {
     const latency = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.set(corsHeaders);
     res.status(200).json({
       status: 'DOWN' as const,
       statusCode: 0,

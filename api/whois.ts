@@ -12,14 +12,6 @@ const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT = 100; // requests per minute
 const RATE_WINDOW = 60 * 1000; // 1 minute
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json',
-};
-
 // Rate limiting middleware
 const checkRateLimit = (ip: string): boolean => {
   const now = Date.now();
@@ -87,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  * For production, consider using a paid WHOIS API service.
  */
 function getWhoisInfo(domain: string): Promise<WhoisResult> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Using a public WHOIS API (for demo purposes)
     // In production, use a reliable paid API like whoisxmlapi.com
     const apiUrl = `https://whoisapi.domainsdb.eu/whois/${domain}`;
@@ -108,7 +100,7 @@ function getWhoisInfo(domain: string): Promise<WhoisResult> {
           resolve({ error: 'Failed to parse WHOIS data' });
         }
       });
-    }).on('error', (error) => {
+    }).on('error', () => {
       // Fallback: simulate expiry check for demo
       // In production, use a real WHOIS API
       resolve({

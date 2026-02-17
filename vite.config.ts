@@ -8,6 +8,24 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        hmr: {
+          overlay: false  // Disable error overlay completely
+        },
+        proxy: {
+          '/api': {
+            target: env.VITE_PROXY_URL || 'http://localhost:3001',
+            changeOrigin: true,
+          }
+        },
+        watch: {
+          ignored: [
+            '**/api/**',
+            '**/server/**',
+            '**/node_modules/**',
+            '**/*.test.ts',
+            '**/*.spec.ts'
+          ]
+        }
       },
       plugins: [react()],
       define: {
@@ -17,6 +35,17 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              charts: ['recharts'],
+              icons: ['lucide-react']
+            }
+          }
+        },
+        chunkSizeWarningLimit: 400
       }
     };
 });

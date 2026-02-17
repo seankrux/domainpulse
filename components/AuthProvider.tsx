@@ -3,14 +3,46 @@ import { AuthState } from '../types';
 
 const AUTH_TOKEN_KEY = 'domainpulse_auth_token';
 const PASSWORD_HASH_KEY = 'domainpulse_password_hash';
+const PASSWORD_SALT_KEY = 'domainpulse_password_salt';
 
-// Simple hash function for password verification (client-side only)
-const hashPassword = async (password: string): Promise<string> => {
+// Generate a random salt for password hashing
+const generateSalt = (): string => {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+// Secure password hashing using PBKDF2 with salt (client-side only)
+const hashPassword = async (password: string, salt?: string): Promise<{ hash: string; salt: string }> => {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const usedSalt = salt || generateSalt();
+  const saltBuffer = encoder.encode(usedSalt);
+  
+  // Use PBKDF2 with 100,000 iterations for better security
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    data,
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+  
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: saltBuffer,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    256
+  );
+  
+  const hashArray = Array.from(new Uint8Array(derivedBits));
+  const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return { hash, salt: usedSalt };
 };
 
 interface AuthContextType extends AuthState {}
@@ -38,8 +70,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = () => {
       const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
       const storedHash = localStorage.getItem(PASSWORD_HASH_KEY);
-      
-      if (storedToken && storedHash && storedToken === storedHash) {
+
+      if (storedToken && storedHash) {
         setIsAuthenticated(true);
       }
       setIsLoading(false);
@@ -50,27 +82,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = useCallback(async (password: string): Promise<boolean> => {
     try {
-      const passwordHash = await hashPassword(password);
       const envPasswordHash = import.meta.env.VITE_PASSWORD_HASH;
-      
+      const storedSalt = localStorage.getItem(PASSWORD_SALT_KEY);
+
       // Check against environment variable first (production)
-      // Then fall back to localStorage (development)
-      const validHash = envPasswordHash || localStorage.getItem(PASSWORD_HASH_KEY);
-      
+      if (envPasswordHash) {
+        // Environment variable format: hash:salt
+        const [envHash, envSalt] = envPasswordHash.split(':');
+        if (!envSalt) {
+          console.error('VITE_PASSWORD_HASH must be in format hash:salt');
+          return false;
+        }
+        const result = await hashPassword(password, envSalt);
+        if (result.hash === envHash) {
+          localStorage.setItem(AUTH_TOKEN_KEY, result.hash);
+          localStorage.setItem(PASSWORD_HASH_KEY, result.hash);
+          localStorage.setItem(PASSWORD_SALT_KEY, result.salt);
+          setIsAuthenticated(true);
+          return true;
+        }
+        return false;
+      }
+
+      // Development: fall back to localStorage
+      const validHash = localStorage.getItem(PASSWORD_HASH_KEY);
+
       if (!validHash) {
-        // No password set - allow login and store the hash
-        localStorage.setItem(PASSWORD_HASH_KEY, passwordHash);
-        localStorage.setItem(AUTH_TOKEN_KEY, passwordHash);
+        // No password set - allow login and store the hash with salt
+        const result = await hashPassword(password);
+        localStorage.setItem(PASSWORD_HASH_KEY, result.hash);
+        localStorage.setItem(PASSWORD_SALT_KEY, result.salt);
+        localStorage.setItem(AUTH_TOKEN_KEY, result.hash);
         setIsAuthenticated(true);
         return true;
       }
-      
-      if (passwordHash === validHash) {
-        localStorage.setItem(AUTH_TOKEN_KEY, passwordHash);
+
+      const result = await hashPassword(password, storedSalt || undefined);
+      if (result.hash === validHash) {
+        localStorage.setItem(AUTH_TOKEN_KEY, result.hash);
+        localStorage.setItem(PASSWORD_SALT_KEY, result.salt);
         setIsAuthenticated(true);
         return true;
       }
-      
+
       return false;
     } catch (error) {
       console.error('Login error:', error);

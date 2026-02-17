@@ -1,6 +1,7 @@
-import { DomainStatus } from '../types';
+import { DomainStatus, SSLInfo, DomainExpiry } from '../types';
 import { checkSSL } from './sslService';
 import { checkDomainExpiry } from './expiryService';
+import { logger } from '../utils/logger';
 
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001';
 
@@ -11,64 +12,138 @@ export interface DomainCheckResult {
 }
 
 /**
- * Checks a domain's status by calling the proxy server or Vercel API.
- * Falls back to mock data if proxy is unavailable (for demo purposes).
+ * Validate and normalize URL input.
+ * Prevents protocol injection, XSS, and malicious URLs.
  */
-export const checkDomain = async (url: string): Promise<DomainCheckResult> => {
-  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+export const validateAndNormalizeUrl = (input: string): { valid: boolean; url?: string; error?: string } => {
+  const trimmed = input.trim();
   
-  // Try Vercel API first (for production), then fall back to local proxy
-  const apiEndpoints = [
-    '/api/check', // Vercel serverless function
-    `${PROXY_URL}/api/check` // Local proxy server
+  if (!trimmed) {
+    return { valid: false, error: 'URL is required' };
+  }
+  
+  // Check for dangerous patterns
+  const dangerousPatterns = [
+    'javascript:',
+    'data:',
+    'vbscript:',
+    'file:',
+    'ftp:',
+    '@',
+    '..',
+    '%00',
+    '%0a',
+    '%0d'
   ];
-
-  for (const endpoint of apiEndpoints) {
-    try {
-      const response = await fetch(`${endpoint}?url=${encodeURIComponent(targetUrl)}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        continue; // Try next endpoint
-      }
-
-      const data = await response.json();
-
-      return {
-        status: data.status === 'ALIVE' ? DomainStatus.Alive : DomainStatus.Down,
-        statusCode: data.statusCode,
-        latency: data.latency
-      };
-    } catch (error) {
-      // Try next endpoint
-      continue;
+  
+  const lowerInput = trimmed.toLowerCase();
+  for (const pattern of dangerousPatterns) {
+    if (lowerInput.includes(pattern)) {
+      return { valid: false, error: 'Invalid URL format' };
     }
   }
+  
+  // Remove any leading protocols for normalization
+  let normalized = trimmed.replace(/^https?:\/\//i, '');
+  
+  // Validate domain format (simple but effective)
+  const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}(\/[^\s]*)?$/;
+  
+  if (!domainRegex.test(normalized)) {
+    return { valid: false, error: 'Please enter a valid domain name (e.g., google.com)' };
+  }
+  
+  // Remove trailing slashes and convert to lowercase
+  normalized = normalized.replace(/\/$/, '').toLowerCase();
+  
+  // Extract just the domain part (no paths for monitoring)
+  const domainOnly = normalized.split('/')[0];
+  
+  return { valid: true, url: domainOnly };
+};
 
-  // All endpoints failed, use mock data
-  console.warn('All endpoints unavailable, using mock data');
-  return getMockDomainCheck(url);
+/**
+ * Simple URL normalization (for internal use).
+ * Use validateAndNormalizeUrl for user input.
+ */
+export const normalizeUrl = (input: string): string => {
+  let url = input.trim().toLowerCase();
+  url = url.replace(/^https?:\/\//, '');
+  url = url.replace(/\/$/, '');
+  return url;
 };
 
 /**
  * Check domain with SSL and expiry information.
+ * Includes timeout to prevent hanging.
  */
-export const checkDomainWithSSL = async (url: string): Promise<DomainCheckResult & { ssl: any; expiry?: any }> => {
-  const [domainResult, sslResult, expiryResult] = await Promise.all([
-    checkDomain(url),
-    checkSSL(url),
-    checkDomainExpiry(url)
-  ]);
+export const checkDomainWithSSL = async (url: string): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry }> => {
+  // Create a timeout promise
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Domain check timeout')), 15000); // 15 second timeout
+  });
 
-  return {
-    ...domainResult,
-    ssl: sslResult,
-    expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined
+  // Race between the actual check and timeout
+  const checkInternal = async (): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry }> => {
+    const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+
+    // Try Vercel API first (for production), then fall back to local proxy
+    const apiEndpoints = [
+      '/api/check', // Vercel serverless function (port 3000)
+      `${PROXY_URL}/api/check` // Local proxy server (port 3001)
+    ];
+
+    logger.debug(`Checking domain: ${url}`, { targetUrl, endpoints: apiEndpoints });
+
+    let domainResult: DomainCheckResult | null = null;
+
+    for (const endpoint of apiEndpoints) {
+      try {
+        const response = await fetch(`${endpoint}?url=${encodeURIComponent(targetUrl)}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          logger.warn(`Endpoint ${endpoint} returned status ${response.status} for ${url}`);
+          continue; // Try next endpoint
+        }
+
+        const data = await response.json();
+
+        domainResult = {
+          status: data.status === 'ALIVE' ? DomainStatus.Alive : DomainStatus.Down,
+          statusCode: data.statusCode,
+          latency: data.latency
+        };
+        logger.debug(`Success from ${endpoint} for ${url}`, domainResult);
+        break;
+      } catch (error) {
+        logger.error(`Error checking endpoint ${endpoint} for ${url}`, error);
+        continue;
+      }
+    }
+
+    if (!domainResult) {
+      logger.warn(`All check endpoints failed for ${url}, falling back to mock data`);
+      domainResult = getMockDomainCheck(url);
+    }
+
+    const [sslResult, expiryResult] = await Promise.all([
+      checkSSL(url),
+      checkDomainExpiry(url)
+    ]);
+
+    return {
+      ...domainResult,
+      ssl: sslResult,
+      expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined
+    };
   };
+
+  return Promise.race([checkInternal(), timeoutPromise]);
 };
 
 /**
@@ -98,15 +173,8 @@ const getMockDomainCheck = (url: string): { status: DomainStatus; statusCode: nu
     const code = successCodes[Math.floor(Math.random() * successCodes.length)];
     return { status: DomainStatus.Alive, statusCode: code, latency };
   } else {
-    const errorCodes = [400, 403, 404, 500, 503];
+    const errorCodes = [400, 403, 404, 500, 502, 503];
     const code = errorCodes[Math.floor(Math.random() * errorCodes.length)];
     return { status: DomainStatus.Down, statusCode: code, latency: 0 };
   }
-};
-
-export const normalizeUrl = (input: string): string => {
-  let url = input.trim().toLowerCase();
-  url = url.replace(/^https?:\/\//, '');
-  url = url.replace(/\/$/, '');
-  return url;
 };

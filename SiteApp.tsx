@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SiteLayout } from './components/SiteLayout';
 import { ContentRenderer } from './components/ContentRenderer';
-import { loadPage, loadPosts, markdownToHtml } from './lib/content';
+import { loadPage, loadPosts } from './lib/content';
 import { ArrowRight, Calendar } from 'lucide-react';
 
 type Page = 'home' | 'about' | 'blog' | 'contact' | 'post';

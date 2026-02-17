@@ -16,14 +16,6 @@ const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT = 100; // requests per minute
 const RATE_WINDOW = 60 * 1000; // 1 minute
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json',
-};
-
 // Rate limiting middleware
 const checkRateLimit = (ip: string): boolean => {
   const now = Date.now();
@@ -90,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  * Get SSL certificate information for a domain.
  */
 function getSSLCertificate(domain: string): Promise<SSLResult> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const options = {
       hostname: domain,
       port: 443,

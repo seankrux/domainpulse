@@ -7,7 +7,15 @@ interface StatsOverviewProps {
   stats: DomainStats;
 }
 
-const StatCard = ({ title, value, icon: Icon, colorClass, trend }: any) => (
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  colorClass: string;
+  trend?: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, colorClass, trend }) => (
   <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-soft transition-all duration-300 group">
     <div className="flex items-start justify-between">
       <div>
@@ -68,19 +76,26 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
 };
 
 export const DistributionChart: React.FC<{ stats: DomainStats }> = ({ stats }) => {
-    const data = [
+    const data = React.useMemo(() => [
         { name: 'Alive', value: stats.alive },
         { name: 'Down', value: stats.down },
         { name: 'Unknown', value: stats.unknown },
-    ].filter(i => i.value > 0);
+    ].filter(i => i.value > 0), [stats.alive, stats.down, stats.unknown]);
 
-    if (data.length === 0) return null;
+    if (data.length === 0 || stats.total === 0) {
+        return (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 h-80 flex flex-col items-center justify-center">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wider mb-2">Health Distribution</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">No data available</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 h-80 flex flex-col relative overflow-hidden">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wider mb-2 z-10">Health Distribution</h3>
             <div className="flex-1 w-full min-h-0 z-10">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" debounce={100}>
                     <PieChart>
                         <Pie
                             data={data}
@@ -91,6 +106,7 @@ export const DistributionChart: React.FC<{ stats: DomainStats }> = ({ stats }) =
                             paddingAngle={5}
                             dataKey="value"
                             stroke="none"
+                            isAnimationActive={true}
                         >
                             {data.map((entry, index) => {
                                 let color = '#475569'; // Unknown (slate-600)
@@ -100,9 +116,9 @@ export const DistributionChart: React.FC<{ stats: DomainStats }> = ({ stats }) =
                             })}
                         </Pie>
                         <Tooltip
-                            contentStyle={{ 
-                                borderRadius: '8px', 
-                                border: 'none', 
+                            contentStyle={{
+                                borderRadius: '8px',
+                                border: 'none',
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                                 backgroundColor: 'rgba(255,255,255,0.95)'
                             }}

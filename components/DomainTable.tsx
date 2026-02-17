@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Domain, DomainStatus, SSLStatus, DomainGroup } from '../types';
+import { Domain, DomainStatus, SSLStatus, DomainGroup, SSLInfo, DomainExpiry } from '../types';
 import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, MoreHorizontal, Search, History, Shield, Tag, Calendar } from 'lucide-react';
 import { getSSLStatusColor, getSSLStatusLabel } from '../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../services/expiryService';
@@ -24,10 +24,10 @@ const Skeleton = ({ className = "w-16" }: { className?: string }) => (
 );
 
 const Favicon = ({ url }: { url: string }) => {
-  const [error, setError] = useState(false);
+  const [status, setStatus] = useState<'loading' | 'error' | 'success'>('loading');
   const faviconUrl = `https://www.google.com/s2/favicons?domain=${url}&sz=128`;
 
-  if (error) {
+  if (status === 'error') {
     return (
       <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs border border-indigo-100 dark:border-indigo-800 flex-shrink-0">
         {url.charAt(0).toUpperCase()}
@@ -36,12 +36,18 @@ const Favicon = ({ url }: { url: string }) => {
   }
 
   return (
-    <img
-      src={faviconUrl}
-      alt=""
-      className="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 object-contain p-0.5 flex-shrink-0"
-      onError={() => setError(true)}
-    />
+    <div className="relative w-8 h-8 flex-shrink-0">
+      {status === 'loading' && (
+        <div className="absolute inset-0 rounded-full bg-slate-100 dark:bg-slate-700 animate-pulse" />
+      )}
+      <img
+        src={faviconUrl}
+        alt=""
+        className={`w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 object-contain p-0.5 transition-opacity duration-300 ${status === 'success' ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setStatus('success')}
+        onError={() => setStatus('error')}
+      />
+    </div>
   );
 };
 
@@ -71,7 +77,7 @@ const StatusBadge: React.FC<{ status: DomainStatus; statusCode?: number }> = ({ 
   );
 };
 
-const SSLBadge: React.FC<{ ssl: any }> = ({ ssl }) => {
+const SSLBadge: React.FC<{ ssl?: SSLInfo }> = ({ ssl }) => {
   if (!ssl || ssl.status === SSLStatus.Unknown) {
     return <span className="text-slate-400 dark:text-slate-500 text-xs">-</span>;
   }
@@ -125,7 +131,7 @@ const TagBadges: React.FC<{ tags: string[] }> = ({ tags }) => {
   );
 };
 
-const ExpiryBadge: React.FC<{ expiry?: any }> = ({ expiry }) => {
+const ExpiryBadge: React.FC<{ expiry?: DomainExpiry }> = ({ expiry }) => {
   if (!expiry) return null;
   
   const colorClass = getExpiryStatusColor(expiry.status);

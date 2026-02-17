@@ -1,4 +1,11 @@
 import { DomainExpiry } from '../types';
+import { logger } from '../utils/logger';
+
+interface WhoisApiResponse {
+  expiryDate?: string;
+  registrar?: string;
+  error?: string;
+}
 
 /**
  * Check domain expiry information using WHOIS API.
@@ -14,11 +21,11 @@ export const checkDomainExpiry = async (domain: string): Promise<DomainExpiry> =
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data: WhoisApiResponse = await response.json();
       return parseWhoisResponse(data);
     }
   } catch (error) {
-    console.warn('WHOIS API unavailable:', error);
+    logger.warn(`WHOIS API unavailable for ${cleanDomain}:`, error);
   }
 
   // Fallback: return unknown status
@@ -33,7 +40,7 @@ export const checkDomainExpiry = async (domain: string): Promise<DomainExpiry> =
 /**
  * Parse WHOIS API response.
  */
-const parseWhoisResponse = (data: any): DomainExpiry => {
+const parseWhoisResponse = (data: WhoisApiResponse): DomainExpiry => {
   if (!data || data.error) {
     return {
       status: 'unknown',

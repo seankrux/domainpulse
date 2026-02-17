@@ -1,4 +1,14 @@
 import { SSLStatus, SSLInfo } from '../types';
+import { logger } from '../utils/logger';
+
+interface SslApiResponse {
+  valid: boolean;
+  issuer?: string;
+  validFrom?: string;
+  validTo?: string;
+  daysUntilExpiry?: number;
+  error?: string;
+}
 
 /**
  * Check SSL certificate information for a domain.
@@ -19,11 +29,11 @@ export const checkSSL = async (url: string): Promise<SSLInfo> => {
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data: SslApiResponse = await response.json();
       return parseSSLResponse(data);
     }
   } catch (error) {
-    console.warn('SSL API unavailable, using basic check:', error);
+    logger.warn(`SSL API unavailable for ${domain}, using basic check:`, error);
   }
 
   // Fallback: Basic HTTPS check
@@ -41,7 +51,7 @@ const basicSSLCheck = async (url: string): Promise<SSLInfo> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch(targetUrl, {
+    await fetch(targetUrl, {
       method: 'HEAD',
       signal: controller.signal
     });
@@ -61,6 +71,7 @@ const basicSSLCheck = async (url: string): Promise<SSLInfo> => {
 
     return { status: SSLStatus.Invalid };
   } catch (error) {
+    logger.debug(`Basic SSL check failed for ${targetUrl}:`, error);
     return { status: SSLStatus.Unknown };
   }
 };
@@ -68,7 +79,7 @@ const basicSSLCheck = async (url: string): Promise<SSLInfo> => {
 /**
  * Parse SSL response from API.
  */
-const parseSSLResponse = (data: any): SSLInfo => {
+const parseSSLResponse = (data: SslApiResponse): SSLInfo => {
   // Add validation
   if (!data || typeof data !== 'object') {
     return { status: SSLStatus.Unknown };

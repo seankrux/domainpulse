@@ -1,4 +1,4 @@
-import { Domain, DomainStatus, StatusRecord, SSLInfo, DomainExpiry, DomainGroup } from '../types';
+import { Domain, DomainStatus, DomainGroup } from '../types';
 import { SAMPLE_DOMAINS, SAMPLE_GROUPS } from '../data/seed';
 
 const STORAGE_KEY = 'domainpulse_domains';
