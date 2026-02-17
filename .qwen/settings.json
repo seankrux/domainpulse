@@ -1,0 +1,21 @@
+{
+  "author": "BigSean",
+  "signature": "Made with 💛 by BigSean",
+  "project": {
+    "name": "DomainPulse",
+    "description": "Domain monitoring & SSL tracking tool",
+    "repository": "https://github.com/seankrux/domainpulse",
+    "visibility": "private"
+  },
+  "preferences": {
+    "addSignatureToFiles": true,
+    "signatureFormat": "Made with 💛 by BigSean",
+    "autoCommit": false,
+    "buildBeforeCommit": true
+  },
+  "skills": [
+    "chrome-devtools",
+    "github",
+    "vercel"
+  ]
+}
