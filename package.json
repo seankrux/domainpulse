@@ -1,0 +1,35 @@
+{
+  "name": "domainpulse",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.site.config.ts",
+    "build": "vite build --config vite.site.config.ts",
+    "preview": "vite preview --config vite.site.config.ts",
+    "dev:app": "vite",
+    "build:app": "vite build",
+    "server": "tsx server/proxy.ts",
+    "dev:all": "concurrently \"npm run server\" \"npm run dev:app\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "lucide-react": "^0.564.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "recharts": "^3.7.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "@vercel/node": "^5.6.3",
+    "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^8.2.2",
+    "tsx": "^4.19.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

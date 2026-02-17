@@ -1,0 +1,5 @@
+{
+  "name": "DomainPulse",
+  "description": "A professional domain status monitoring dashboard allowing users to import, export, and track the availability and latency of their domains in real-time.",
+  "requestFramePermissions": []
+}

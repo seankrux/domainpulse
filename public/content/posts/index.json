@@ -1,0 +1,10 @@
+[
+  {
+    "slug": "welcome",
+    "title": "Welcome to Our New Website",
+    "excerpt": "We're excited to launch our brand new website with a modern, file-based content system.",
+    "date": "2026-02-17",
+    "tags": ["announcement", "launch", "update"],
+    "author": "Team"
+  }
+]
