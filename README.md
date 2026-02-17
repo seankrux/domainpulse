@@ -322,3 +322,9 @@ JSON.parse(localStorage.getItem('domainpulse_groups'))
 ```javascript
 localStorage.clear(); location.reload()
 ```
+
+---
+
+<div align="center">
+  <p>Made with 💛 by BigSean</p>
+</div>

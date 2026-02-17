@@ -914,6 +914,11 @@ const App: React.FC = () => {
           onClose={() => setShowGroupManager(false)}
         />
       )}
+
+      {/* Footer */}
+      <footer className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">
+        Made with 💛 by BigSean
+      </footer>
     </div>
   );
 };
