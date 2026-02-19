@@ -75,7 +75,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
   );
 };
 
-export const DistributionChart: React.FC<{ stats: DomainStats }> = ({ stats }) => {
+export const DistributionChart: React.FC<{ stats: DomainStats }> = React.memo(({ stats }) => {
     const data = React.useMemo(() => [
         { name: 'Alive', value: stats.alive },
         { name: 'Down', value: stats.down },
@@ -84,7 +84,7 @@ export const DistributionChart: React.FC<{ stats: DomainStats }> = ({ stats }) =
 
     if (data.length === 0 || stats.total === 0) {
         return (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 h-80 flex flex-col items-center justify-center">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 h-[320px] flex flex-col items-center justify-center">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wider mb-2">Health Distribution</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">No data available</p>
             </div>
@@ -92,10 +92,10 @@ export const DistributionChart: React.FC<{ stats: DomainStats }> = ({ stats }) =
     }
 
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 h-80 flex flex-col relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 h-[320px] min-h-[320px] flex flex-col relative overflow-hidden">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wider mb-2 z-10">Health Distribution</h3>
-            <div className="flex-1 w-full min-h-0 z-10">
-                <ResponsiveContainer width="100%" height="100%" debounce={100}>
+            <div className="flex-1 w-full min-h-[240px] z-10">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     <PieChart>
                         <Pie
                             data={data}
@@ -106,7 +106,7 @@ export const DistributionChart: React.FC<{ stats: DomainStats }> = ({ stats }) =
                             paddingAngle={5}
                             dataKey="value"
                             stroke="none"
-                            isAnimationActive={true}
+                            isAnimationActive={false}
                         >
                             {data.map((entry, index) => {
                                 let color = '#475569'; // Unknown (slate-600)
@@ -129,5 +129,5 @@ export const DistributionChart: React.FC<{ stats: DomainStats }> = ({ stats }) =
             {/* Decorative background element */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
         </div>
-    )
-}
+    );
+});

@@ -1,49 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AuthState } from '../types';
+import { config } from '../lib/config';
 
-const AUTH_TOKEN_KEY = 'domainpulse_auth_token';
-const PASSWORD_HASH_KEY = 'domainpulse_password_hash';
-const PASSWORD_SALT_KEY = 'domainpulse_password_salt';
+const AUTH_SESSION_KEY = 'domainpulse_auth_session';
+const SESSION_TTL_MS = config.auth.sessionTTL;
 
-// Generate a random salt for password hashing
-const generateSalt = (): string => {
-  const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
-  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
-// Secure password hashing using PBKDF2 with salt (client-side only)
-const hashPassword = async (password: string, salt?: string): Promise<{ hash: string; salt: string }> => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const usedSalt = salt || generateSalt();
-  const saltBuffer = encoder.encode(usedSalt);
-  
-  // Use PBKDF2 with 100,000 iterations for better security
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    data,
-    'PBKDF2',
-    false,
-    ['deriveBits']
-  );
-  
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: 'PBKDF2',
-      salt: saltBuffer,
-      iterations: 100000,
-      hash: 'SHA-256'
-    },
-    keyMaterial,
-    256
-  );
-  
-  const hashArray = Array.from(new Uint8Array(derivedBits));
-  const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  return { hash, salt: usedSalt };
-};
+interface StoredSession {
+  token: string;
+  expiresAt: number;
+}
 
 interface AuthContextType extends AuthState {}
 
@@ -61,70 +26,90 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const getNow = () => Date.now();
+
+const readSession = (): StoredSession | null => {
+  const storedSession = localStorage.getItem(AUTH_SESSION_KEY);
+  if (!storedSession) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(storedSession) as StoredSession;
+    if (!parsed.token || !parsed.expiresAt) {
+      return null;
+    }
+
+    if (parsed.expiresAt <= getNow()) {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    localStorage.removeItem(AUTH_SESSION_KEY);
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on mount
-  useEffect(() => {
-    const checkAuth = () => {
-      const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
-      const storedHash = localStorage.getItem(PASSWORD_HASH_KEY);
+  const clearSession = useCallback(() => {
+    localStorage.removeItem(AUTH_SESSION_KEY);
+    setIsAuthenticated(false);
+  }, []);
 
-      if (storedToken && storedHash) {
-        setIsAuthenticated(true);
-      }
-      setIsLoading(false);
+  const checkAuth = useCallback(() => {
+    const session = readSession();
+    setIsAuthenticated(Boolean(session));
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  useEffect(() => {
+    const handleAuthInvalid = () => {
+      clearSession();
     };
 
-    checkAuth();
-  }, []);
+    window.addEventListener('domainpulse:auth-invalid', handleAuthInvalid);
+    return () => window.removeEventListener('domainpulse:auth-invalid', handleAuthInvalid);
+  }, [clearSession]);
+
+  useEffect(() => {
+    const syncStorage = (event: StorageEvent) => {
+      if (event.key === AUTH_SESSION_KEY && event.newValue === null) {
+        clearSession();
+      }
+    };
+
+    window.addEventListener('storage', syncStorage);
+    return () => window.removeEventListener('storage', syncStorage);
+  }, [clearSession]);
+
+  const saveSession = (token: string, expiresAt: number) => {
+    const safeExpiresAt = expiresAt > getNow() ? expiresAt : getNow() + SESSION_TTL_MS;
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ token, expiresAt: safeExpiresAt }));
+  };
 
   const login = useCallback(async (password: string): Promise<boolean> => {
     try {
-      const envPasswordHash = import.meta.env.VITE_PASSWORD_HASH;
-      const storedSalt = localStorage.getItem(PASSWORD_SALT_KEY);
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
 
-      // Check against environment variable first (production)
-      if (envPasswordHash) {
-        // Environment variable format: hash:salt
-        const [envHash, envSalt] = envPasswordHash.split(':');
-        if (!envSalt) {
-          console.error('VITE_PASSWORD_HASH must be in format hash:salt');
-          return false;
-        }
-        const result = await hashPassword(password, envSalt);
-        if (result.hash === envHash) {
-          localStorage.setItem(AUTH_TOKEN_KEY, result.hash);
-          localStorage.setItem(PASSWORD_HASH_KEY, result.hash);
-          localStorage.setItem(PASSWORD_SALT_KEY, result.salt);
-          setIsAuthenticated(true);
-          return true;
-        }
-        return false;
-      }
-
-      // Development: fall back to localStorage
-      const validHash = localStorage.getItem(PASSWORD_HASH_KEY);
-
-      if (!validHash) {
-        // No password set - allow login and store the hash with salt
-        const result = await hashPassword(password);
-        localStorage.setItem(PASSWORD_HASH_KEY, result.hash);
-        localStorage.setItem(PASSWORD_SALT_KEY, result.salt);
-        localStorage.setItem(AUTH_TOKEN_KEY, result.hash);
+      if (response.ok) {
+        const data = await response.json();
+        saveSession(data.token, Number(data.expiresAt) || getNow() + SESSION_TTL_MS);
         setIsAuthenticated(true);
         return true;
       }
-
-      const result = await hashPassword(password, storedSalt || undefined);
-      if (result.hash === validHash) {
-        localStorage.setItem(AUTH_TOKEN_KEY, result.hash);
-        localStorage.setItem(PASSWORD_SALT_KEY, result.salt);
-        setIsAuthenticated(true);
-        return true;
-      }
-
       return false;
     } catch (error) {
       console.error('Login error:', error);
@@ -133,9 +118,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    setIsAuthenticated(false);
-  }, []);
+    clearSession();
+  }, [clearSession]);
 
   const value: AuthContextType = {
     isAuthenticated,

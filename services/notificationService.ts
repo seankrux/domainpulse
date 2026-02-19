@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { loadSettings } from '../utils/storage';
 
 /**
  * Browser Notification Service
@@ -49,35 +50,71 @@ export const canSendNotifications = (): boolean => {
 };
 
 /**
- * Send a browser notification.
+ * Send a browser notification and external webhooks.
  */
-export const sendNotification = (options: NotificationOptions): void => {
-  if (!canSendNotifications()) {
-    logger.warn('Cannot send notification: permission not granted');
-    return;
+export const sendNotification = async (options: NotificationOptions): Promise<void> => {
+  // 1. Browser Notification
+  if (canSendNotifications()) {
+    try {
+      const notification = new Notification(options.title, {
+        body: options.body,
+        icon: options.icon || '/favicon.ico',
+        badge: '/favicon.ico',
+        requireInteraction: false,
+        silent: false
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        if (options.onClick) {
+          options.onClick();
+        }
+        notification.close();
+      };
+
+      setTimeout(() => notification.close(), 5000);
+    } catch (error) {
+      logger.error('Error sending browser notification:', error);
+    }
   }
 
-  try {
-    const notification = new Notification(options.title, {
-      body: options.body,
-      icon: options.icon || '/favicon.ico',
-      badge: '/favicon.ico',
-      requireInteraction: false,
-      silent: false
-    });
+  // 2. External Webhooks
+  const settings = loadSettings();
+  if (settings.webhooks && settings.webhooks.length > 0) {
+    const enabledWebhooks = settings.webhooks.filter(w => w.enabled);
+    
+    for (const webhook of enabledWebhooks) {
+      try {
+        let payload = {};
+        
+        if (webhook.type === 'slack') {
+          payload = { text: `*${options.title}*\n${options.body}` };
+        } else if (webhook.type === 'discord') {
+          payload = {
+            content: null,
+            embeds: [{
+              title: options.title,
+              description: options.body,
+              color: options.title.includes('Down') ? 15548997 : 5763719 // Red or Green
+            }]
+          };
+        }
 
-    notification.onclick = () => {
-      window.focus();
-      if (options.onClick) {
-        options.onClick();
+        const response = await fetch(webhook.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Webhook responded with ${response.status}`);
+        }
+
+        logger.debug(`Webhook sent to ${webhook.name}`);
+      } catch (error) {
+        logger.error(`Failed to send webhook to ${webhook.name}:`, error);
       }
-      notification.close();
-    };
-
-    // Auto-close after 5 seconds
-    setTimeout(() => notification.close(), 5000);
-  } catch (error) {
-    logger.error('Error sending notification:', error);
+    }
   }
 };
 

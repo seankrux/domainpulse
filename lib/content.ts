@@ -1,3 +1,5 @@
+import { marked } from 'marked';
+
 /**
  * Simple content loader for file-based CMS
  * Reads markdown/JSON content files and returns structured data
@@ -163,24 +165,9 @@ function parseMarkdownContent(content: string): string {
 }
 
 /**
- * Convert markdown to simple HTML (basic implementation)
+ * Convert markdown to HTML using 'marked' library
  */
 export function markdownToHtml(markdown: string): string {
-  return markdown
-    // Headers
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    // Bold
-    .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.*)\*/gim, '<em>$1</em>')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    // Line breaks
-    .replace(/\n$/gim, '<br />')
-    // Code blocks
-    .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
-    // Inline code
-    .replace(/`([^`]+)`/gim, '<code>$1</code>');
+  if (!markdown) return '';
+  return marked.parse(markdown) as string;
 }

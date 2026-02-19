@@ -11,11 +11,12 @@ test.describe('DomainPulse Dashboard', () => {
     const passwordInput = page.locator('input[id="password"]');
     if (await passwordInput.isVisible()) {
       await passwordInput.fill('testpassword');
-      await page.click('button:has-text("Sign In")');
+      await page.getByRole('button', { name: /sign in/i }).click();
+      await page.waitForSelector('[data-testid="header-title"]');
     }
 
     // 1. Verify Header
-    await expect(page.locator('h1:has-text("DomainPulse")')).toBeVisible();
+    await expect(page.getByTestId('header-title')).toContainText('DomainPulse', { timeout: 15000 });
 
     // 2. Verify Domain Addition
     const input = page.locator('input[placeholder*="Enter domain to monitor"]');

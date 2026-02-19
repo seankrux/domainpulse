@@ -1,9 +1,25 @@
-import { DomainStatus, SSLInfo, DomainExpiry } from '../types';
+import { DomainStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo } from '../types';
 import { checkSSL } from './sslService';
 import { checkDomainExpiry } from './expiryService';
+import { checkDNS } from './dnsService';
 import { logger } from '../utils/logger';
+import { config } from '../lib/config';
 
-const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001';
+const DEFAULT_PROXY_URL = config.proxy.defaultUrl;
+const AUTH_SESSION_KEY = 'domainpulse_auth_session';
+const getStoredToken = (): string | null => {
+  try {
+    const storedSession = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!storedSession) return null;
+    const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
+    if (!parsed?.token || !parsed.expiresAt || parsed.expiresAt <= Date.now()) {
+      return null;
+    }
+    return parsed.token;
+  } catch {
+    return null;
+  }
+};
 
 export interface DomainCheckResult {
   status: DomainStatus;
@@ -74,37 +90,57 @@ export const normalizeUrl = (input: string): string => {
 };
 
 /**
- * Check domain with SSL and expiry information.
+ * Check domain with SSL, expiry, and DNS information.
  * Includes timeout to prevent hanging.
  */
-export const checkDomainWithSSL = async (url: string): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry }> => {
-  // Create a timeout promise
+export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo }> => {
+  // Create a timeout promise using centralized config
+  const timeoutMs = serviceConfig?.timeout || config.timeouts.domainCheck;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Domain check timeout')), 15000); // 15 second timeout
+    setTimeout(() => reject(new Error('Domain check timeout')), timeoutMs);
   });
 
   // Race between the actual check and timeout
-  const checkInternal = async (): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry }> => {
+  const checkInternal = async (): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo }> => {
     const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+
+    // Determine proxy URL and token
+    const proxyUrl = serviceConfig?.proxyUrl || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_URL) || DEFAULT_PROXY_URL;
+    let token = serviceConfig?.authToken;
+    const userAgent = serviceConfig?.userAgent || 'DomainPulse/1.0 (Domain Monitor)';
+    const timeout = serviceConfig?.timeout || config.timeouts.domainCheck;
+    
+    // In main thread (where localStorage is available), we can get the token if not provided
+    if (!token && typeof localStorage !== 'undefined') {
+      token = getStoredToken() || undefined;
+    }
 
     // Try Vercel API first (for production), then fall back to local proxy
     const apiEndpoints = [
       '/api/check', // Vercel serverless function (port 3000)
-      `${PROXY_URL}/api/check` // Local proxy server (port 3001)
+      `${proxyUrl}/api/check` // Local proxy server (port 3001)
     ];
 
     logger.debug(`Checking domain: ${url}`, { targetUrl, endpoints: apiEndpoints });
 
-    let domainResult: DomainCheckResult | null = null;
+  let domainResult: DomainCheckResult | null = null;
+    let authFailure: Error | null = null;
 
     for (const endpoint of apiEndpoints) {
       try {
-        const response = await fetch(`${endpoint}?url=${encodeURIComponent(targetUrl)}`, {
+        const response = await fetch(`${endpoint}?url=${encodeURIComponent(targetUrl)}&ua=${encodeURIComponent(userAgent)}&timeout=${timeout}`, {
           method: 'GET',
           headers: {
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
           }
         });
+
+        if (response.status === 401) {
+          logger.warn(`Auth failed for endpoint ${endpoint} for ${url}`);
+          authFailure = new Error('Unauthorized');
+          continue;
+        }
 
         if (!response.ok) {
           logger.warn(`Endpoint ${endpoint} returned status ${response.status} for ${url}`);
@@ -121,60 +157,35 @@ export const checkDomainWithSSL = async (url: string): Promise<DomainCheckResult
         logger.debug(`Success from ${endpoint} for ${url}`, domainResult);
         break;
       } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
+          authFailure = error;
+        }
         logger.error(`Error checking endpoint ${endpoint} for ${url}`, error);
         continue;
       }
     }
 
     if (!domainResult) {
-      logger.warn(`All check endpoints failed for ${url}, falling back to mock data`);
-      domainResult = getMockDomainCheck(url);
+      if (authFailure) {
+        throw authFailure;
+      }
+      logger.warn(`All check endpoints failed for ${url}, returning error state`);
+      throw new Error(`All endpoints unavailable for ${url}`);
     }
 
-    const [sslResult, expiryResult] = await Promise.all([
-      checkSSL(url),
-      checkDomainExpiry(url)
+    const [sslResult, expiryResult, dnsResult] = await Promise.all([
+      checkSSL(url, config),
+      checkDomainExpiry(url, config),
+      checkDNS(url, config)
     ]);
 
     return {
       ...domainResult,
       ssl: sslResult,
-      expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined
+      expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined,
+      dns: dnsResult && !dnsResult.error ? dnsResult : undefined
     };
   };
 
   return Promise.race([checkInternal(), timeoutPromise]);
-};
-
-/**
- * Mock domain checking for demo/development when proxy is unavailable.
- */
-const getMockDomainCheck = (url: string): { status: DomainStatus; statusCode: number; latency: number } => {
-  const latency = Math.floor(Math.random() * 750) + 50;
-  const lowerUrl = url.toLowerCase();
-
-  // Well-known domains that should be "alive"
-  if (lowerUrl.includes('google') || lowerUrl.includes('bing') || lowerUrl.includes('example') ||
-      lowerUrl.includes('github') || lowerUrl.includes('microsoft') || lowerUrl.includes('amazon')) {
-    return { status: DomainStatus.Alive, statusCode: 200, latency };
-  }
-
-  // Keywords that suggest failure
-  if (lowerUrl.includes('fail') || lowerUrl.includes('down') || lowerUrl.includes('error')) {
-    const errorCodes = [400, 403, 404, 500, 502, 503];
-    const randomError = errorCodes[Math.floor(Math.random() * errorCodes.length)];
-    return { status: DomainStatus.Down, statusCode: randomError, latency: 0 };
-  }
-
-  // Random chance for other domains
-  const isAlive = Math.random() > 0.2;
-  if (isAlive) {
-    const successCodes = [200, 200, 200, 201];
-    const code = successCodes[Math.floor(Math.random() * successCodes.length)];
-    return { status: DomainStatus.Alive, statusCode: code, latency };
-  } else {
-    const errorCodes = [400, 403, 404, 500, 502, 503];
-    const code = errorCodes[Math.floor(Math.random() * errorCodes.length)];
-    return { status: DomainStatus.Down, statusCode: code, latency: 0 };
-  }
 };

@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import * as https from 'https';
+import { verifyAuth, getCorsHeaders } from './_utils/auth';
 
 interface WhoisResult {
   expiryDate?: string;
@@ -32,41 +33,58 @@ const checkRateLimit = (ip: string): boolean => {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Helper to set multiple headers since res.set is not available on VercelResponse
+  const setHeaders = (headers: Record<string, string>) => {
+    Object.entries(headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+  };
+
+  const origin = req.headers.origin;
+  const corsHeaders = getCorsHeaders(origin);
+  
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    setHeaders(corsHeaders);
     return res.status(200).end();
-  }
-
-  // Only allow GET requests
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   // Rate limiting
   const ip = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
   if (!checkRateLimit(ip)) {
+    setHeaders(corsHeaders);
     return res.status(429).json({ 
       error: 'Rate limit exceeded', 
       message: 'Too many requests. Please wait a minute.' 
     });
   }
 
+  // Verify authentication
+  if (!verifyAuth(req)) {
+    setHeaders(corsHeaders);
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    setHeaders(corsHeaders);
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   const domain = req.query.domain as string;
 
   if (!domain) {
+    setHeaders(corsHeaders);
     return res.status(400).json({ error: 'Domain is required' });
   }
 
   try {
     const whoisInfo = await getWhoisInfo(domain);
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    setHeaders(corsHeaders);
     res.status(200).json(whoisInfo);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    setHeaders(corsHeaders);
     res.status(200).json({
       error: errorMessage
     });
@@ -116,10 +134,10 @@ function getWhoisInfo(domain: string): Promise<WhoisResult> {
  */
 function parseWhoisData(data: string): WhoisResult {
   const result: WhoisResult = {};
-  
+
   // Extract expiry date
   const expiryMatch = data.match(/(?:Registry Expiry Date|Expiration Date|expires(?:-on)?|Valid Until)[:\s]+([^\n]+)/i);
-  if (expiryMatch) {
+  if (expiryMatch && expiryMatch[1]) {
     const dateStr = expiryMatch[1].trim();
     // Try to parse various date formats
     const date = new Date(dateStr);
@@ -127,12 +145,12 @@ function parseWhoisData(data: string): WhoisResult {
       result.expiryDate = date.toISOString();
     }
   }
-  
+
   // Extract registrar
   const registrarMatch = data.match(/(?:Registrar|Sponsoring Registrar)[:\s]+([^\n]+)/i);
-  if (registrarMatch) {
+  if (registrarMatch && registrarMatch[1]) {
     result.registrar = registrarMatch[1].trim();
   }
-  
+
   return result;
 }

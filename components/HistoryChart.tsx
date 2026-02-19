@@ -23,7 +23,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
       status: record.status,
       statusCode: record.statusCode
     }));
-  }, [domain.history.length]);
+  }, [domain.history]);
 
   const stats = useMemo(() => {
     if (domain.history.length === 0) return null;
@@ -44,7 +44,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
       uptime: uptime.toFixed(1),
       totalChecks: domain.history.length
     };
-  }, [domain.history.length]);
+  }, [domain.history]);
 
   if (!stats) {
     return (
