@@ -62,21 +62,19 @@ export const config = {
  * Get a configuration value by path.
  * @example getConfig('timeouts.domainCheck') // 15000
  */
-export function getConfig<T extends keyof typeof config | `${keyof typeof config}.${string}`>(
-  path: T
-): T extends `${string}.${string}` ? any : typeof config[T] {
-  const parts = path.split('.');
-  let value: any = config;
-  
-  for (const part of parts) {
-    if (value && typeof value === 'object' && part in value) {
-      value = value[part as keyof typeof value];
-    } else {
-      throw new Error(`Invalid config path: ${path}`);
-    }
-  }
-  
-  return value;
+export function getConfig<T extends keyof typeof config>(section: T): typeof config[T] {
+  return config[section];
+}
+
+/**
+ * Get a nested configuration value by path.
+ * @example getConfigValue('timeouts', 'domainCheck') // 15000
+ */
+export function getConfigValue<
+  T extends keyof typeof config,
+  K extends keyof typeof config[T]
+>(section: T, key: K): typeof config[T][K] {
+  return config[section][key];
 }
 
 export default config;

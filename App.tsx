@@ -50,21 +50,19 @@ const App: React.FC = () => {
   const { logout } = useAuth();
 
   // Monitoring Hook
-  const { 
-    isCheckingAll, 
-    checkProgress, 
-    checkBatch, 
-    checkAllDomains, 
-    checkSingleDomain 
+  const {
+    isCheckingAll,
+    checkProgress,
+    checkBatch,
+    checkAllDomains,
+    checkSingleDomain
   } = useMonitoring({
     domains,
     setDomains,
     maxHistoryRecords: settings.maxHistoryRecords,
     customUserAgent: settings.customUserAgent,
     checkTimeout: settings.checkTimeout,
-    showSuccess,
-    showError,
-    showInfo
+    showSuccess
   });
 
   // Refs for stability
@@ -259,6 +257,29 @@ const App: React.FC = () => {
       setPreviousStatuses(newMap);
     }
   }, [domains, settings.enableNotifications, settings.playSound, previousStatuses, showInfo, showSuccess]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K: Focus search input
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+      }
+      // Cmd+Enter: Check all domains
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        checkAllDomains();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [checkAllDomains]);
 
   // Computed Stats
   const stats: DomainStats = useMemo(() => {
@@ -458,7 +479,10 @@ const App: React.FC = () => {
                 setDomains(prev => prev.map(d => d.id === id ? { ...d, url: validation.url! } : d));
                 checkSingleDomain(id, validation.url);
               }}
-              onCheck={checkSingleDomain}
+              onCheck={(id) => {
+                const domain = domains.find(d => d.id === id);
+                if (domain?.url) checkSingleDomain(id, domain.url);
+              }}
               onEditTags={(id, tags) => setDomains(prev => prev.map(d => d.id === id ? { ...d, tags } : d))}
               onEditGroup={(id, groupId) => setDomains(prev => prev.map(d => d.id === id ? { ...d, groupId } : d))}
               onViewHistory={(domain) => setViewingHistoryId(domain.id)}
@@ -496,7 +520,7 @@ const App: React.FC = () => {
               <button onClick={() => setViewingHistoryId(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"><X size={20} /></button>
             </div>
             <div className="p-6">
-              <HistoryChart domain={viewingHistory} onClose={() => setViewingHistoryId(null)} />
+              <HistoryChart domain={viewingHistory} />
             </div>
           </div>
         </div>

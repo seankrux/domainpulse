@@ -41,11 +41,13 @@ export const parseCSV = (content: string): Partial<Domain>[] => {
   const domains: Partial<Domain>[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const parts = parseCSVLine(lines[i]);
-    const rawUrl = parts[0];
+    const line = lines[i] || '';
+    const parts = parseCSVLine(line);
+    const rawUrl = (parts[0] ?? '') as string;
 
     // Skip empty or header rows
-    if (!rawUrl || (i === 0 && (rawUrl.toLowerCase() === 'domain' || rawUrl.toLowerCase() === 'url'))) {
+    if (!rawUrl) continue;
+    if (i === 0 && (rawUrl.toLowerCase() === 'domain' || rawUrl.toLowerCase() === 'url')) {
       continue;
     }
 

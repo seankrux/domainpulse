@@ -101,28 +101,3 @@ export const SAMPLE_GROUPS: DomainGroup[] = [
     color: '#f59e0b' // amber
   }
 ];
-
-/**
- * Generate sample history data for a domain
- */
-export const generateSampleHistory = (days: number = 30): { status: DomainStatus; latency: number; timestamp: Date }[] => {
-  const history: { status: DomainStatus; latency: number; timestamp: Date }[] = [];
-  const now = new Date();
-  
-  for (let i = days; i >= 0; i--) {
-    const timestamp = new Date(now);
-    timestamp.setDate(timestamp.getDate() - i);
-    
-    // 95% uptime simulation
-    const isDown = Math.random() < 0.05;
-    const baseLatency = 50 + Math.random() * 150;
-    
-    history.push({
-      status: isDown ? DomainStatus.Down : DomainStatus.Alive,
-      latency: isDown ? 0 : Math.round(baseLatency),
-      timestamp
-    });
-  }
-  
-  return history;
-};

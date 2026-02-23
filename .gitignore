@@ -41,3 +41,16 @@ build/
 
 .qwen/
 gha-creds-*.json
+
+# Debug artifacts
+*.png
+gui_test.py
+debug_gui.py
+inspect_*.py
+comprehensive_gui_test.cjs
+standalone_verify.cjs
+verify_updates.cjs
+venv/
+playwright-report/
+test-results/
+.autonomous/

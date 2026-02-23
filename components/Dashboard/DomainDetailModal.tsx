@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink } from 'lucide-react';
+import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle } from 'lucide-react';
 import { Domain, DomainStatus, SSLStatus } from '../../types';
 import { getSSLStatusColor, getSSLStatusLabel } from '../../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../../services/expiryService';
@@ -12,7 +12,7 @@ interface DomainDetailModalProps {
 export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, onClose }) => {
   return (
     <div data-testid="detail-modal" className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
-      <div 
+      <div
         className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -112,11 +112,11 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             )}
           </section>
 
-          {/* Domain Expiry */}
+          {/* Domain Expiry & WHOIS Information */}
           <section>
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="text-indigo-500" size={18} />
-              <h3 className="font-bold text-slate-900 dark:text-white">Domain Registration</h3>
+              <h3 className="font-bold text-slate-900 dark:text-white">Domain Registration & WHOIS</h3>
             </div>
             {domain.expiry && domain.expiry.status !== 'unknown' ? (
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
@@ -135,7 +135,54 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                       {domain.expiry.expiryDate ? new Date(domain.expiry.expiryDate).toLocaleDateString() : 'Unknown'}
                     </p>
                   </div>
+                  {domain.expiry.createdDate && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Created Date</p>
+                      <p className="font-medium text-slate-700 dark:text-slate-200">
+                        {new Date(domain.expiry.createdDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                  {domain.expiry.updatedDate && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Last Updated</p>
+                      <p className="font-medium text-slate-700 dark:text-slate-200">
+                        {new Date(domain.expiry.updatedDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                  {domain.expiry.registrarIanaId && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Registrar IANA ID</p>
+                      <p className="font-medium text-slate-700 dark:text-slate-200">{domain.expiry.registrarIanaId}</p>
+                    </div>
+                  )}
+                  {domain.expiry.dnssec && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">DNSSEC</p>
+                      <div className="flex items-center gap-1">
+                        {domain.expiry.dnssec === 'signed' || domain.expiry.dnssec === 'signedDelegation' ? (
+                          <CheckCircle size={14} className="text-emerald-500" />
+                        ) : (
+                          <AlertCircle size={14} className="text-amber-500" />
+                        )}
+                        <span className="font-medium text-slate-700 dark:text-slate-200">{domain.expiry.dnssec}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
+                {domain.expiry.domainStatus && domain.expiry.domainStatus.length > 0 && (
+                  <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/30 border-t border-slate-200 dark:border-slate-700">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">Domain Status</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {domain.expiry.domainStatus.map((status, i) => (
+                        <span key={i} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded text-[10px] font-medium">
+                          {status}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-6 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
@@ -150,56 +197,77 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
               <Server className="text-indigo-500" size={18} />
               <h3 className="font-bold text-slate-900 dark:text-white">DNS Records & Nameservers</h3>
             </div>
-            {domain.dns ? (
+            {domain.dns || (domain.expiry && domain.expiry.nameServers) ? (
               <div className="space-y-4">
-                {/* Nameservers */}
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Nameservers (NS)</p>
-                  <div className="flex flex-wrap gap-2">
-                    {domain.dns.ns && domain.dns.ns.length > 0 ? (
-                      domain.dns.ns.map((ns, i) => (
-                        <span key={i} className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono text-indigo-600 dark:text-indigo-400 shadow-sm">
+                {/* Nameservers - from WHOIS */}
+                {(domain.expiry?.nameServers && domain.expiry.nameServers.length > 0) && (
+                  <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Info size={14} className="text-indigo-600 dark:text-indigo-400" />
+                      <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Nameservers (from WHOIS)</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {domain.expiry.nameServers.map((ns, i) => (
+                        <span key={i} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 rounded-lg text-xs font-mono text-indigo-700 dark:text-indigo-300 shadow-sm">
                           {ns}
                         </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-slate-400 italic">No NS records found</span>
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* A Records */}
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">A Records (IPs)</p>
-                  <div className="flex flex-wrap gap-2">
-                    {domain.dns.a && domain.dns.a.length > 0 ? (
-                      domain.dns.a.map((ip, i) => (
-                        <span key={i} className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 shadow-sm">
-                          {ip}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-slate-400 italic">No A records found</span>
-                    )}
-                  </div>
-                </div>
+                {/* Nameservers - from DNS lookup */}
+                {domain.dns && (
+                  <>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Nameservers (DNS Lookup)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {domain.dns.ns && domain.dns.ns.length > 0 ? (
+                          domain.dns.ns.map((ns, i) => (
+                            <span key={i} className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono text-indigo-600 dark:text-indigo-400 shadow-sm">
+                              {ns}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">No NS records found</span>
+                        )}
+                      </div>
+                    </div>
 
-                {/* MX Records */}
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Mail Servers (MX)</p>
-                  <div className="space-y-2">
-                    {domain.dns.mx && domain.dns.mx.length > 0 ? (
-                      domain.dns.mx.map((mx, i) => (
-                        <div key={i} className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs shadow-sm">
-                          <span className="font-mono text-slate-700 dark:text-slate-300">{mx.exchange}</span>
-                          <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.5 rounded font-bold text-[10px]">PRIO {mx.priority}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-xs text-slate-400 italic">No MX records found</span>
-                    )}
-                  </div>
-                </div>
+                    {/* A Records */}
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">A Records (IPs)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {domain.dns.a && domain.dns.a.length > 0 ? (
+                          domain.dns.a.map((ip, i) => (
+                            <span key={i} className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 shadow-sm">
+                              {ip}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">No A records found</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* MX Records */}
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Mail Servers (MX)</p>
+                      <div className="space-y-2">
+                        {domain.dns.mx && domain.dns.mx.length > 0 ? (
+                          domain.dns.mx.map((mx, i) => (
+                            <div key={i} className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs shadow-sm">
+                              <span className="font-mono text-slate-700 dark:text-slate-300">{mx.exchange}</span>
+                              <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.5 rounded font-bold text-[10px]">PRIO {mx.priority}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">No MX records found</span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="text-center py-6 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">

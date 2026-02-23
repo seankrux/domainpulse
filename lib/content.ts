@@ -50,8 +50,8 @@ export async function loadPages(): Promise<ContentPage[]> {
           fetch('/content/pages/about.md').then(r => r.ok ? r.text() : null)
         ]);
 
-        if (homeRes) pages[0].content = parseMarkdownContent(homeRes);
-        if (aboutRes) pages[1].content = parseMarkdownContent(aboutRes);
+        if (homeRes && pages[0]) pages[0].content = parseMarkdownContent(homeRes);
+        if (aboutRes && pages[1]) pages[1].content = parseMarkdownContent(aboutRes);
       } catch {
         // Fallback to defaults if files not found
       }
@@ -135,8 +135,8 @@ function parseMarkdownPost(content: string, slug: string): BlogPost {
 
   const [, frontmatterStr, body] = frontmatterMatch;
   const frontmatter: Record<string, string> = {};
-  
-  frontmatterStr.split('\n').forEach(line => {
+
+  frontmatterStr?.split('\n').forEach(line => {
     const [key, ...valueParts] = line.split(':');
     if (key && valueParts.length) {
       frontmatter[key.trim()] = valueParts.join(':').trim();
@@ -146,8 +146,8 @@ function parseMarkdownPost(content: string, slug: string): BlogPost {
   return {
     slug,
     title: frontmatter.title || slug,
-    content: body.trim(),
-    excerpt: frontmatter.excerpt || body.slice(0, 150).trim() + '...',
+    content: body?.trim() || '',
+    excerpt: frontmatter.excerpt || (body?.slice(0, 150).trim() || '') + '...',
     date: frontmatter.date || new Date().toISOString(),
     draft: frontmatter.draft === 'true',
     tags: frontmatter.tags?.split(',').map(t => t.trim()),

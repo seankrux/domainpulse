@@ -300,6 +300,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               <th className="p-4">Status</th>
               <th className="p-4">SSL</th>
               <th className="p-4">Expiry</th>
+              <th className="p-4 hidden xl:table-cell">Nameservers</th>
               <th className="p-4">Latency</th>
               <th className="p-4 hidden md:table-cell">Last Checked</th>
               <th className="p-4 hidden lg:table-cell">History</th>
@@ -465,6 +466,32 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                   <td className="p-4 align-middle">
                     <ExpiryBadge expiry={domain.expiry} onClick={() => onViewDetails?.(domain)} />
                   </td>
+                  <td className="p-4 align-middle hidden xl:table-cell">
+                    {isChecking ? (
+                      <Skeleton className="w-24 h-4" />
+                    ) : (
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {(domain.expiry?.nameServers && domain.expiry.nameServers.length > 0) ? (
+                          domain.expiry.nameServers.slice(0, 2).map((ns, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded text-[9px] font-mono text-indigo-700 dark:text-indigo-300 truncate max-w-[100px]">
+                              {ns}
+                            </span>
+                          ))
+                        ) : domain.dns?.ns && domain.dns.ns.length > 0 ? (
+                          domain.dns.ns.slice(0, 2).map((ns, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded text-[9px] font-mono text-slate-600 dark:text-slate-400 truncate max-w-[100px]">
+                              {ns}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">-</span>
+                        )}
+                        {((domain.expiry?.nameServers?.length || domain.dns?.ns?.length || 0) > 2) && (
+                          <span className="px-2 py-0.5 text-[9px] text-slate-400">+{((domain.expiry?.nameServers?.length || 0) + (domain.dns?.ns?.length || 0)) - 2}</span>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className="p-4 align-middle text-sm text-slate-600 dark:text-slate-300 font-mono">
                     {isChecking ? (
                         <Skeleton className="w-12 h-4" />
@@ -488,6 +515,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                         onClick={() => onViewHistory && onViewHistory(domain)}
                         className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors"
                         title="View History"
+                        aria-label={`View history for ${domain.url}`}
                       >
                         <History size={16} />
                       </button>
@@ -496,6 +524,8 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                         disabled={isChecking}
                         className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors disabled:opacity-50"
                         title="Check Status"
+                        aria-label={`Check status for ${domain.url}`}
+                        aria-busy={isChecking}
                       >
                         <RefreshCw size={16} className={isChecking ? "animate-spin" : ""} />
                       </button>
@@ -503,6 +533,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                         onClick={() => startEdit(domain)}
                         className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors"
                         title="Edit Domain"
+                        aria-label={`Edit domain ${domain.url}`}
                       >
                         <Edit2 size={16} />
                       </button>
@@ -510,6 +541,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                         onClick={() => onRemove(domain.id)}
                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors"
                         title="Remove"
+                        aria-label={`Remove ${domain.url}`}
                       >
                         <Trash2 size={16} />
                       </button>

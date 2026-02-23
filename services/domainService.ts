@@ -85,7 +85,7 @@ export const validateAndNormalizeUrl = (input: string): { valid: boolean; url?: 
 export const normalizeUrl = (input: string): string => {
   let url = input.trim().toLowerCase();
   url = url.replace(/^https?:\/\//, '');
-  url = url.replace(/\/$/, '');
+  url = url.replace(/\/.*$/, ''); // Remove path and trailing slashes
   return url;
 };
 
@@ -173,10 +173,11 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
       throw new Error(`All endpoints unavailable for ${url}`);
     }
 
+    // Use the serviceConfig parameter for SSL/expiry/DNS calls
     const [sslResult, expiryResult, dnsResult] = await Promise.all([
-      checkSSL(url, config),
-      checkDomainExpiry(url, config),
-      checkDNS(url, config)
+      checkSSL(url, serviceConfig),
+      checkDomainExpiry(url, serviceConfig),
+      checkDNS(url, serviceConfig)
     ]);
 
     return {

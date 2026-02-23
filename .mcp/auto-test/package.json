@@ -1,0 +1,13 @@
+{
+  "name": "domainpulse-auto-test",
+  "version": "1.0.0",
+  "description": "MCP server for automated testing on code changes",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  }
+}

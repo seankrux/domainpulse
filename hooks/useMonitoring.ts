@@ -10,8 +10,6 @@ interface MonitoringHookProps {
   customUserAgent?: string;
   checkTimeout?: number;
   showSuccess: (msg: string) => void;
-  showError: (msg: string) => void;
-  showInfo: (msg: string) => void;
 }
 
 export const useMonitoring = ({
@@ -182,20 +180,20 @@ export const useMonitoring = ({
     }
   }, [addHistoryRecord, setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid]);
 
-  // Initialize Worker
+  // Initialize Worker - created once on mount
   useEffect(() => {
     const MonitoringWorker = new Worker(new URL('../services/monitoring.worker.ts', import.meta.url), {
       type: 'module'
     });
-    
+
     MonitoringWorker.onmessage = (e) => {
       if (!e?.data || typeof e.data !== 'object' || typeof e.data.type !== 'string') {
         return;
       }
       const { type, domainId, result } = e.data;
-      
+
       if (type === 'DOMAIN_RESULT') {
-        setDomains(prev => 
+        setDomains(prev =>
           prev.map(d =>
             d.id === domainId ? {
               ...d,
@@ -231,33 +229,40 @@ export const useMonitoring = ({
       }
     };
 
-    // Configure worker with proxy URL and initial auth token
-    MonitoringWorker.postMessage({
-      type: 'CONFIG',
-      config: {
-        proxyUrl: import.meta.env.VITE_PROXY_URL || 'http://localhost:3001',
-        authToken: (() => {
-          try {
-            const storedSession = localStorage.getItem('domainpulse_auth_session');
-            if (!storedSession) return '';
-            const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
-            if (!parsed?.token || !parsed.expiresAt || parsed.expiresAt <= Date.now()) return '';
-            return parsed.token;
-          } catch {
-            return '';
-          }
-        })(),
-        userAgent: customUserAgent,
-        timeout: checkTimeout
-      }
-    });
-
     workerRef.current = MonitoringWorker;
 
     return () => {
       MonitoringWorker.terminate();
     };
-  }, [addHistoryRecord, showSuccess, setDomains, customUserAgent, checkTimeout]);
+  }, []); // Empty deps - worker created once
+
+  // Send config updates to worker when values change
+  useEffect(() => {
+    if (!workerRef.current) return;
+
+    const storedSession = localStorage.getItem('domainpulse_auth_session');
+    let authToken = '';
+    if (storedSession) {
+      try {
+        const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
+        if (parsed?.token && parsed.expiresAt && parsed.expiresAt > Date.now()) {
+          authToken = parsed.token;
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    workerRef.current.postMessage({
+      type: 'CONFIG',
+      config: {
+        proxyUrl: import.meta.env.VITE_PROXY_URL || 'http://localhost:3001',
+        authToken,
+        userAgent: customUserAgent,
+        timeout: checkTimeout
+      }
+    });
+  }, [customUserAgent, checkTimeout]); // Only re-run when config values change
 
   return {
     isCheckingAll,

@@ -24,7 +24,14 @@ export interface SSLInfo {
 
 export interface DomainExpiry {
   expiryDate?: Date;
+  createdDate?: Date;
+  updatedDate?: Date;
   registrar?: string;
+  registrarUrl?: string;
+  registrarIanaId?: string;
+  domainStatus?: string[];
+  nameServers?: string[];
+  dnssec?: string;
   daysUntilExpiry?: number;
   status: 'active' | 'expiring' | 'expired' | 'unknown';
 }
