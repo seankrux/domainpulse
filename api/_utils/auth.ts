@@ -2,7 +2,19 @@ import { VercelRequest } from '@vercel/node';
 import jwt from 'jsonwebtoken';
 
 const AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
-const JWT_SECRET = process.env.JWT_SECRET || process.env.VITE_PASSWORD_HASH || 'dev-secret-change-in-production';
+
+// JWT_SECRET is required in production - no fallback allowed
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Validate JWT_SECRET is present in production
+if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required in production. Generate a secure random string (e.g., openssl rand -hex 32) and set it in your environment.');
+}
+
+// Fallback for development only
+const devJWTSecret = process.env.NODE_ENV === 'production' ? '' : 'dev-secret-do-not-use-in-production';
+const effectiveJWTSecret = JWT_SECRET || devJWTSecret;
+
 const SESSION_TTL_SECONDS = Number(process.env.VITE_AUTH_SESSION_TTL_MINUTES || 720) * 60;
 
 interface JWTPayload {
@@ -21,8 +33,8 @@ export const generateToken = (): { token: string; expiresAt: number } => {
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(expiresAt / 1000)
   };
-  
-  const token = jwt.sign(payload, JWT_SECRET);
+
+  const token = jwt.sign(payload, effectiveJWTSecret);
   return { token, expiresAt };
 };
 
@@ -45,7 +57,7 @@ export const verifyAuth = (req: VercelRequest): boolean => {
   if (!token) return false;
 
   try {
-    jwt.verify(token, JWT_SECRET);
+    jwt.verify(token, effectiveJWTSecret);
     return true;
   } catch {
     return false;

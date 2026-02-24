@@ -238,6 +238,17 @@ const App: React.FC = () => {
     e.target.value = '';
   }, [showInfo]);
 
+  // CSV Export with error handling
+  const handleExportCSV = useCallback(() => {
+    try {
+      exportToCSV(domains);
+      showSuccess('Domains exported successfully');
+    } catch (error) {
+      logger.error('CSV export failed', error);
+      showError('Failed to export domains. Please try again.');
+    }
+  }, [domains, showSuccess, showError]);
+
   // Notifications
   useEffect(() => {
     if (!settings.enableNotifications) return;
@@ -307,28 +318,37 @@ const App: React.FC = () => {
     return { total, alive, down, unknown, avgLatency, uptime };
   }, [domains]);
 
-  // Filter Counts
+  // Filter Counts - optimized single-pass computation
   const filterCounts = useMemo(() => {
     const statusCounts: Record<DomainStatus, number> = {
-      [DomainStatus.Alive]: domains.filter(d => d.status === DomainStatus.Alive).length,
-      [DomainStatus.Down]: domains.filter(d => d.status === DomainStatus.Down).length,
-      [DomainStatus.Unknown]: domains.filter(d => d.status === DomainStatus.Unknown).length,
-      [DomainStatus.Checking]: domains.filter(d => d.status === DomainStatus.Checking).length,
-      [DomainStatus.Error]: domains.filter(d => d.status === DomainStatus.Error).length,
+      [DomainStatus.Alive]: 0,
+      [DomainStatus.Down]: 0,
+      [DomainStatus.Unknown]: 0,
+      [DomainStatus.Checking]: 0,
+      [DomainStatus.Error]: 0,
     };
     
     const sslCounts: Record<SSLStatus, number> = {
-      [SSLStatus.Valid]: domains.filter(d => d.ssl?.status === SSLStatus.Valid).length,
-      [SSLStatus.Expiring]: domains.filter(d => d.ssl?.status === SSLStatus.Expiring).length,
-      [SSLStatus.Expired]: domains.filter(d => d.ssl?.status === SSLStatus.Expired).length,
-      [SSLStatus.Invalid]: domains.filter(d => d.ssl?.status === SSLStatus.Invalid).length,
-      [SSLStatus.Unknown]: domains.filter(d => !d.ssl || d.ssl.status === SSLStatus.Unknown).length,
+      [SSLStatus.Valid]: 0,
+      [SSLStatus.Expiring]: 0,
+      [SSLStatus.Expired]: 0,
+      [SSLStatus.Invalid]: 0,
+      [SSLStatus.Unknown]: 0,
     };
     
     const groupCounts = new Map<string, number>();
-    groups.forEach(g => {
-      groupCounts.set(g.id, domains.filter(d => d.groupId === g.id).length);
+    groups.forEach(g => groupCounts.set(g.id, 0));
+    
+    // Single pass through domains array
+    domains.forEach(d => {
+      statusCounts[d.status]++;
+      sslCounts[d.ssl?.status || SSLStatus.Unknown]++;
+      if (d.groupId) {
+        const current = groupCounts.get(d.groupId) || 0;
+        groupCounts.set(d.groupId, current + 1);
+      }
     });
+    
     groupCounts.set('ALL', domains.length);
     
     return { statusCounts, sslCounts, groupCounts };
@@ -499,7 +519,7 @@ const App: React.FC = () => {
               onRemoveSelected={removeSelectedDomains}
               onAssignGroup={assignSelectedToGroup}
               handleFileUpload={handleFileUpload}
-              onExportCSV={() => exportToCSV(domains)}
+              onExportCSV={handleExportCSV}
               domainCount={domains.length}
               filterCounts={filterCounts}
             />

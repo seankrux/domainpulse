@@ -8,6 +8,15 @@ interface FilterCounts {
   groupCounts: Map<string, number>;
 }
 
+// Type guards for filter values
+const isValidStatusFilter = (value: string): value is DomainStatus | 'ALL' => {
+  return ['ALL', DomainStatus.Alive, DomainStatus.Down, DomainStatus.Unknown, DomainStatus.Checking, DomainStatus.Error].includes(value as any);
+};
+
+const isValidSSLFilter = (value: string): value is SSLStatus | 'ALL' => {
+  return ['ALL', SSLStatus.Valid, SSLStatus.Expiring, SSLStatus.Expired, SSLStatus.Invalid, SSLStatus.Unknown].includes(value as any);
+};
+
 interface FilterBarProps {
   filter: string;
   setFilter: (val: string) => void;
@@ -147,7 +156,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <span className="text-sm text-slate-500 dark:text-slate-400">Status:</span>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as DomainStatus | 'ALL')}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (isValidStatusFilter(value)) {
+                setStatusFilter(value);
+              }
+            }}
             className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           >
             <option value="ALL">All ({domainCount})</option>
@@ -161,7 +175,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <span className="text-sm text-slate-500 dark:text-slate-400">SSL:</span>
           <select
             value={sslFilter}
-            onChange={(e) => setSslFilter(e.target.value as SSLStatus | 'ALL')}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (isValidSSLFilter(value)) {
+                setSslFilter(value);
+              }
+            }}
             className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           >
             <option value="ALL">All ({domainCount})</option>

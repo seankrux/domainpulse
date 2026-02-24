@@ -18,18 +18,23 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
     onEscape: onClose
   });
 
-  // Announce modal to screen readers
+  // Announce modal to screen readers - using stable live region container
   useEffect(() => {
-    const announcement = `Domain details dialog opened for ${domain.url}`;
-    const liveRegion = document.createElement('div');
-    liveRegion.setAttribute('role', 'status');
-    liveRegion.setAttribute('aria-live', 'polite');
-    liveRegion.setAttribute('class', 'sr-only');
-    liveRegion.textContent = announcement;
-    document.body.appendChild(liveRegion);
-    
+    let liveRegion = document.getElementById('domainpulse-aria-live-region');
+    if (!liveRegion) {
+      liveRegion = document.createElement('div');
+      liveRegion.id = 'domainpulse-aria-live-region';
+      liveRegion.setAttribute('role', 'status');
+      liveRegion.setAttribute('aria-live', 'polite');
+      liveRegion.setAttribute('class', 'sr-only');
+      document.body.appendChild(liveRegion);
+    }
+    liveRegion.textContent = `Domain details dialog opened for ${domain.url}`;
+
     return () => {
-      document.body.removeChild(liveRegion);
+      if (liveRegion) {
+        liveRegion.textContent = '';
+      }
     };
   }, [domain.url]);
 
@@ -430,7 +435,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             <a
               href={`https://whois.com/whois/${domain.url}`}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
               title="Check WHOIS registration information"
             >
@@ -440,7 +445,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             <a
               href={`https://dnslytics.com/domain/${domain.url}`}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5 dark:bg-slate-600 dark:hover:bg-slate-700"
               title="View DNS records and analysis"
             >
@@ -450,7 +455,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             <a
               href={`https://www.sslshopper.com/ssl-checker.html#hostname=${domain.url}`}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
               title="Verify SSL certificate installation"
             >
@@ -460,7 +465,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             <a
               href={`https://transparencyreport.google.com/safe-browsing/search?url=${domain.url}`}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
               title="Check Google Safe Browsing status"
             >
@@ -470,7 +475,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             <a
               href={`https://site-explorer.com/?q=${domain.url}`}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
               title="View site explorer and backlinks"
             >

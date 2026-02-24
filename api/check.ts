@@ -26,9 +26,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  // Rate limiting
+  // Rate limiting (async for Vercel KV support)
   const ip = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
-  if (!checkRateLimit(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs })) {
+  const isRateLimited = await checkRateLimit(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs });
+  if (!isRateLimited) {
     setHeaders(corsHeaders);
     return res.status(429).json({
       error: 'Rate limit exceeded',
@@ -37,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Add rate limit headers to successful responses
-  const rateLimitHeaders = getRateLimitHeaders(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs });
+  const rateLimitHeaders = await getRateLimitHeaders(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs });
   setHeaders(rateLimitHeaders);
 
   // Verify authentication

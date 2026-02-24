@@ -101,7 +101,7 @@ export const detectTechStack = async (url: string, config?: ServiceConfig): Prom
   let token = config?.authToken;
 
   if (!token && typeof localStorage !== 'undefined') {
-    const storedSession = localStorage.getItem('domainpulse_auth_session');
+    const storedSession = sessionStorage.getItem('domainpulse_auth_session');
     if (storedSession) {
       try {
         const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };

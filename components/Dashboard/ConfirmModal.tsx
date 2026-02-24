@@ -30,17 +30,16 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      const announcement = `${title}. ${message}`;
-      const liveRegion = document.createElement('div');
-      liveRegion.setAttribute('role', 'alert');
-      liveRegion.setAttribute('aria-live', 'assertive');
-      liveRegion.setAttribute('class', 'sr-only');
-      liveRegion.textContent = announcement;
-      document.body.appendChild(liveRegion);
-
-      return () => {
-        document.body.removeChild(liveRegion);
-      };
+      let liveRegion = document.getElementById('domainpulse-aria-live-region');
+      if (!liveRegion) {
+        liveRegion = document.createElement('div');
+        liveRegion.id = 'domainpulse-aria-live-region';
+        liveRegion.setAttribute('role', 'alert');
+        liveRegion.setAttribute('aria-live', 'assertive');
+        liveRegion.setAttribute('class', 'sr-only');
+        document.body.appendChild(liveRegion);
+      }
+      liveRegion.textContent = `${title}. ${message}`;
     }
   }, [isOpen, title, message]);
 
