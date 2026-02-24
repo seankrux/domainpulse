@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import * as https from 'https';
 import * as tls from 'tls';
+import { getCorsHeaders, verifyAuth } from './_utils/auth';
 
 interface SSLResult {
   valid: boolean;
@@ -15,14 +16,6 @@ interface SSLResult {
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT = 100; // requests per minute
 const RATE_WINDOW = 60 * 1000; // 1 minute
-
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json',
-};
 
 // Rate limiting middleware
 const checkRateLimit = (ip: string): boolean => {
@@ -44,17 +37,31 @@ const checkRateLimit = (ip: string): boolean => {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Helper to set multiple headers since res.set is not available on VercelResponse
+  const setHeaders = (headers: Record<string, string>) => {
+    Object.entries(headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+  };
+
+  const origin = req.headers.origin;
+  const corsHeaders = getCorsHeaders(origin);
+  
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    setHeaders(corsHeaders);
     return res.status(200).end();
   }
 
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Verify authentication
+  if (!verifyAuth(req)) {
+    setHeaders(corsHeaders);
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   // Rate limiting
@@ -74,11 +81,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const sslInfo = await getSSLCertificate(domain);
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    setHeaders(corsHeaders);
     res.status(200).json(sslInfo);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    setHeaders(corsHeaders);
     res.status(200).json({
       valid: false,
       error: errorMessage
@@ -90,7 +97,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  * Get SSL certificate information for a domain.
  */
 function getSSLCertificate(domain: string): Promise<SSLResult> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const options = {
       hostname: domain,
       port: 443,
@@ -122,7 +129,7 @@ function getSSLCertificate(domain: string): Promise<SSLResult> {
       const issuer = cert.issuer?.CN || cert.issuer?.O || 'Unknown';
 
       resolve({
-        valid: cert.valid && daysUntilExpiry > 0,
+        valid: daysUntilExpiry > 0,
         issuer,
         validFrom: validFrom.toISOString(),
         validTo: validTo.toISOString(),

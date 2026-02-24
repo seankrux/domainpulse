@@ -38,3 +38,6 @@ build/
 
 # Qwen
 .qwen-clipboard/
+
+.qwen/
+gha-creds-*.json

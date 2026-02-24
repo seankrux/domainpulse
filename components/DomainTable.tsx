@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Domain, DomainStatus, SSLStatus, DomainGroup } from '../types';
-import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, MoreHorizontal, Search, History, Shield, Tag, Calendar } from 'lucide-react';
+import { Domain, DomainStatus, SSLStatus, DomainGroup, SSLInfo, DomainExpiry } from '../types';
+import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, Search, History, Shield, Calendar, LayoutDashboard, Plus } from 'lucide-react';
 import { getSSLStatusColor, getSSLStatusLabel } from '../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../services/expiryService';
 
@@ -17,6 +17,7 @@ interface DomainTableProps {
   onEditTags?: (id: string, tags: string[]) => void;
   onEditGroup?: (id: string, groupId?: string) => void;
   onViewHistory?: (domain: Domain) => void;
+  onViewDetails?: (domain: Domain) => void;
 }
 
 const Skeleton = ({ className = "w-16" }: { className?: string }) => (
@@ -24,10 +25,10 @@ const Skeleton = ({ className = "w-16" }: { className?: string }) => (
 );
 
 const Favicon = ({ url }: { url: string }) => {
-  const [error, setError] = useState(false);
+  const [status, setStatus] = useState<'loading' | 'error' | 'success'>('loading');
   const faviconUrl = `https://www.google.com/s2/favicons?domain=${url}&sz=128`;
 
-  if (error) {
+  if (status === 'error') {
     return (
       <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs border border-indigo-100 dark:border-indigo-800 flex-shrink-0">
         {url.charAt(0).toUpperCase()}
@@ -36,22 +37,28 @@ const Favicon = ({ url }: { url: string }) => {
   }
 
   return (
-    <img
-      src={faviconUrl}
-      alt=""
-      className="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 object-contain p-0.5 flex-shrink-0"
-      onError={() => setError(true)}
-    />
+    <div className="relative w-8 h-8 flex-shrink-0">
+      {status === 'loading' && (
+        <div className="absolute inset-0 rounded-full bg-slate-100 dark:bg-slate-700 animate-pulse" />
+      )}
+      <img
+        src={faviconUrl}
+        alt=""
+        className={`w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 object-contain p-0.5 transition-opacity duration-300 ${status === 'success' ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setStatus('success')}
+        onError={() => setStatus('error')}
+      />
+    </div>
   );
 };
 
 const StatusBadge: React.FC<{ status: DomainStatus; statusCode?: number }> = ({ status, statusCode }) => {
   const configs = {
-    [DomainStatus.Alive]: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-500' },
-    [DomainStatus.Down]: { bg: 'bg-rose-100 dark:bg-rose-900/30', text: 'text-rose-700 dark:text-rose-300', dot: 'bg-rose-500' },
-    [DomainStatus.Checking]: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-700 dark:text-indigo-300', dot: 'bg-indigo-500' },
-    [DomainStatus.Unknown]: { bg: 'bg-slate-100 dark:bg-slate-700', text: 'text-slate-600 dark:text-slate-400', dot: 'bg-slate-400' },
-    [DomainStatus.Error]: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
+    [DomainStatus.Alive]: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500', border: 'border-emerald-100 dark:border-emerald-800/50' },
+    [DomainStatus.Down]: { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-700 dark:text-rose-400', dot: 'bg-rose-500', border: 'border-rose-100 dark:border-rose-800/50' },
+    [DomainStatus.Checking]: { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-700 dark:text-indigo-400', dot: 'bg-indigo-500', border: 'border-indigo-100 dark:border-indigo-800/50' },
+    [DomainStatus.Unknown]: { bg: 'bg-slate-50 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400', dot: 'bg-slate-400', border: 'border-slate-200 dark:border-slate-700' },
+    [DomainStatus.Error]: { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500', border: 'border-amber-100 dark:border-amber-800/50' },
   };
 
   const config = configs[status];
@@ -64,16 +71,20 @@ const StatusBadge: React.FC<{ status: DomainStatus; statusCode?: number }> = ({ 
   }
 
   return (
-    <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-semibold ${config.bg} ${config.text} bg-opacity-50 border border-transparent whitespace-nowrap`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${config.dot} ${status === DomainStatus.Checking ? 'animate-pulse' : ''}`} />
+    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold ${config.bg} ${config.text} border ${config.border} shadow-sm transition-all hover:shadow-md whitespace-nowrap`}>
+      <span className={`w-2 h-2 rounded-full ${config.dot} ${status === DomainStatus.Checking ? 'animate-pulse' : ''} shadow-glow`} />
       {displayText}
     </span>
   );
 };
 
-const SSLBadge: React.FC<{ ssl: any }> = ({ ssl }) => {
+const SSLBadge: React.FC<{ ssl?: SSLInfo, onClick?: () => void }> = ({ ssl, onClick }) => {
   if (!ssl || ssl.status === SSLStatus.Unknown) {
-    return <span className="text-slate-400 dark:text-slate-500 text-xs">-</span>;
+    return (
+      <button onClick={onClick} className="text-slate-300 dark:text-slate-700 text-[10px] font-bold uppercase tracking-widest pl-2 hover:text-indigo-500 transition-colors">
+        -
+      </button>
+    );
   }
 
   const colorClass = getSSLStatusColor(ssl.status);
@@ -87,10 +98,14 @@ const SSLBadge: React.FC<{ ssl: any }> = ({ ssl }) => {
   }
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${colorClass}`} title={ssl.issuer || label}>
-      <Shield size={10} />
+    <button 
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border shadow-sm transition-all hover:shadow-md hover:scale-105 ${colorClass}`} 
+      title={ssl.issuer || label}
+    >
+      <Shield size={10} strokeWidth={2.5} />
       {displayLabel}
-    </span>
+    </button>
   );
 };
 
@@ -99,34 +114,22 @@ const GroupBadge: React.FC<{ group?: DomainGroup }> = ({ group }) => {
   
   return (
     <span 
-      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-      style={{ backgroundColor: `${group.color}20`, color: group.color }}
+      className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight shadow-sm"
+      style={{ backgroundColor: `${group.color}20`, color: group.color, border: `1px solid ${group.color}30` }}
     >
       {group.name}
     </span>
   );
 };
 
-const TagBadges: React.FC<{ tags: string[] }> = ({ tags }) => {
-  if (!tags || tags.length === 0) return null;
-  
-  return (
-    <div className="flex items-center gap-1 flex-wrap">
-      {tags.slice(0, 3).map((tag, i) => (
-        <span key={i} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-          <Tag size={8} />
-          {tag}
-        </span>
-      ))}
-      {tags.length > 3 && (
-        <span className="text-xs text-slate-400">+{tags.length - 3}</span>
-      )}
-    </div>
-  );
-};
-
-const ExpiryBadge: React.FC<{ expiry?: any }> = ({ expiry }) => {
-  if (!expiry) return null;
+const ExpiryBadge: React.FC<{ expiry?: DomainExpiry, onClick?: () => void }> = ({ expiry, onClick }) => {
+  if (!expiry || expiry.status === 'unknown') {
+    return (
+      <button onClick={onClick} className="text-slate-300 dark:text-slate-700 text-[10px] font-bold uppercase tracking-widest pl-2 hover:text-indigo-500 transition-colors">
+        -
+      </button>
+    );
+  }
   
   const colorClass = getExpiryStatusColor(expiry.status);
   const label = getExpiryStatusLabel(expiry.status);
@@ -139,10 +142,14 @@ const ExpiryBadge: React.FC<{ expiry?: any }> = ({ expiry }) => {
   }
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${colorClass}`} title={expiry.registrar || label}>
-      <Calendar size={10} />
+    <button 
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border shadow-sm transition-all hover:shadow-md hover:scale-105 ${colorClass}`} 
+      title={expiry.registrar || label}
+    >
+      <Calendar size={10} strokeWidth={2.5} />
       {displayLabel}
-    </span>
+    </button>
   );
 };
 
@@ -185,10 +192,16 @@ export const DomainTable: React.FC<DomainTableProps> = ({
     onRemove,
     onUpdate,
     onCheck,
-    onViewHistory
+    onEditTags,
+    onEditGroup,
+    onViewHistory,
+    onViewDetails
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTagsId, setEditingTagsId] = useState<string | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [newTag, setNewTag] = useState('');
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (domain: Domain) => {
@@ -206,6 +219,19 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   const cancelEdit = () => {
     setEditingId(null);
     setEditValue('');
+  };
+
+  const addTag = (id: string, currentTags: string[]) => {
+    if (!newTag.trim() || !onEditTags) return;
+    if (!currentTags.includes(newTag.trim())) {
+      onEditTags(id, [...currentTags, newTag.trim()]);
+    }
+    setNewTag('');
+  };
+
+  const removeTag = (id: string, currentTags: string[], tag: string) => {
+    if (!onEditTags) return;
+    onEditTags(id, currentTags.filter(t => t !== tag));
   };
 
   const allSelected = domains.length > 0 && domains.every(d => selectedIds.has(d.id));
@@ -232,12 +258,25 @@ export const DomainTable: React.FC<DomainTableProps> = ({
     }
 
     return (
-      <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center">
-        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
-            <MoreHorizontal className="text-slate-300" />
+      <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/20 to-transparent dark:from-indigo-900/10 pointer-events-none" />
+        <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-6 text-indigo-500 transform group-hover:scale-110 transition-transform duration-500 shadow-glow">
+            <LayoutDashboard size={32} />
         </div>
-        <h3 className="text-slate-900 dark:text-white font-semibold text-lg">No domains monitored</h3>
-        <p className="text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">Start by adding a domain manually or import a CSV file to bulk check status.</p>
+        <h3 className="text-slate-900 dark:text-white font-display font-bold text-xl mb-2">Ready to monitor your domains?</h3>
+        <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto text-sm mb-8 leading-relaxed">
+            Track uptime, latency, SSL status, and domain expiry in one powerful dashboard. Start by adding your first domain above.
+        </p>
+        <div className="flex items-center gap-4">
+            <div className="flex -space-x-2">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className={`w-8 h-8 rounded-full border-2 border-white dark:border-slate-800 bg-slate-${100 + i*100} dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold`}>
+                        {['G', 'A', 'M'][i-1]}
+                    </div>
+                ))}
+            </div>
+            <p className="text-xs text-slate-400 font-medium">Trusted by teams worldwide</p>
+        </div>
       </div>
     );
   }
@@ -275,7 +314,8 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               return (
                 <tr
                   key={domain.id}
-                  className={`group transition-all duration-200 ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/50'}`}
+                  id={`domain-${domain.id}`}
+                  className={`group transition-all duration-300 ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/50'}`}
                 >
                   <td className="p-4 text-center align-middle">
                      <input
@@ -307,7 +347,13 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                         <Favicon url={domain.url} />
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
-                                <span className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px]">{domain.url}</span>
+                                <span 
+                                  onClick={() => onViewDetails?.(domain)}
+                                  data-testid={`domain-link-${domain.url}`}
+                                  className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] cursor-pointer hover:text-indigo-600 transition-colors"
+                                >
+                                  {domain.url}
+                                </span>
                                 <a
                                 href={`https://${domain.url}`}
                                 target="_blank"
@@ -317,9 +363,94 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                 <ExternalLink size={12} />
                                 </a>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <GroupBadge group={groups?.find(g => g.id === domain.groupId)} />
-                              <TagBadges tags={domain.tags || []} />
+                            <div className="flex items-center gap-2 relative">
+                              <button 
+                                onClick={() => setEditingGroupId(domain.id)}
+                                className="group/badge"
+                                title="Change Group"
+                              >
+                                {domain.groupId ? (
+                                  <GroupBadge group={groups?.find(g => g.id === domain.groupId)} />
+                                ) : (
+                                  <span className="text-[10px] uppercase font-bold text-slate-300 dark:text-slate-600 border border-dashed border-slate-200 dark:border-slate-700 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Group</span>
+                                )}
+                              </button>
+                              
+                              {editingGroupId === domain.id && (
+                                <div className="absolute top-full left-0 mt-1 z-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 min-w-[160px] animate-in fade-in zoom-in-95 origin-top-left">
+                                  <div className="flex items-center justify-between mb-2 px-2">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Group</span>
+                                    <button onClick={() => setEditingGroupId(null)}><X size={12} className="text-slate-400 hover:text-slate-600" /></button>
+                                  </div>
+                                  <button 
+                                    onClick={() => {
+                                      onEditGroup?.(domain.id, undefined);
+                                      setEditingGroupId(null);
+                                    }}
+                                    className="w-full text-left px-2 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+                                  >
+                                    No Group
+                                  </button>
+                                  {groups.map(group => (
+                                    <button
+                                      key={group.id}
+                                      onClick={() => {
+                                        onEditGroup?.(domain.id, group.id);
+                                        setEditingGroupId(null);
+                                      }}
+                                      className="w-full text-left px-2 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors flex items-center gap-2"
+                                    >
+                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: group.color }}></div>
+                                      {group.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-1 flex-wrap relative">
+                                {domain.tags?.map((tag, i) => (
+                                  <span 
+                                    key={i} 
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 group/tag hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
+                                    onClick={() => removeTag(domain.id, domain.tags, tag)}
+                                    title="Click to remove"
+                                  >
+                                    {tag}
+                                    <X size={8} className="opacity-0 group-hover/tag:opacity-100" />
+                                  </span>
+                                ))}
+                                <button 
+                                  onClick={() => setEditingTagsId(domain.id)}
+                                  className="text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                                  title="Add Tag"
+                                >
+                                  <Plus size={10} />
+                                </button>
+
+                                {editingTagsId === domain.id && (
+                                  <div className="absolute top-full left-0 mt-1 z-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 min-w-[140px] animate-in fade-in zoom-in-95 origin-top-left flex gap-1">
+                                    <input
+                                      autoFocus
+                                      type="text"
+                                      placeholder="New tag..."
+                                      value={newTag}
+                                      onChange={(e) => setNewTag(e.target.value)}
+                                      className="bg-transparent border-none outline-none text-xs w-full text-slate-900 dark:text-white"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          addTag(domain.id, domain.tags);
+                                          setEditingTagsId(null);
+                                        }
+                                        if (e.key === 'Escape') setEditingTagsId(null);
+                                      }}
+                                    />
+                                    <button onClick={() => {
+                                      addTag(domain.id, domain.tags);
+                                      setEditingTagsId(null);
+                                    }} className="text-indigo-600"><Check size={14} /></button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                         </div>
                       </div>
@@ -329,10 +460,10 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                     <StatusBadge status={domain.status} statusCode={domain.statusCode} />
                   </td>
                   <td className="p-4 align-middle">
-                    <SSLBadge ssl={domain.ssl} />
+                    <SSLBadge ssl={domain.ssl} onClick={() => onViewDetails?.(domain)} />
                   </td>
                   <td className="p-4 align-middle">
-                    <ExpiryBadge expiry={domain.expiry} />
+                    <ExpiryBadge expiry={domain.expiry} onClick={() => onViewDetails?.(domain)} />
                   </td>
                   <td className="p-4 align-middle text-sm text-slate-600 dark:text-slate-300 font-mono">
                     {isChecking ? (

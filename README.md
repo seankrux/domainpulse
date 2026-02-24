@@ -325,6 +325,32 @@ localStorage.clear(); location.reload()
 
 ---
 
+## 🏗 Architecture
+
+### Background Monitoring (Web Workers)
+To ensure the UI remains responsive while checking hundreds of domains, all status check logic is offloaded to a **Web Worker** (`services/monitoring.worker.ts`). This prevents the main thread from blocking during heavy network batching.
+
+### Vite Proxy
+The dashboard communicates with the backend via a Vite proxy configured in `vite.config.ts`. This allows the frontend to call `/api/*` endpoints without CORS or bundling issues.
+
+## 🧪 Testing
+
+### GUI & End-to-End Tests
+We use Playwright for comprehensive GUI testing. The tests automatically start the development environment.
+
+```bash
+# Install test browsers
+npx playwright install chromium
+
+# Run tests
+npm run test:gui
+
+# View test report
+npm run test:gui:report
+```
+
+---
+
 <div align="center">
   <p>Made with 💛 by BigSean</p>
 </div>

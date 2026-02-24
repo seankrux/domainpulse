@@ -1,5 +1,5 @@
 import { Domain, DomainStatus } from '../types';
-import { normalizeUrl } from '../services/domainService';
+import { validateAndNormalizeUrl } from '../services/domainService';
 
 /**
  * Parses a CSV line handling quoted fields that may contain commas.
@@ -49,11 +49,14 @@ export const parseCSV = (content: string): Partial<Domain>[] => {
       continue;
     }
 
-    domains.push({
-      url: normalizeUrl(rawUrl),
-      status: DomainStatus.Unknown,
-      addedAt: new Date(),
-    });
+    const validation = validateAndNormalizeUrl(rawUrl);
+    if (validation.valid && validation.url) {
+      domains.push({
+        url: validation.url,
+        status: DomainStatus.Unknown,
+        addedAt: new Date(),
+      });
+    }
   }
 
   return domains;

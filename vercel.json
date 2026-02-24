@@ -6,7 +6,11 @@
   "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
+    { "source": "/api/login", "destination": "/api/login.ts" },
     { "source": "/api/check", "destination": "/api/check.ts" },
+    { "source": "/api/ssl", "destination": "/api/ssl.ts" },
+    { "source": "/api/whois", "destination": "/api/whois.ts" },
+    { "source": "/api/dns", "destination": "/api/dns.ts" },
     { "source": "/content/:path*", "destination": "/content/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],

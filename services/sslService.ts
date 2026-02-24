@@ -1,74 +1,95 @@
-import { SSLStatus, SSLInfo } from '../types';
+import { SSLStatus, SSLInfo, ServiceConfig } from '../types';
+import { logger } from '../utils/logger';
+import { config } from '../lib/config';
+
+interface SslApiResponse {
+  valid: boolean;
+  issuer?: string;
+  validFrom?: string;
+  validTo?: string;
+  daysUntilExpiry?: number;
+  error?: string;
+}
+
+const DEFAULT_PROXY_URL = config.proxy.defaultUrl;
+const AUTH_SESSION_KEY = 'domainpulse_auth_session';
+
+const getStoredToken = (): string | null => {
+  try {
+    const storedSession = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!storedSession) return null;
+    const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
+    if (!parsed?.token || !parsed.expiresAt || parsed.expiresAt <= Date.now()) return null;
+    return parsed.token;
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Check SSL certificate information for a domain.
  * Uses a public SSL checker API or falls back to basic HTTPS check.
  */
-export const checkSSL = async (url: string): Promise<SSLInfo> => {
+export const checkSSL = async (url: string, config?: ServiceConfig): Promise<SSLInfo> => {
   const domain = extractDomain(url);
   
   if (!domain) {
     return { status: SSLStatus.Invalid };
   }
 
+  // Determine proxy URL and token
+  const proxyUrl = config?.proxyUrl || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_URL) || DEFAULT_PROXY_URL;
+  let token = config?.authToken;
+  
+  if (!token && typeof localStorage !== 'undefined') {
+    token = getStoredToken() || undefined;
+  }
+
   try {
     // Try to get SSL info via our API proxy
-    const response = await fetch(`/api/ssl?domain=${encodeURIComponent(domain)}`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' }
-    });
+    // Try Vercel endpoint first, then proxy
+    const endpoints = [
+      `/api/ssl?domain=${encodeURIComponent(domain)}`,
+      `${proxyUrl}/api/ssl?domain=${encodeURIComponent(domain)}`
+    ];
 
-    if (response.ok) {
-      const data = await response.json();
-      return parseSSLResponse(data);
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers: { 
+            'Accept': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
+        });
+
+        if (response.status === 401) {
+          throw new Error('Unauthorized');
+        }
+
+        if (response.ok) {
+          const data: SslApiResponse = await response.json();
+          return parseSSLResponse(data);
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message === 'Unauthorized') {
+          throw e;
+        }
+        continue;
+      }
     }
   } catch (error) {
-    console.warn('SSL API unavailable, using basic check:', error);
+    logger.warn(`SSL API unavailable for ${domain}, using basic check:`, error);
   }
 
-  // Fallback: Basic HTTPS check
-  return basicSSLCheck(url);
-};
-
-/**
- * Basic SSL check - just verifies if HTTPS is available.
- * This is a fallback when the SSL API is unavailable.
- */
-const basicSSLCheck = async (url: string): Promise<SSLInfo> => {
-  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
-  
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch(targetUrl, {
-      method: 'HEAD',
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-
-    if (targetUrl.startsWith('https://')) {
-      // Assume valid SSL if HTTPS works
-      return {
-        status: SSLStatus.Valid,
-        issuer: 'Unknown (Basic Check)',
-        validFrom: new Date(),
-        validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Assume 1 year
-        daysUntilExpiry: 365
-      };
-    }
-
-    return { status: SSLStatus.Invalid };
-  } catch (error) {
-    return { status: SSLStatus.Unknown };
-  }
+  // Fallback: Return unknown instead of attempting a direct fetch (which causes CORS errors)
+  return { status: SSLStatus.Unknown };
 };
 
 /**
  * Parse SSL response from API.
  */
-const parseSSLResponse = (data: any): SSLInfo => {
+const parseSSLResponse = (data: SslApiResponse): SSLInfo => {
   // Add validation
   if (!data || typeof data !== 'object') {
     return { status: SSLStatus.Unknown };
@@ -101,18 +122,15 @@ const parseSSLResponse = (data: any): SSLInfo => {
   };
 };
 
-/**
- * Extract domain from URL.
- */
 const extractDomain = (url: string): string | null => {
   let domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  domain = domain.split(':')[0]; // Remove port
+  domain = domain.split(':')[0] || ''; // Remove port, ensure string
   
-  if (!domain || domain.includes('.')) {
-    return domain;
+  if (!domain || !domain.includes('.')) {
+    return null;
   }
   
-  return null;
+  return domain;
 };
 
 /**

@@ -1,4 +1,4 @@
-import { Domain, DomainStatus, StatusRecord, SSLInfo, DomainExpiry, DomainGroup } from '../types';
+import { Domain, DomainStatus, DomainGroup, WebhookConfig } from '../types';
 import { SAMPLE_DOMAINS, SAMPLE_GROUPS } from '../data/seed';
 
 const STORAGE_KEY = 'domainpulse_domains';
@@ -40,15 +40,6 @@ interface StoredDomainExpiry {
   registrar?: string;
   daysUntilExpiry?: number;
   status: 'active' | 'expiring' | 'expired' | 'unknown';
-}
-
-interface StoredSettings {
-  autoRefresh: boolean;
-  refreshInterval: number;
-  darkMode: boolean;
-  maxHistoryRecords: number;
-  enableNotifications: boolean;
-  playSound: boolean;
 }
 
 interface StoredGroup {
@@ -115,10 +106,29 @@ export const loadDomains = (): Domain[] => {
 
 export const saveDomains = (domains: Domain[]): void => {
   try {
-    const stored = domains.map(toStored);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+    let stored = domains.map(toStored);
+    let serialized = JSON.stringify(stored);
+
+    // Protection against LocalStorage QuotaExceededError (typically 5MB)
+    if (serialized.length > 4 * 1024 * 1024) {
+      console.warn('LocalStorage limit approaching, trimming history records...');
+      stored = stored.map(d => ({
+        ...d,
+        history: d.history.slice(-20)
+      }));
+      serialized = JSON.stringify(stored);
+    }
+
+    localStorage.setItem(STORAGE_KEY, serialized);
   } catch (error) {
-    console.error('Failed to save domains to localStorage:', error);
+    if (error instanceof Error && error.name === 'QuotaExceededError') {
+      console.error('LocalStorage quota exceeded! Clearing old history...');
+      const domains = loadDomains();
+      const trimmed = domains.map(d => ({ ...d, history: d.history.slice(-5) }));
+      saveDomains(trimmed);
+    } else {
+      console.error('Failed to save domains to localStorage:', error);
+    }
   }
 };
 
@@ -135,7 +145,6 @@ export const loadGroups = (): DomainGroup[] => {
   try {
     const stored = localStorage.getItem(GROUPS_KEY);
     if (!stored) {
-      // First time user - seed with sample groups
       saveGroups(SAMPLE_GROUPS);
       return SAMPLE_GROUPS;
     }
@@ -164,7 +173,6 @@ export const addGroup = (group: DomainGroup): void => {
 export const removeGroup = (groupId: string): void => {
   const groups = loadGroups().filter(g => g.id !== groupId);
   saveGroups(groups);
-  // Remove groupId from domains
   const domains = loadDomains().map(d => 
     d.groupId === groupId ? { ...d, groupId: undefined } : d
   );
@@ -183,14 +191,10 @@ export const loadSettings = (): AppSettings => {
   try {
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (!stored) return defaultSettings;
-    const parsed: StoredSettings = JSON.parse(stored);
+    const parsed = JSON.parse(stored);
     return {
-      autoRefresh: parsed.autoRefresh ?? false,
-      refreshInterval: parsed.refreshInterval ?? 300000,
-      darkMode: parsed.darkMode ?? false,
-      maxHistoryRecords: parsed.maxHistoryRecords ?? 100,
-      enableNotifications: parsed.enableNotifications ?? false,
-      playSound: parsed.playSound ?? false
+      ...defaultSettings,
+      ...parsed
     };
   } catch (error) {
     console.error('Failed to load settings:', error);
@@ -200,15 +204,7 @@ export const loadSettings = (): AppSettings => {
 
 export const saveSettings = (settings: AppSettings): void => {
   try {
-    const stored: StoredSettings = {
-      autoRefresh: settings.autoRefresh,
-      refreshInterval: settings.refreshInterval,
-      darkMode: settings.darkMode,
-      maxHistoryRecords: settings.maxHistoryRecords,
-      enableNotifications: settings.enableNotifications,
-      playSound: settings.playSound
-    };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(stored));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   } catch (error) {
     console.error('Failed to save settings:', error);
   }
@@ -221,6 +217,10 @@ export interface AppSettings {
   maxHistoryRecords: number;
   enableNotifications: boolean;
   playSound: boolean;
+  webhooks: WebhookConfig[];
+  customUserAgent: string;
+  latencyThreshold: number;
+  checkTimeout: number;
 }
 
 export const defaultSettings: AppSettings = {
@@ -229,5 +229,9 @@ export const defaultSettings: AppSettings = {
   darkMode: false,
   maxHistoryRecords: 100,
   enableNotifications: false,
-  playSound: false
+  playSound: false,
+  webhooks: [],
+  customUserAgent: 'DomainPulse/1.0',
+  latencyThreshold: 1000,
+  checkTimeout: 15000
 };

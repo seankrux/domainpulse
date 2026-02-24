@@ -1,3 +1,5 @@
+import { marked } from 'marked';
+
 /**
  * Simple content loader for file-based CMS
  * Reads markdown/JSON content files and returns structured data
@@ -48,8 +50,8 @@ export async function loadPages(): Promise<ContentPage[]> {
           fetch('/content/pages/about.md').then(r => r.ok ? r.text() : null)
         ]);
 
-        if (homeRes) pages[0].content = parseMarkdownContent(homeRes, pages[0].title);
-        if (aboutRes) pages[1].content = parseMarkdownContent(aboutRes, pages[1].title);
+        if (homeRes) pages[0].content = parseMarkdownContent(homeRes);
+        if (aboutRes) pages[1].content = parseMarkdownContent(aboutRes);
       } catch {
         // Fallback to defaults if files not found
       }
@@ -156,31 +158,16 @@ function parseMarkdownPost(content: string, slug: string): BlogPost {
 /**
  * Parse simple markdown content (title + body)
  */
-function parseMarkdownContent(content: string, defaultTitle: string): string {
+function parseMarkdownContent(content: string): string {
   // Simple parsing - just return the content
   // Can be extended with a markdown library if needed
   return content;
 }
 
 /**
- * Convert markdown to simple HTML (basic implementation)
+ * Convert markdown to HTML using 'marked' library
  */
 export function markdownToHtml(markdown: string): string {
-  return markdown
-    // Headers
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    // Bold
-    .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.*)\*/gim, '<em>$1</em>')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    // Line breaks
-    .replace(/\n$/gim, '<br />')
-    // Code blocks
-    .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
-    // Inline code
-    .replace(/`([^`]+)`/gim, '<code>$1</code>');
+  if (!markdown) return '';
+  return marked.parse(markdown) as string;
 }

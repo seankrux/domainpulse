@@ -36,6 +36,15 @@ export interface StatusRecord {
   latency: number;
 }
 
+export interface DNSInfo {
+  a?: string[];
+  mx?: { exchange: string; priority: number }[];
+  ns?: string[];
+  txt?: string[][];
+  cname?: string[];
+  error?: string;
+}
+
 export interface Domain {
   id: string;
   url: string;
@@ -47,6 +56,7 @@ export interface Domain {
   history: StatusRecord[];
   ssl?: SSLInfo;
   expiry?: DomainExpiry;
+  dns?: DNSInfo;
   groupId?: string;
   tags: string[];
 }
@@ -69,10 +79,64 @@ export interface DomainStats {
 export type SortField = 'url' | 'status' | 'latency' | 'lastChecked' | 'ssl' | 'expiry';
 export type SortOrder = 'asc' | 'desc';
 
-// Authentication types
-export interface AuthState {
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (password: string) => Promise<boolean>;
-  logout: () => void;
+export interface WebhookConfig {
+
+  id: string;
+
+  name: string;
+
+  url: string;
+
+  type: 'slack' | 'discord';
+
+  enabled: boolean;
+
 }
+
+
+
+// Authentication types
+
+export interface AuthState {
+
+  isAuthenticated: boolean;
+
+  isLoading: boolean;
+
+  login: (password: string) => Promise<boolean>;
+
+  logout: () => void;
+
+}
+
+
+
+// Service configuration for API calls (especially for workers)
+
+
+
+export interface ServiceConfig {
+
+
+
+  proxyUrl?: string;
+
+
+
+  authToken?: string;
+
+
+
+  userAgent?: string;
+
+
+
+  timeout?: number;
+
+
+
+}
+
+
+
+

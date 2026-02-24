@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Domain, DomainStatus, StatusRecord } from '../types';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { Domain, DomainStatus } from '../types';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { TrendingUp, Activity, Clock } from 'lucide-react';
 
 interface HistoryChartProps {
@@ -15,7 +15,7 @@ interface ChartDataPoint {
   statusCode?: number;
 }
 
-export const HistoryChart: React.FC<HistoryChartProps> = ({ domain, onClose }) => {
+export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
   const chartData = useMemo(() => {
     return domain.history.map((record): ChartDataPoint => ({
       time: record.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -29,12 +29,12 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain, onClose }) =
     if (domain.history.length === 0) return null;
 
     const latencies = domain.history.filter(h => h.latency > 0).map(h => h.latency);
-    const avgLatency = latencies.length > 0 
-      ? latencies.reduce((a, b) => a + b, 0) / latencies.length 
+    const avgLatency = latencies.length > 0
+      ? latencies.reduce((a, b) => a + b, 0) / latencies.length
       : 0;
     const minLatency = latencies.length > 0 ? Math.min(...latencies) : 0;
     const maxLatency = latencies.length > 0 ? Math.max(...latencies) : 0;
-    
+
     const uptime = domain.history.filter(h => h.status === DomainStatus.Alive).length / domain.history.length * 100;
 
     return {
@@ -100,7 +100,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain, onClose }) =
       <div>
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Response Time (ms)</h3>
         <div className="h-64 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={200} debounce={100}>
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="latencyGradient" x1="0" y1="0" x2="0" y2="1">
@@ -109,12 +109,12 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain, onClose }) =
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} />
-              <XAxis 
-                dataKey="time" 
+              <XAxis
+                dataKey="time"
                 tick={{ fontSize: 12, fill: '#64748b' }}
                 axisLine={{ stroke: '#e2e8f0' }}
               />
-              <YAxis 
+              <YAxis
                 tick={{ fontSize: 12, fill: '#64748b' }}
                 axisLine={{ stroke: '#e2e8f0' }}
                 label={{ value: 'ms', angle: -90, position: 'insideLeft', fill: '#64748b' }}
@@ -135,6 +135,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain, onClose }) =
                 strokeWidth={2}
                 fill="url(#latencyGradient)"
                 name="Latency"
+                isAnimationActive={false}
               />
             </AreaChart>
           </ResponsiveContainer>
