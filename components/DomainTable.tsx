@@ -282,29 +282,30 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden" role="region" aria-label="Domains table">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
+        <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0" role="grid" aria-rowcount={domains.length + 1}>
           <thead>
-            <tr className="bg-slate-50/50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-semibold">
-              <th className="p-4 w-12 text-center">
+            <tr className="bg-slate-50/50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-semibold" role="row">
+              <th className="p-4 w-12 text-center" role="columnheader" aria-label="Select">
                 <input
                     ref={headerCheckboxRef}
                     type="checkbox"
                     className="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer transition-all"
                     checked={allSelected}
                     onChange={onToggleAll}
+                    aria-label="Select all domains"
                 />
               </th>
-              <th className="p-4 pl-2">Domain</th>
-              <th className="p-4">Status</th>
-              <th className="p-4">SSL</th>
-              <th className="p-4">Expiry</th>
-              <th className="p-4 hidden xl:table-cell">Nameservers</th>
-              <th className="p-4">Latency</th>
-              <th className="p-4 hidden md:table-cell">Last Checked</th>
-              <th className="p-4 hidden lg:table-cell">History</th>
-              <th className="p-4 text-right">Actions</th>
+              <th className="p-4 pl-2" role="columnheader" scope="col">Domain</th>
+              <th className="p-4" role="columnheader" scope="col">Status</th>
+              <th className="p-4" role="columnheader" scope="col">SSL</th>
+              <th className="p-4" role="columnheader" scope="col">Expiry</th>
+              <th className="p-4 hidden xl:table-cell" role="columnheader" scope="col">Nameservers</th>
+              <th className="p-4" role="columnheader" scope="col">Latency</th>
+              <th className="p-4 hidden md:table-cell" role="columnheader" scope="col">Last Checked</th>
+              <th className="p-4 hidden lg:table-cell" role="columnheader" scope="col">History</th>
+              <th className="p-4 text-right" role="columnheader" scope="col">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
@@ -316,14 +317,18 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                 <tr
                   key={domain.id}
                   id={`domain-${domain.id}`}
+                  role="row"
+                  aria-rowindex={domains.indexOf(domain) + 2}
+                  aria-selected={isSelected}
                   className={`group transition-all duration-300 ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/50'}`}
                 >
-                  <td className="p-4 text-center align-middle">
+                  <td className="p-4 text-center align-middle" role="gridcell">
                      <input
                         type="checkbox"
                         className="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer transition-all opacity-100 md:opacity-30 md:group-hover:opacity-100 checked:opacity-100"
                         checked={isSelected}
                         onChange={() => onToggleSelect(domain.id)}
+                        aria-label={`Select ${domain.url}`}
                     />
                   </td>
                   <td className="p-4 pl-2 align-middle">
@@ -509,12 +514,12 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                   <td className="p-4 align-middle hidden lg:table-cell">
                     <HistorySparkline history={domain.history} />
                   </td>
-                  <td className="p-4 align-middle text-right">
+                  <td className="p-4 align-middle text-right" role="gridcell">
                     <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => onViewHistory && onViewHistory(domain)}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors"
-                        title="View History"
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        title="View history"
                         aria-label={`View history for ${domain.url}`}
                       >
                         <History size={16} />
@@ -522,8 +527,8 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       <button
                         onClick={() => onCheck(domain.id)}
                         disabled={isChecking}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors disabled:opacity-50"
-                        title="Check Status"
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        title="Check status"
                         aria-label={`Check status for ${domain.url}`}
                         aria-busy={isChecking}
                       >
@@ -531,15 +536,15 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       </button>
                       <button
                         onClick={() => startEdit(domain)}
-                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors"
-                        title="Edit Domain"
+                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        title="Edit domain"
                         aria-label={`Edit domain ${domain.url}`}
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
                         onClick={() => onRemove(domain.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500"
                         title="Remove"
                         aria-label={`Remove ${domain.url}`}
                       >

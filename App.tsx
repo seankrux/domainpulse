@@ -5,11 +5,10 @@ import { parseCSV, exportToCSV } from './utils/csvHelper';
 import { loadDomains, saveDomains, loadSettings, saveSettings, AppSettings, loadGroups, saveGroups, addGroup, removeGroup, updateGroup } from './utils/storage';
 import { useNotification } from './components/NotificationProvider';
 import { useAuth } from './components/AuthProvider';
-import { StatsOverview, DistributionChart } from './components/StatsOverview';
+import { StatsOverview } from './components/StatsOverview';
 import { DomainTable } from './components/DomainTable';
 import { HistoryChart } from './components/HistoryChart';
 import { GroupManager } from './components/GroupManager';
-import { AlertSummary } from './components/AlertSummary';
 import { requestNotificationPermission, sendDomainDownNotification, sendDomainUpNotification, playAlertSound } from './services/notificationService';
 import { validateAndNormalizeUrl } from './services/domainService';
 
@@ -21,6 +20,9 @@ import { HeroSection } from './components/Dashboard/HeroSection';
 import { FilterBar } from './components/Dashboard/FilterBar';
 import { BulkImportModal } from './components/Dashboard/BulkImportModal';
 import { DomainDetailModal } from './components/Dashboard/DomainDetailModal';
+import { SkipLinks } from './components/Accessibility';
+import { BottomPanel } from './components/BottomPanel';
+import { useAnnounce } from './components/Accessibility';
 
 // Simple UUID generator
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -48,6 +50,7 @@ const App: React.FC = () => {
 
   const { showSuccess, showError, showInfo } = useNotification();
   const { logout } = useAuth();
+  const { announce, Announcer } = useAnnounce();
 
   // Monitoring Hook
   const {
@@ -387,8 +390,14 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className={`min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 pb-20 font-sans selection:bg-indigo-100 dark:selection:bg-indigo-900 transition-colors duration-300 ${isCheckingAll ? 'animate-pulse-slow' : ''}`}>
-      <Header 
+    <div className={`min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-100 dark:selection:bg-indigo-900 transition-colors duration-300 ${isCheckingAll ? 'animate-pulse-slow' : ''}`}>
+      {/* Accessibility: Skip Links */}
+      <SkipLinks />
+      
+      {/* Accessibility: Screen Reader Announcements */}
+      <Announcer />
+
+      <Header
         settings={settings}
         toggleDarkMode={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))}
         showSettings={showSettings}
@@ -396,7 +405,7 @@ const App: React.FC = () => {
         logout={logout}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
         {showSettings && (
           <SettingsPanel 
             settings={settings}
@@ -442,9 +451,9 @@ const App: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-5">
-            <FilterBar 
+        <div className="space-y-6">
+          <div id="filters">
+            <FilterBar
               filter={filter} setFilter={setFilter}
               statusFilter={statusFilter} setStatusFilter={setStatusFilter}
               sslFilter={sslFilter} setSslFilter={setSslFilter}
@@ -461,7 +470,9 @@ const App: React.FC = () => {
               onExportCSV={() => exportToCSV(domains)}
               domainCount={domains.length}
             />
+          </div>
 
+          <div id="domain-table" role="region" aria-label="Domain list">
             <DomainTable
               domains={displayDomains}
               groups={groups}
@@ -489,21 +500,21 @@ const App: React.FC = () => {
               onViewDetails={(domain) => setViewingDetailId(domain.id)}
             />
           </div>
-
-          <div className="space-y-6">
-            <AlertSummary domains={domains} onViewDomain={scrollToDomain} />
-            <DistributionChart stats={stats} />
-            
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
-              <h3 className="font-semibold text-sm uppercase tracking-wide mb-4">Keyboard Shortcuts</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span>Focus search</span><kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs">⌘K</kbd></div>
-                <div className="flex justify-between"><span>Check all</span><kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs">⌘Enter</kbd></div>
-              </div>
-            </div>
-          </div>
         </div>
       </main>
+
+      {/* Bottom Panel - Alerts & Stats (Collapsible) */}
+      <BottomPanel domains={domains} onViewDomain={scrollToDomain} />
+
+      <footer id="footer" className="text-center py-8 text-sm text-slate-400" role="contentinfo">
+        <div className="max-w-7xl mx-auto px-4">
+          <p>Made with 💛 by BigSean</p>
+          <div className="mt-2 text-xs text-slate-500">
+            <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded mx-1">⌘K</kbd> Focus search
+            <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded mx-1">⌘Enter</kbd> Check all
+          </div>
+        </div>
+      </footer>
 
       {viewingDetail && (
         <DomainDetailModal 
