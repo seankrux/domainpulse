@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { getCorsHeaders, isAuthBootstrapAllowed, generateToken } from './_utils/auth';
 
 let AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SESSION_TTL_MINUTES = Number(process.env.VITE_AUTH_SESSION_TTL_MINUTES || 720); // 12h
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

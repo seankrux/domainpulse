@@ -1,16 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AuthState } from '../types';
-import { config } from '../lib/config';
 
 // Use sessionStorage instead of localStorage for better security (cleared on browser close)
 const AUTH_SESSION_KEY = 'domainpulse_auth_session';
-const SESSION_TTL_MS = config.auth.sessionTTL;
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
 
 interface StoredSession {
   token: string;
   expiresAt: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface AuthContextType extends AuthState {}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

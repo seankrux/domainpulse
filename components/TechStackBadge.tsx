@@ -1,6 +1,6 @@
 import React from 'react';
-import { ExternalLink, Code, ShoppingCart, BarChart3, Globe } from 'lucide-react';
-import { TechStackInfo } from '../../types';
+import { ExternalLink } from 'lucide-react';
+import { TechStackInfo } from '../types';
 
 interface TechStackBadgeProps {
   techStack?: TechStackInfo;

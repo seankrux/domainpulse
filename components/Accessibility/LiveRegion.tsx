@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, type ReactElement } from 'react';
 
 interface UseAnnounceReturn {
   announce: (message: string, priority?: 'polite' | 'assertive') => void;
-  Announcer: () => JSX.Element;
+  Announcer: () => ReactElement;
 }
 
 export function useAnnounce(): UseAnnounceReturn {

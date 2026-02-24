@@ -20,7 +20,7 @@ try {
       }
     });
   }
-} catch (e) {
+} catch {
   console.log('No .env.local found or error reading it');
 }
 

@@ -86,7 +86,7 @@ async function getDNSInfo(domain: string) {
       txt: txt.status === 'fulfilled' ? txt.value : [],
       cname: cname.status === 'fulfilled' ? cname.value : []
     };
-  } catch (error) {
+  } catch {
     throw new Error(`DNS resolution failed for ${domain}`);
   }
 }

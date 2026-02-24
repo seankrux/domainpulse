@@ -123,7 +123,7 @@ function getWhoisInfo(domain: string): Promise<WhoisResult> {
               // Try next API
               tryNextApi(index + 1);
             }
-          } catch (error) {
+          } catch {
             tryNextApi(index + 1);
           }
         });

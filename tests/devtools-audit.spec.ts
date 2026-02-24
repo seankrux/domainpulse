@@ -55,9 +55,10 @@ test.describe('Chrome DevTools Audit', () => {
     await page.waitForLoadState('networkidle');
     
     const metrics = await page.evaluate(() => {
+      const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
       return {
-        domContentLoaded: performance.getEntriesByType('navigation')[0]?.domContentLoadedEventEnd || 0,
-        loadComplete: performance.getEntriesByType('navigation')[0]?.loadEventEnd || 0,
+        domContentLoaded: navEntry?.domContentLoadedEventEnd || 0,
+        loadComplete: navEntry?.loadEventEnd || 0,
         firstPaint: performance.getEntriesByName('first-paint')[0]?.startTime || 0,
         firstContentfulPaint: performance.getEntriesByName('first-contentful-paint')[0]?.startTime || 0
       };
@@ -99,10 +100,11 @@ test.describe('Chrome DevTools Audit', () => {
     }
 
     // Check color contrast (simplified check)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const contrastIssues = await page.evaluate(() => {
       // This is a simplified check - real contrast checking requires more complex logic
       const elements = Array.from(document.querySelectorAll('*'));
-      let issues = 0;
+      const issues = 0;
       elements.forEach(el => {
         const style = window.getComputedStyle(el);
         if (style.color === 'rgba(0, 0, 0, 0)' || style.backgroundColor === 'rgba(0, 0, 0, 0)') {

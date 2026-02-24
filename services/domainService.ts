@@ -94,7 +94,7 @@ export const normalizeUrl = (input: string): string => {
  * Check domain with SSL, expiry, and DNS information.
  * Includes timeout to prevent hanging.
  */
-export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo }> => {
+export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
   // Create a timeout promise using centralized config
   const timeoutMs = serviceConfig?.timeout || config.timeouts.domainCheck;
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -102,7 +102,7 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
   });
 
   // Race between the actual check and timeout
-  const checkInternal = async (): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo }> => {
+  const checkInternal = async (): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
     const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
     // Determine proxy URL and token

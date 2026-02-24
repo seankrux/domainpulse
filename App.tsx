@@ -23,7 +23,9 @@ import { DomainDetailModal } from './components/Dashboard/DomainDetailModal';
 import { ConfirmModal } from './components/Dashboard/ConfirmModal';
 import { SkipLinks } from './components/Accessibility';
 import { BottomPanel } from './components/BottomPanel';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useAnnounce } from './components/Accessibility';
+import { logger } from './utils/logger';
 
 // Simple UUID generator
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -52,6 +54,7 @@ const App: React.FC = () => {
 
   const { showSuccess, showError, showInfo } = useNotification();
   const { logout } = useAuth();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { announce, Announcer } = useAnnounce();
 
   // Monitoring Hook

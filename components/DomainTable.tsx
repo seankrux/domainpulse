@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Domain, DomainStatus, SSLStatus, DomainGroup, SSLInfo, DomainExpiry, TechStackInfo } from '../types';
+import { Domain, DomainStatus, SSLStatus, DomainGroup, SSLInfo, DomainExpiry /* TechStackInfo */ } from '../types';
 import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, Search, History, Shield, Calendar, LayoutDashboard, Plus, Copy, CheckCheck } from 'lucide-react';
 import { getSSLStatusColor, getSSLStatusLabel } from '../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../services/expiryService';
@@ -25,6 +25,7 @@ const Skeleton = ({ className = "w-16" }: { className?: string }) => (
   <div className={`h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse ${className}`} />
 );
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const LoadingSkeletonRow = () => (
   <tr className="animate-pulse">
     <td className="p-4 text-center"><div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded mx-auto" /></td>

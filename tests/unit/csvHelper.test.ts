@@ -50,17 +50,17 @@ github.com,ALIVE,120`;
 
       const result = parseCSV(csvContent);
       expect(result).toHaveLength(2);
-      expect(result[0].url).toBe('google.com');
-      expect(result[1].url).toBe('github.com');
+      expect(result[0]?.url).toBe('google.com');
+      expect(result[1]?.url).toBe('github.com');
     });
 
     it('should handle CSV with extra whitespace', () => {
-      const csvContent = `  url  ,  status  ,  latency  
+      const csvContent = `  url  ,  status  ,  latency
   google.com  ,  ALIVE  ,  45  `;
 
       const result = parseCSV(csvContent);
       expect(result).toHaveLength(1);
-      expect(result[0].url).toBe('google.com');
+      expect(result[0]?.url).toBe('google.com');
     });
 
     it('should skip empty lines', () => {
@@ -81,7 +81,7 @@ google.com`;
 
       const result = parseCSV(csvContent);
       expect(result).toHaveLength(1);
-      expect(result[0].url).toBe('google.com');
+      expect(result[0]?.url).toBe('google.com');
     });
 
     it('should return empty array for empty content', () => {

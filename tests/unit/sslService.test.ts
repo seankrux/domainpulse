@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { checkSSL, getSSLStatusColor, getSSLStatusLabel } from '../../services/sslService';
-import { SSLStatus, SSLInfo } from '../../types';
+import { SSLStatus } from '../../types';
+
+type Mock = ReturnType<typeof vi.fn>;
 
 describe('sslService', () => {
   describe('getSSLStatusColor', () => {
@@ -73,7 +75,7 @@ describe('sslService', () => {
         daysUntilExpiry: 300
       };
 
-      (global.fetch as vi.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
@@ -84,7 +86,7 @@ describe('sslService', () => {
     });
 
     it('should return UNKNOWN status on error', async () => {
-      (global.fetch as vi.Mock).mockRejectedValueOnce(new Error('Network error'));
+      (global.fetch as Mock).mockRejectedValueOnce(new Error('Network error'));
 
       const result = await checkSSL('example.com');
       expect(result.status).toBe(SSLStatus.Unknown);
@@ -99,7 +101,7 @@ describe('sslService', () => {
         daysUntilExpiry: 300
       };
 
-      (global.fetch as vi.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
@@ -120,7 +122,7 @@ describe('sslService', () => {
         daysUntilExpiry: 300
       };
 
-      (global.fetch as vi.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
@@ -133,7 +135,7 @@ describe('sslService', () => {
     });
 
     it('should return UNKNOWN when API returns 401', async () => {
-      (global.fetch as vi.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         status: 401,
         ok: false
       });
@@ -155,7 +157,7 @@ describe('sslService', () => {
       };
 
       // First endpoint fails, second succeeds
-      (global.fetch as vi.Mock)
+      (global.fetch as Mock)
         .mockRejectedValueOnce(new Error('First endpoint failed'))
         .mockResolvedValueOnce({
           ok: true,

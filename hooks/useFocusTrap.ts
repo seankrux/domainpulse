@@ -43,13 +43,13 @@ export function useFocusTrap({
         // Shift + Tab: Move focus backward
         if (document.activeElement === firstElement) {
           e.preventDefault();
-          lastElement.focus();
+          (lastElement as HTMLElement).focus();
         }
       } else {
         // Tab: Move focus forward
         if (document.activeElement === lastElement) {
           e.preventDefault();
-          firstElement.focus();
+          (firstElement as HTMLElement).focus();
         }
       }
     }
@@ -67,7 +67,7 @@ export function useFocusTrap({
     // Focus initial element
     if (initialFocus && containerRef.current) {
       const element = containerRef.current.querySelector(initialFocus);
-      if (element) {
+      if (element && element instanceof HTMLElement) {
         element.focus();
       } else {
         // Focus first focusable element

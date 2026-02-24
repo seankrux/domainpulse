@@ -23,48 +23,59 @@ const defaultConfig: RateLimitConfig = {
 };
 
 // Try to import Vercel KV for production use
-let kv: typeof import('@vercel/kv') | undefined;
 let hasKV = false;
 
-try {
-  // Dynamic import to avoid bundling @vercel/kv if not used
-  kv = require('@vercel/kv');
-  hasKV = process.env.KV_URL !== undefined;
-} catch {
-  // @vercel/kv not installed or KV_URL not configured
-  hasKV = false;
-}
+// Dynamic import function for @vercel/kv (optional dependency)
+const getVercelKV = async (): Promise<any | undefined> => {
+  try {
+    if (typeof process === 'undefined' || process.env?.KV_URL === undefined) {
+      return undefined;
+    }
+    // Use dynamic import to avoid bundling @vercel/kv if not used
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const kv = await import(/* webpackIgnore: true */ '@vercel/kv' as any);
+    hasKV = true;
+    return kv.default || kv;
+  } catch {
+    // @vercel/kv not installed or KV_URL not configured
+    hasKV = false;
+    return undefined;
+  }
+};
 
 // In-memory store (development only, resets on cold start)
 const requestCounts = new Map<string, RateLimitRecord>();
 
 /**
  * Check if request is within rate limit.
- * 
+ *
  * In production with KV_URL configured, uses Vercel KV for distributed rate limiting.
  * In development or without KV, uses in-memory storage (resets on cold start).
- * 
+ *
  * @param ip - Client IP address
  * @param config - Rate limit configuration
  * @returns true if request is allowed, false if rate limited
  */
 export const checkRateLimit = async (ip: string, config: RateLimitConfig = defaultConfig): Promise<boolean> => {
   const now = Date.now();
-  
+
   // Use Vercel KV in production if available
-  if (hasKV && kv) {
-    const key = `ratelimit:${ip}`;
-    const current = await kv.incr(key);
-    
-    if (current === 1) {
-      // First request, set expiry
-      await kv.expire(key, Math.ceil(config.windowMs / 1000));
-      return true;
+  if (process.env.KV_URL !== undefined) {
+    const kv = await getVercelKV();
+    if (kv && hasKV) {
+      const key = `ratelimit:${ip}`;
+      const current = await kv.incr(key);
+
+      if (current === 1) {
+        // First request, set expiry
+        await kv.expire(key, Math.ceil(config.windowMs / 1000));
+        return true;
+      }
+
+      return current <= config.maxRequests;
     }
-    
-    return current <= config.maxRequests;
   }
-  
+
   // Fallback to in-memory (development or no KV)
   const record = requestCounts.get(ip);
 
@@ -91,20 +102,23 @@ export const checkRateLimit = async (ip: string, config: RateLimitConfig = defau
  */
 export const getRateLimitHeaders = async (ip: string, config: RateLimitConfig = defaultConfig): Promise<Record<string, string>> => {
   const now = Date.now();
-  
+
   // With Vercel KV, provide approximate headers
-  if (hasKV && kv) {
-    const key = `ratelimit:${ip}`;
-    const ttl = await kv.ttl(key);
-    const remaining = ttl > 0 ? config.maxRequests : config.maxRequests;
-    
-    return {
-      'X-RateLimit-Limit': String(config.maxRequests),
-      'X-RateLimit-Remaining': String(Math.max(0, remaining)),
-      'X-RateLimit-Reset': String(ttl > 0 ? now + (ttl * 1000) : now + config.windowMs)
-    };
+  if (process.env.KV_URL !== undefined) {
+    const kv = await getVercelKV();
+    if (kv && hasKV) {
+      const key = `ratelimit:${ip}`;
+      const ttl = await kv.ttl(key);
+      const remaining = ttl > 0 ? config.maxRequests : config.maxRequests;
+
+      return {
+        'X-RateLimit-Limit': String(config.maxRequests),
+        'X-RateLimit-Remaining': String(Math.max(0, remaining)),
+        'X-RateLimit-Reset': String(ttl > 0 ? now + (ttl * 1000) : now + config.windowMs)
+      };
+    }
   }
-  
+
   // In-memory fallback
   const record = requestCounts.get(ip);
   const remaining = record && now <= record.resetTime
@@ -112,7 +126,6 @@ export const getRateLimitHeaders = async (ip: string, config: RateLimitConfig = 
     : config.maxRequests;
 
   const resetTime = record?.resetTime || now + config.windowMs;
-  const resetSeconds = Math.ceil((resetTime - now) / 1000);
 
   return {
     'X-RateLimit-Limit': String(config.maxRequests),
