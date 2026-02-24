@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2 } from 'lucide-react';
 import { Domain, DomainStatus, SSLStatus } from '../../types';
 import { getSSLStatusColor, getSSLStatusLabel } from '../../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../../services/expiryService';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface DomainDetailModalProps {
   domain: Domain;
@@ -10,11 +11,42 @@ interface DomainDetailModalProps {
 }
 
 export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, onClose }) => {
+  // Trap focus within modal
+  const modalContentRef = useFocusTrap({
+    enabled: true,
+    onEscape: onClose
+  });
+
+  // Announce modal to screen readers
+  useEffect(() => {
+    const announcement = `Domain details dialog opened for ${domain.url}`;
+    const liveRegion = document.createElement('div');
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.setAttribute('class', 'sr-only');
+    liveRegion.textContent = announcement;
+    document.body.appendChild(liveRegion);
+    
+    return () => {
+      document.body.removeChild(liveRegion);
+    };
+  }, [domain.url]);
+
   return (
-    <div data-testid="detail-modal" className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
+    <div 
+      data-testid="detail-modal" 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" 
+      onClick={onClose}
+      role="presentation"
+    >
       <div
+        ref={modalContentRef}
         className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        aria-describedby="modal-description"
       >
         {/* Header */}
         <div className="sticky top-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between z-10">
@@ -23,14 +55,18 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
               {domain.url.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 id="modal-title" className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 {domain.url}
                 <a href={`https://${domain.url}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-indigo-500">
                   <ExternalLink size={16} />
+                  <span className="sr-only">Open in new tab</span>
                 </a>
               </h2>
+              <p id="modal-description" className="sr-only">
+                Domain status: {domain.status === DomainStatus.Alive ? 'Online' : 'Offline'}
+              </p>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className={`w-2 h-2 rounded-full ${domain.status === DomainStatus.Alive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                <span className={`w-2 h-2 rounded-full ${domain.status === DomainStatus.Alive ? 'bg-emerald-500' : 'bg-rose-500'}`} aria-hidden="true" />
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   {domain.status} {domain.statusCode ? `(${domain.statusCode})` : ''}
                 </span>
@@ -39,7 +75,8 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            aria-label="Close domain details dialog"
           >
             <X size={20} className="text-slate-500 dark:text-slate-400" />
           </button>
