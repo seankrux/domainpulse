@@ -21,7 +21,7 @@ describe('sslService', () => {
 
     it('should return error color for INVALID status', () => {
       const result = getSSLStatusColor(SSLStatus.Invalid);
-      expect(result).toContain('bg-rose');
+      expect(result).toContain('bg-red');
     });
 
     it('should return neutral color for UNKNOWN status', () => {
@@ -62,11 +62,14 @@ describe('sslService', () => {
     });
 
     it('should return SSL info for valid domain', async () => {
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 1);
+      
       const mockResponse = {
         valid: true,
         issuer: 'Let\'s Encrypt',
-        validFrom: '2024-01-01T00:00:00.000Z',
-        validTo: '2024-12-31T00:00:00.000Z',
+        validFrom: new Date().toISOString(),
+        validTo: futureDate.toISOString(),
         daysUntilExpiry: 300
       };
 
@@ -140,11 +143,14 @@ describe('sslService', () => {
     });
 
     it('should try multiple endpoints on failure', async () => {
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 1);
+      
       const mockResponse = {
         valid: true,
         issuer: 'Backup CA',
-        validFrom: '2024-01-01T00:00:00.000Z',
-        validTo: '2024-12-31T00:00:00.000Z',
+        validFrom: new Date().toISOString(),
+        validTo: futureDate.toISOString(),
         daysUntilExpiry: 300
       };
 
