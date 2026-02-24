@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Domain, DomainStatus, SSLStatus, DomainGroup, SSLInfo, DomainExpiry } from '../types';
+import { Domain, DomainStatus, SSLStatus, DomainGroup, SSLInfo, DomainExpiry, TechStackInfo } from '../types';
 import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, Search, History, Shield, Calendar, LayoutDashboard, Plus, Copy, CheckCheck } from 'lucide-react';
 import { getSSLStatusColor, getSSLStatusLabel } from '../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../services/expiryService';
+import { TechStackBadge } from './TechStackBadge';
 
 interface DomainTableProps {
   domains: Domain[];
@@ -348,6 +349,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               </th>
               <th className="p-4 pl-2" role="columnheader" scope="col">Domain</th>
               <th className="p-4" role="columnheader" scope="col">Status</th>
+              <th className="p-4" role="columnheader" scope="col">Tech Stack</th>
               <th className="p-4" role="columnheader" scope="col">SSL</th>
               <th className="p-4" role="columnheader" scope="col">Expiry</th>
               <th className="p-4 hidden xl:table-cell" role="columnheader" scope="col">Nameservers</th>
@@ -528,6 +530,13 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                   </td>
                   <td className="p-4 align-middle">
                     <StatusBadge status={domain.status} statusCode={domain.statusCode} />
+                  </td>
+                  <td className="p-4 align-middle">
+                    <TechStackBadge 
+                      techStack={domain.techStack} 
+                      domain={domain.url}
+                      onClick={() => onViewDetails?.(domain)}
+                    />
                   </td>
                   <td className="p-4 align-middle">
                     <SSLBadge ssl={domain.ssl} onClick={() => onViewDetails?.(domain)} />

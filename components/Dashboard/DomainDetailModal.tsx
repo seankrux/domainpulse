@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2 } from 'lucide-react';
+import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3 } from 'lucide-react';
 import { Domain, DomainStatus, SSLStatus } from '../../types';
 import { getSSLStatusColor, getSSLStatusLabel } from '../../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../../services/expiryService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { getTechStackColor } from '../../components/TechStackBadge';
 
 interface DomainDetailModalProps {
   domain: Domain;
@@ -224,6 +225,105 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             ) : (
               <div className="text-center py-6 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-500">No registration/expiry information available.</p>
+              </div>
+            )}
+          </section>
+
+          {/* Technology Stack */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Code className="text-indigo-500" size={18} />
+              <h3 className="font-bold text-slate-900 dark:text-white">Technology Stack</h3>
+            </div>
+            {domain.techStack && domain.techStack.confidence !== 'low' ? (
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded ${getTechStackColor(domain.techStack.cms || domain.techStack.ecommerce)}`}>
+                      {domain.techStack.cms || domain.techStack.ecommerce || domain.techStack.framework || 'Detected'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      Confidence: {domain.techStack.confidence}
+                    </span>
+                  </div>
+                  {domain.techStack.adminUrl && (
+                    <a
+                      href={`https://${domain.url}${domain.techStack.adminUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-sm"
+                    >
+                      Open Admin
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  {domain.techStack.cms && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">CMS</p>
+                      <p className="font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                        <span>{domain.techStack.cms}</span>
+                      </p>
+                    </div>
+                  )}
+                  {domain.techStack.ecommerce && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                        <ShoppingCart size={12} /> Ecommerce
+                      </p>
+                      <p className="font-medium text-slate-700 dark:text-slate-200">{domain.techStack.ecommerce}</p>
+                    </div>
+                  )}
+                  {domain.techStack.framework && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                        <Code size={12} /> Framework
+                      </p>
+                      <p className="font-medium text-slate-700 dark:text-slate-200">{domain.techStack.framework}</p>
+                    </div>
+                  )}
+                  {domain.techStack.server && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                        <Server size={12} /> Server
+                      </p>
+                      <p className="font-medium text-slate-700 dark:text-slate-200">{domain.techStack.server}</p>
+                    </div>
+                  )}
+                  {domain.techStack.analytics && domain.techStack.analytics.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                        <BarChart3 size={12} /> Analytics
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {domain.techStack.analytics.map((a, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs text-slate-700 dark:text-slate-300">
+                            {a}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {domain.techStack.javascriptLibraries && domain.techStack.javascriptLibraries.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                        <Code size={12} /> JavaScript
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {domain.techStack.javascriptLibraries.map((lib, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 rounded text-xs text-indigo-700 dark:text-indigo-300">
+                            {lib}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                <p className="text-sm text-slate-500">Technology stack detection unavailable. Click "Check" to analyze.</p>
               </div>
             )}
           </section>

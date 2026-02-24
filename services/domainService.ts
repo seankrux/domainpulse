@@ -1,7 +1,8 @@
-import { DomainStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo } from '../types';
+import { DomainStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo } from '../types';
 import { checkSSL } from './sslService';
 import { checkDomainExpiry } from './expiryService';
 import { checkDNS } from './dnsService';
+import { detectTechStack } from './techDetectionService';
 import { logger } from '../utils/logger';
 import { config } from '../lib/config';
 
@@ -173,18 +174,20 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
       throw new Error(`All endpoints unavailable for ${url}`);
     }
 
-    // Use the serviceConfig parameter for SSL/expiry/DNS calls
-    const [sslResult, expiryResult, dnsResult] = await Promise.all([
+    // Use the serviceConfig parameter for SSL/expiry/DNS/Tech calls
+    const [sslResult, expiryResult, dnsResult, techResult] = await Promise.all([
       checkSSL(url, serviceConfig),
       checkDomainExpiry(url, serviceConfig),
-      checkDNS(url, serviceConfig)
+      checkDNS(url, serviceConfig),
+      detectTechStack(url, serviceConfig)
     ]);
 
     return {
       ...domainResult,
       ssl: sslResult,
       expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined,
-      dns: dnsResult && !dnsResult.error ? dnsResult : undefined
+      dns: dnsResult && !dnsResult.error ? dnsResult : undefined,
+      techStack: techResult.confidence !== 'low' ? techResult : undefined
     };
   };
 

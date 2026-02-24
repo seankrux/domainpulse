@@ -52,6 +52,17 @@ export interface DNSInfo {
   error?: string;
 }
 
+export interface TechStackInfo {
+  cms?: string;
+  framework?: string;
+  ecommerce?: string;
+  analytics?: string[];
+  javascriptLibraries?: string[];
+  server?: string;
+  adminUrl?: string;
+  confidence: 'high' | 'medium' | 'low';
+}
+
 export interface Domain {
   id: string;
   url: string;
@@ -64,6 +75,7 @@ export interface Domain {
   ssl?: SSLInfo;
   expiry?: DomainExpiry;
   dns?: DNSInfo;
+  techStack?: TechStackInfo;
   groupId?: string;
   tags: string[];
 }
