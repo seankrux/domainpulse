@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Domain, DomainStatus, SSLStatus, DomainGroup, SSLInfo, DomainExpiry } from '../types';
-import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, Search, History, Shield, Calendar, LayoutDashboard, Plus } from 'lucide-react';
+import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, Search, History, Shield, Calendar, LayoutDashboard, Plus, Copy, CheckCheck } from 'lucide-react';
 import { getSSLStatusColor, getSSLStatusLabel } from '../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../services/expiryService';
 
@@ -22,6 +22,29 @@ interface DomainTableProps {
 
 const Skeleton = ({ className = "w-16" }: { className?: string }) => (
   <div className={`h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse ${className}`} />
+);
+
+const LoadingSkeletonRow = () => (
+  <tr className="animate-pulse">
+    <td className="p-4 text-center"><div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded mx-auto" /></td>
+    <td className="p-4 pl-2">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700" />
+        <div className="space-y-2">
+          <Skeleton className="w-32 h-4" />
+          <Skeleton className="w-20 h-3" />
+        </div>
+      </div>
+    </td>
+    <td className="p-4"><Skeleton className="w-20 h-6" /></td>
+    <td className="p-4"><Skeleton className="w-16 h-6" /></td>
+    <td className="p-4"><Skeleton className="w-16 h-6" /></td>
+    <td className="p-4 hidden xl:table-cell"><Skeleton className="w-24 h-4" /></td>
+    <td className="p-4"><Skeleton className="w-12 h-4" /></td>
+    <td className="p-4 hidden md:table-cell"><Skeleton className="w-16 h-4" /></td>
+    <td className="p-4 hidden lg:table-cell"><Skeleton className="w-20 h-4" /></td>
+    <td className="p-4 text-right"><Skeleton className="w-16 h-8" /></td>
+  </tr>
 );
 
 const Favicon = ({ url }: { url: string }) => {
@@ -202,6 +225,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [newTag, setNewTag] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (domain: Domain) => {
@@ -232,6 +256,31 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   const removeTag = (id: string, currentTags: string[], tag: string) => {
     if (!onEditTags) return;
     onEditTags(id, currentTags.filter(t => t !== tag));
+  };
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
+  const formatRelativeTime = (date?: Date) => {
+    if (!date) return 'Never';
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   };
 
   const allSelected = domains.length > 0 && domains.every(d => selectedIds.has(d.id));
@@ -353,12 +402,27 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                         <Favicon url={domain.url} />
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
-                                <span 
+                                <span
                                   onClick={() => onViewDetails?.(domain)}
                                   data-testid={`domain-link-${domain.url}`}
-                                  className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] cursor-pointer hover:text-indigo-600 transition-colors"
+                                  className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-2 group/domain"
                                 >
                                   {domain.url}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyToClipboard(domain.url, domain.id);
+                                    }}
+                                    className="opacity-0 group-hover/domain:opacity-100 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-all"
+                                    title="Copy domain to clipboard"
+                                    aria-label={`Copy ${domain.url} to clipboard`}
+                                  >
+                                    {copiedId === domain.id ? (
+                                      <CheckCheck size={12} className="text-emerald-500" />
+                                    ) : (
+                                      <Copy size={12} className="text-slate-400" />
+                                    )}
+                                  </button>
                                 </span>
                                 <a
                                 href={`https://${domain.url}`}
@@ -508,7 +572,12 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                     {isChecking ? (
                         <Skeleton className="w-20 h-4" />
                     ) : (
-                        domain.lastChecked ? domain.lastChecked.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : <span className="text-slate-300 dark:text-slate-600">Never</span>
+                        domain.lastChecked ? (
+                          <span className="flex items-center gap-2">
+                            {formatRelativeTime(domain.lastChecked)}
+                            <span className="text-xs text-slate-400">({domain.lastChecked.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
+                          </span>
+                        ) : <span className="text-slate-300 dark:text-slate-600">Never</span>
                     )}
                   </td>
                   <td className="p-4 align-middle hidden lg:table-cell">

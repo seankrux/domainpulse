@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2 } from 'lucide-react';
 import { Domain, DomainStatus, SSLStatus } from '../../types';
 import { getSSLStatusColor, getSSLStatusLabel } from '../../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../../services/expiryService';
@@ -278,22 +278,46 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm shadow-sm"
-          >
-            Close
-          </button>
-          <a
-            href={`https://whois.com/whois/${domain.url}`}
-            target="_blank"
-            rel="noreferrer"
-            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-2"
-          >
-            External WHOIS
-            <ExternalLink size={14} />
-          </a>
+        <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <Link2 size={14} />
+            <span>External tools:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm shadow-sm"
+            >
+              Close
+            </button>
+            <a
+              href={`https://whois.com/whois/${domain.url}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
+            >
+              WHOIS
+              <ExternalLink size={14} />
+            </a>
+            <a
+              href={`https://dnslytics.com/domain/${domain.url}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5 dark:bg-slate-600 dark:hover:bg-slate-700"
+            >
+              DNS
+              <ExternalLink size={14} />
+            </a>
+            <a
+              href={`https://www.sslshopper.com/ssl-checker.html#hostname=${domain.url}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
+            >
+              SSL
+              <ExternalLink size={14} />
+            </a>
+          </div>
         </div>
       </div>
     </div>
