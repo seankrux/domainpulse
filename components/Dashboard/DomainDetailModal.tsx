@@ -432,6 +432,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
               target="_blank"
               rel="noreferrer"
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
+              title="Check WHOIS registration information"
             >
               WHOIS
               <ExternalLink size={14} />
@@ -441,6 +442,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
               target="_blank"
               rel="noreferrer"
               className="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5 dark:bg-slate-600 dark:hover:bg-slate-700"
+              title="View DNS records and analysis"
             >
               DNS
               <ExternalLink size={14} />
@@ -450,8 +452,29 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
               target="_blank"
               rel="noreferrer"
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
+              title="Verify SSL certificate installation"
             >
               SSL
+              <ExternalLink size={14} />
+            </a>
+            <a
+              href={`https://transparencyreport.google.com/safe-browsing/search?url=${domain.url}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
+              title="Check Google Safe Browsing status"
+            >
+              Safety
+              <ExternalLink size={14} />
+            </a>
+            <a
+              href={`https://site-explorer.com/?q=${domain.url}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
+              title="View site explorer and backlinks"
+            >
+              Explorer
               <ExternalLink size={14} />
             </a>
           </div>

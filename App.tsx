@@ -20,6 +20,7 @@ import { HeroSection } from './components/Dashboard/HeroSection';
 import { FilterBar } from './components/Dashboard/FilterBar';
 import { BulkImportModal } from './components/Dashboard/BulkImportModal';
 import { DomainDetailModal } from './components/Dashboard/DomainDetailModal';
+import { ConfirmModal } from './components/Dashboard/ConfirmModal';
 import { SkipLinks } from './components/Accessibility';
 import { BottomPanel } from './components/BottomPanel';
 import { useAnnounce } from './components/Accessibility';
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [groupFilter, setGroupFilter] = useState<string | 'ALL'>(() => localStorage.getItem('domainpulse_group_filter') || 'ALL');
   const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
   const [showGroupManager, setShowGroupManager] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [previousStatuses, setPreviousStatuses] = useState<Map<string, DomainStatus>>(new Map());
   
   const [sortField, setSortField] = useState<SortField>(() => (localStorage.getItem('domainpulse_sort_field') as SortField) || 'lastChecked');
@@ -184,11 +186,14 @@ const App: React.FC = () => {
   }, [selectedIds, showInfo]);
 
   const removeSelectedDomains = useCallback(() => {
-    if (window.confirm(`Are you sure you want to remove ${selectedIds.size} domains?`)) {
-      setDomains(prev => prev.filter(d => !selectedIds.has(d.id)));
-      setSelectedIds(new Set());
-      showInfo(`Removed ${selectedIds.size} domains`);
-    }
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const confirmDeleteSelected = useCallback(() => {
+    setDomains(prev => prev.filter(d => !selectedIds.has(d.id)));
+    setSelectedIds(new Set());
+    showInfo(`Removed ${selectedIds.size} domains`);
+    setShowDeleteConfirm(false);
   }, [selectedIds, showInfo]);
 
   const checkSelectedDomains = useCallback(() => {
@@ -301,6 +306,33 @@ const App: React.FC = () => {
     const uptime = totalRecords > 0 ? (aliveRecords / totalRecords) * 100 : 100;
     return { total, alive, down, unknown, avgLatency, uptime };
   }, [domains]);
+
+  // Filter Counts
+  const filterCounts = useMemo(() => {
+    const statusCounts: Record<DomainStatus, number> = {
+      [DomainStatus.Alive]: domains.filter(d => d.status === DomainStatus.Alive).length,
+      [DomainStatus.Down]: domains.filter(d => d.status === DomainStatus.Down).length,
+      [DomainStatus.Unknown]: domains.filter(d => d.status === DomainStatus.Unknown).length,
+      [DomainStatus.Checking]: domains.filter(d => d.status === DomainStatus.Checking).length,
+      [DomainStatus.Error]: domains.filter(d => d.status === DomainStatus.Error).length,
+    };
+    
+    const sslCounts: Record<SSLStatus, number> = {
+      [SSLStatus.Valid]: domains.filter(d => d.ssl?.status === SSLStatus.Valid).length,
+      [SSLStatus.Expiring]: domains.filter(d => d.ssl?.status === SSLStatus.Expiring).length,
+      [SSLStatus.Expired]: domains.filter(d => d.ssl?.status === SSLStatus.Expired).length,
+      [SSLStatus.Invalid]: domains.filter(d => d.ssl?.status === SSLStatus.Invalid).length,
+      [SSLStatus.Unknown]: domains.filter(d => !d.ssl || d.ssl.status === SSLStatus.Unknown).length,
+    };
+    
+    const groupCounts = new Map<string, number>();
+    groups.forEach(g => {
+      groupCounts.set(g.id, domains.filter(d => d.groupId === g.id).length);
+    });
+    groupCounts.set('ALL', domains.length);
+    
+    return { statusCounts, sslCounts, groupCounts };
+  }, [domains, groups]);
 
   // Filtering and Sorting
   const displayDomains = useMemo(() => {
@@ -469,6 +501,7 @@ const App: React.FC = () => {
               handleFileUpload={handleFileUpload}
               onExportCSV={() => exportToCSV(domains)}
               domainCount={domains.length}
+              filterCounts={filterCounts}
             />
           </div>
 
@@ -546,6 +579,17 @@ const App: React.FC = () => {
           onClose={() => setShowGroupManager(false)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDeleteSelected}
+        title="Delete Domains"
+        message={`Are you sure you want to remove ${selectedIds.size} domain${selectedIds.size === 1 ? '' : 's'}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
 
       <footer className="text-center py-8 text-sm text-slate-400">
         Made with 💛 by BigSean
