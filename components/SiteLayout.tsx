@@ -34,7 +34,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <a href="/" className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
-              YourBrand
+              DomainPulse
             </a>
 
             {/* Desktop Nav */}
@@ -53,7 +53,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
                 </a>
               ))}
               <a
-                href="http://localhost:3000"
+                href={typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_URL ? import.meta.env.VITE_APP_URL : 'http://localhost:3000'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
@@ -72,7 +72,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
                 {darkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
               <a
-                href="https://github.com/yourusername"
+                href="https://github.com/bigsean"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
@@ -121,10 +121,10 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <h3 className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mb-4">
-                YourBrand
+                DomainPulse
               </h3>
               <p className="text-slate-600 dark:text-slate-400 text-sm">
-                Building amazing things, one step at a time.
+                Professional domain monitoring and SSL tracking.
               </p>
             </div>
             <div>
@@ -138,17 +138,17 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
             <div>
               <h4 className="font-semibold mb-4">Connect</h4>
               <div className="flex items-center gap-4">
-                <a href="https://github.com/yourusername" className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
+                <a href="https://github.com/bigsean" className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
                   <Github size={20} />
                 </a>
-                <a href="mailto:hello@example.com" className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
+                <a href="mailto:contact@domainpulse.app" className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
                   <Mail size={20} />
                 </a>
               </div>
             </div>
           </div>
           <div className="border-t border-slate-200 dark:border-slate-800 mt-8 pt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-            © {new Date().getFullYear()} YourBrand. All rights reserved.
+            © {new Date().getFullYear()} DomainPulse. All rights reserved.
           </div>
         </div>
       </footer>

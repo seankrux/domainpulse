@@ -19,18 +19,23 @@
     "test": "vitest",
     "test:gui": "playwright test",
     "test:gui:report": "playwright show-report",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "test:auto": "./scripts/auto-test.sh",
+    "test:devtools": "playwright test tests/devtools-audit.spec.ts",
+    "test:unit": "vitest tests/unit/",
+    "test:watch": "vitest --watch",
+    "mcp:start": "node .mcp/auto-test/index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.564.0",
     "marked": "^17.0.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-is": "^19.2.4",
-    "recharts": "^3.7.0",
-    "uuid": "^13.0.0"
+    "recharts": "^3.7.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -39,12 +44,13 @@
     "@testing-library/react": "^16.2.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/marked": "^5.0.2",
     "@types/node": "^22.14.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "@vercel/node": "^5.6.3",
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/coverage-v8": "^1.3.1",

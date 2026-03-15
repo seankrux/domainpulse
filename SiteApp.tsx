@@ -242,8 +242,8 @@ async function loadPost(slug: string) {
 
     const [, frontmatterStr, body] = frontmatterMatch;
     const frontmatter: Record<string, string> = {};
-    
-    frontmatterStr.split('\n').forEach(line => {
+
+    frontmatterStr?.split('\n').forEach(line => {
       const [key, ...valueParts] = line.split(':');
       if (key && valueParts.length) {
         frontmatter[key.trim()] = valueParts.join(':').trim();
@@ -253,7 +253,7 @@ async function loadPost(slug: string) {
     return {
       slug,
       title: frontmatter.title || slug,
-      content: body.trim(),
+      content: body?.trim() || '',
       date: frontmatter.date || new Date().toISOString(),
       tags: frontmatter.tags?.split(',').map(t => t.trim())
     };

@@ -1,9 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import * as dns from 'dns';
 import { verifyAuth, getCorsHeaders } from './_utils/auth';
+import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit';
+import { config } from '../lib/config';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Helper to set multiple headers since res.set is not available on VercelResponse
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);
@@ -12,12 +13,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const origin = req.headers.origin;
   const corsHeaders = getCorsHeaders(origin);
-  
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     setHeaders(corsHeaders);
     return res.status(200).end();
   }
+
+  // Rate limiting (async for Vercel KV support)
+  const ip = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
+  const isRateLimited = await checkRateLimit(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs });
+  if (!isRateLimited) {
+    setHeaders(corsHeaders);
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'Too many requests. Please wait a minute.'
+    });
+  }
+
+  // Add rate limit headers
+  setHeaders(await getRateLimitHeaders(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs }));
 
   // Verify authentication
   if (!verifyAuth(req)) {
@@ -71,7 +86,7 @@ async function getDNSInfo(domain: string) {
       txt: txt.status === 'fulfilled' ? txt.value : [],
       cname: cname.status === 'fulfilled' ? cname.value : []
     };
-  } catch (error) {
+  } catch {
     throw new Error(`DNS resolution failed for ${domain}`);
   }
 }

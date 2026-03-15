@@ -3,7 +3,14 @@ import { logger } from '../utils/logger';
 
 interface WhoisApiResponse {
   expiryDate?: string;
+  createdDate?: string;
+  updatedDate?: string;
   registrar?: string;
+  registrarUrl?: string;
+  registrarIanaId?: string;
+  domainStatus?: string[];
+  nameServers?: string[];
+  dnssec?: string;
   error?: string;
 }
 
@@ -89,12 +96,16 @@ const parseWhoisResponse = (data: WhoisApiResponse): DomainExpiry => {
     return {
       status: 'unknown',
       expiryDate: undefined,
+      createdDate: undefined,
+      updatedDate: undefined,
       registrar: undefined,
       daysUntilExpiry: undefined
     };
   }
 
   const expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
+  const createdDate = data.createdDate ? new Date(data.createdDate) : undefined;
+  const updatedDate = data.updatedDate ? new Date(data.updatedDate) : undefined;
   const daysUntilExpiry = expiryDate
     ? Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : undefined;
@@ -111,7 +122,14 @@ const parseWhoisResponse = (data: WhoisApiResponse): DomainExpiry => {
   return {
     status,
     expiryDate: expiryDate || undefined,
+    createdDate,
+    updatedDate,
     registrar: data.registrar || 'Unknown',
+    registrarUrl: data.registrarUrl,
+    registrarIanaId: data.registrarIanaId,
+    domainStatus: data.domainStatus,
+    nameServers: data.nameServers,
+    dnssec: data.dnssec,
     daysUntilExpiry
   };
 };

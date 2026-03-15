@@ -11,8 +11,14 @@ class Logger {
   private static instance: Logger;
   private readonly maxLogs = 100;
   private logs: LogEntry[] = [];
+  private isProduction: boolean;
 
-  private constructor() {}
+  private constructor() {
+    // Detect production environment
+    this.isProduction = typeof process !== 'undefined' 
+      ? process.env?.NODE_ENV === 'production'
+      : false;
+  }
 
   public static getInstance(): Logger {
     if (!Logger.instance) {
@@ -28,6 +34,11 @@ class Logger {
       message,
       data,
     };
+
+    // In production, suppress debug logs to reduce noise
+    if (this.isProduction && level === 'debug') {
+      return;
+    }
 
     // Console output for development
     const consoleMethod = level === 'debug' ? 'log' : level;
@@ -65,6 +76,13 @@ class Logger {
 
   public clearLogs() {
     this.logs = [];
+  }
+  
+  /**
+   * Manually set production mode (useful for testing)
+   */
+  public setProductionMode(isProduction: boolean) {
+    this.isProduction = isProduction;
   }
 }
 

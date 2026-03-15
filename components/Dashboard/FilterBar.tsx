@@ -2,6 +2,21 @@ import React from 'react';
 import { Search, FolderPlus, RefreshCw, Trash2, Upload, Download, Play, SortAsc, SortDesc } from 'lucide-react';
 import { DomainStatus, SSLStatus, DomainGroup, SortField, SortOrder } from '../../types';
 
+interface FilterCounts {
+  statusCounts: Record<DomainStatus, number>;
+  sslCounts: Record<SSLStatus, number>;
+  groupCounts: Map<string, number>;
+}
+
+// Type guards for filter values
+const isValidStatusFilter = (value: string): value is DomainStatus | 'ALL' => {
+  return ['ALL', DomainStatus.Alive, DomainStatus.Down, DomainStatus.Unknown, DomainStatus.Checking, DomainStatus.Error].includes(value as any);
+};
+
+const isValidSSLFilter = (value: string): value is SSLStatus | 'ALL' => {
+  return ['ALL', SSLStatus.Valid, SSLStatus.Expiring, SSLStatus.Expired, SSLStatus.Invalid, SSLStatus.Unknown].includes(value as any);
+};
+
 interface FilterBarProps {
   filter: string;
   setFilter: (val: string) => void;
@@ -25,6 +40,7 @@ interface FilterBarProps {
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onExportCSV: () => void;
   domainCount: number;
+  filterCounts: FilterCounts;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -41,7 +57,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onAssignGroup,
   handleFileUpload,
   onExportCSV,
-  domainCount
+  domainCount,
+  filterCounts
 }) => {
   return (
     <div className="space-y-4">
@@ -139,28 +156,38 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <span className="text-sm text-slate-500 dark:text-slate-400">Status:</span>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as DomainStatus | 'ALL')}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (isValidStatusFilter(value)) {
+                setStatusFilter(value);
+              }
+            }}
             className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           >
-            <option value="ALL">All</option>
-            <option value={DomainStatus.Alive}>Alive</option>
-            <option value={DomainStatus.Down}>Down</option>
-            <option value={DomainStatus.Unknown}>Unknown</option>
-            <option value={DomainStatus.Error}>Error</option>
+            <option value="ALL">All ({domainCount})</option>
+            <option value={DomainStatus.Alive}>Alive ({filterCounts.statusCounts[DomainStatus.Alive] || 0})</option>
+            <option value={DomainStatus.Down}>Down ({filterCounts.statusCounts[DomainStatus.Down] || 0})</option>
+            <option value={DomainStatus.Unknown}>Unknown ({filterCounts.statusCounts[DomainStatus.Unknown] || 0})</option>
+            <option value={DomainStatus.Error}>Error ({filterCounts.statusCounts[DomainStatus.Error] || 0})</option>
           </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-500 dark:text-slate-400">SSL:</span>
           <select
             value={sslFilter}
-            onChange={(e) => setSslFilter(e.target.value as SSLStatus | 'ALL')}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (isValidSSLFilter(value)) {
+                setSslFilter(value);
+              }
+            }}
             className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           >
-            <option value="ALL">All</option>
-            <option value={SSLStatus.Valid}>Valid</option>
-            <option value={SSLStatus.Expiring}>Expiring</option>
-            <option value={SSLStatus.Expired}>Expired</option>
-            <option value={SSLStatus.Invalid}>Invalid</option>
+            <option value="ALL">All ({domainCount})</option>
+            <option value={SSLStatus.Valid}>Valid ({filterCounts.sslCounts[SSLStatus.Valid] || 0})</option>
+            <option value={SSLStatus.Expiring}>Expiring ({filterCounts.sslCounts[SSLStatus.Expiring] || 0})</option>
+            <option value={SSLStatus.Expired}>Expired ({filterCounts.sslCounts[SSLStatus.Expired] || 0})</option>
+            <option value={SSLStatus.Invalid}>Invalid ({filterCounts.sslCounts[SSLStatus.Invalid] || 0})</option>
           </select>
         </div>
         <div className="flex items-center gap-2">
@@ -170,9 +197,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onChange={(e) => setGroupFilter(e.target.value as string | 'ALL')}
             className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           >
-            <option value="ALL">All</option>
+            <option value="ALL">All ({filterCounts.groupCounts.get('ALL') || 0})</option>
             {groups.map(group => (
-              <option key={group.id} value={group.id}>{group.name}</option>
+              <option key={group.id} value={group.id}>{group.name} ({filterCounts.groupCounts.get(group.id) || 0})</option>
             ))}
           </select>
           <button

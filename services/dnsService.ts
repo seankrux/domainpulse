@@ -1,14 +1,5 @@
-import { ServiceConfig } from '../types';
+import { ServiceConfig, DNSInfo } from '../types';
 import { logger } from '../utils/logger';
-
-export interface DNSInfo {
-  a?: string[];
-  mx?: { exchange: string; priority: number }[];
-  ns?: string[];
-  txt?: string[][];
-  cname?: string[];
-  error?: string;
-}
 
 const DEFAULT_PROXY_URL = 'http://localhost:3001';
 const AUTH_SESSION_KEY = 'domainpulse_auth_session';

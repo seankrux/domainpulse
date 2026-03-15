@@ -10,8 +10,6 @@ interface MonitoringHookProps {
   customUserAgent?: string;
   checkTimeout?: number;
   showSuccess: (msg: string) => void;
-  showError: (msg: string) => void;
-  showInfo: (msg: string) => void;
 }
 
 export const useMonitoring = ({
@@ -68,7 +66,7 @@ export const useMonitoring = ({
 
     // Get auth token and proxy URL
     let authToken = '';
-    const storedSession = localStorage.getItem('domainpulse_auth_session');
+    const storedSession = sessionStorage.getItem('domainpulse_auth_session');
     if (storedSession) {
       try {
         const session = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
@@ -91,18 +89,24 @@ export const useMonitoring = ({
     const processDomainResult = async (domain: Domain) => {
       try {
         const result = await checkDomainWithSSL(domain.url, serviceConfig);
-        setDomains(prev => prev.map(d =>
-          d.id === domain.id ? {
-            ...d,
-            status: result.status,
-            statusCode: result.statusCode,
-            latency: result.latency,
-            ssl: result.ssl,
-            expiry: result.expiry,
-            dns: result.dns,
-            lastChecked: new Date()
-          } : d
-        ));
+        setDomains(prev => {
+          // Check if domain still exists (race condition fix)
+          const domainExists = prev.some(d => d.id === domain.id);
+          if (!domainExists) return prev;
+          
+          return prev.map(d =>
+            d.id === domain.id ? {
+              ...d,
+              status: result.status,
+              statusCode: result.statusCode,
+              latency: result.latency,
+              ssl: result.ssl,
+              expiry: result.expiry,
+              dns: result.dns,
+              lastChecked: new Date()
+            } : d
+          );
+        });
         setCheckProgress(prev => ({ ...prev, current: prev.current + 1 }));
       } catch (error) {
         if (error instanceof Error && error.message === 'Unauthorized') {
@@ -112,9 +116,15 @@ export const useMonitoring = ({
           logger.error(`Failed to check domain: ${domain.url}`, error);
         }
 
-        setDomains(prev => prev.map(d =>
-          d.id === domain.id ? { ...d, status: DomainStatus.Error, lastChecked: new Date() } : d
-        ));
+        setDomains(prev => {
+          // Check if domain still exists (race condition fix)
+          const domainExists = prev.some(d => d.id === domain.id);
+          if (!domainExists) return prev;
+          
+          return prev.map(d =>
+            d.id === domain.id ? { ...d, status: DomainStatus.Error, lastChecked: new Date() } : d
+          );
+        });
         setCheckProgress(prev => ({ ...prev, current: prev.current + 1 }));
       }
     };
@@ -182,20 +192,21 @@ export const useMonitoring = ({
     }
   }, [addHistoryRecord, setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid]);
 
-  // Initialize Worker
+  // Initialize Worker - created once on mount
   useEffect(() => {
+    let isMounted = true;
     const MonitoringWorker = new Worker(new URL('../services/monitoring.worker.ts', import.meta.url), {
       type: 'module'
     });
-    
+
     MonitoringWorker.onmessage = (e) => {
-      if (!e?.data || typeof e.data !== 'object' || typeof e.data.type !== 'string') {
+      if (!isMounted || !e?.data || typeof e.data !== 'object' || typeof e.data.type !== 'string') {
         return;
       }
       const { type, domainId, result } = e.data;
-      
+
       if (type === 'DOMAIN_RESULT') {
-        setDomains(prev => 
+        setDomains(prev =>
           prev.map(d =>
             d.id === domainId ? {
               ...d,
@@ -231,33 +242,42 @@ export const useMonitoring = ({
       }
     };
 
-    // Configure worker with proxy URL and initial auth token
-    MonitoringWorker.postMessage({
+    workerRef.current = MonitoringWorker;
+
+    return () => {
+      isMounted = false;
+      MonitoringWorker.terminate();
+      workerRef.current = null;
+    };
+  }, []); // Empty deps - worker created once
+
+  // Send config updates to worker when values change
+  useEffect(() => {
+    if (!workerRef.current) return;
+
+    const storedSession = sessionStorage.getItem('domainpulse_auth_session');
+    let authToken = '';
+    if (storedSession) {
+      try {
+        const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
+        if (parsed?.token && parsed.expiresAt && parsed.expiresAt > Date.now()) {
+          authToken = parsed.token;
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    workerRef.current.postMessage({
       type: 'CONFIG',
       config: {
         proxyUrl: import.meta.env.VITE_PROXY_URL || 'http://localhost:3001',
-        authToken: (() => {
-          try {
-            const storedSession = localStorage.getItem('domainpulse_auth_session');
-            if (!storedSession) return '';
-            const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
-            if (!parsed?.token || !parsed.expiresAt || parsed.expiresAt <= Date.now()) return '';
-            return parsed.token;
-          } catch {
-            return '';
-          }
-        })(),
+        authToken,
         userAgent: customUserAgent,
         timeout: checkTimeout
       }
     });
-
-    workerRef.current = MonitoringWorker;
-
-    return () => {
-      MonitoringWorker.terminate();
-    };
-  }, [addHistoryRecord, showSuccess, setDomains, customUserAgent, checkTimeout]);
+  }, [customUserAgent, checkTimeout]); // Only re-run when config values change
 
   return {
     isCheckingAll,

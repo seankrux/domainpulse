@@ -1,39 +1,24 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import * as https from 'https';
 import { verifyAuth, getCorsHeaders } from './_utils/auth';
+import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit';
+import { config } from '../lib/config';
 
 interface WhoisResult {
   expiryDate?: string;
+  createdDate?: string;
+  updatedDate?: string;
   registrar?: string;
+  registrarUrl?: string;
+  registrarIanaId?: string;
+  domainStatus?: string[];
+  nameServers?: string[];
+  dnssec?: string;
   error?: string;
+  raw?: string;
 }
 
-// Rate limiting: Track requests per IP
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT = 100; // requests per minute
-const RATE_WINDOW = 60 * 1000; // 1 minute
-
-// Rate limiting middleware
-const checkRateLimit = (ip: string): boolean => {
-  const now = Date.now();
-  const record = requestCounts.get(ip);
-  
-  if (!record || now > record.resetTime) {
-    requestCounts.set(ip, { count: 1, resetTime: now + RATE_WINDOW });
-    return true;
-  }
-  
-  if (record.count >= RATE_LIMIT) {
-    return false;
-  }
-  
-  record.count++;
-  requestCounts.set(ip, record);
-  return true;
-};
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Helper to set multiple headers since res.set is not available on VercelResponse
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);
@@ -42,22 +27,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const origin = req.headers.origin;
   const corsHeaders = getCorsHeaders(origin);
-  
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     setHeaders(corsHeaders);
     return res.status(200).end();
   }
 
-  // Rate limiting
+  // Rate limiting (async for Vercel KV support)
   const ip = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
-  if (!checkRateLimit(ip)) {
+  const isRateLimited = await checkRateLimit(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs });
+  if (!isRateLimited) {
     setHeaders(corsHeaders);
-    return res.status(429).json({ 
-      error: 'Rate limit exceeded', 
-      message: 'Too many requests. Please wait a minute.' 
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'Too many requests. Please wait a minute.'
     });
   }
+
+  // Add rate limit headers
+  setHeaders(await getRateLimitHeaders(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs }));
 
   // Verify authentication
   if (!verifyAuth(req)) {
@@ -92,45 +81,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Get WHOIS information for a domain using a public WHOIS API.
- * Note: This uses a free API which may have rate limits.
- * For production, consider using a paid WHOIS API service.
+ * Get WHOIS information for a domain using multiple fallback APIs.
  */
 function getWhoisInfo(domain: string): Promise<WhoisResult> {
   return new Promise((resolve) => {
-    // Using a public WHOIS API (for demo purposes)
-    // In production, use a reliable paid API like whoisxmlapi.com
-    const apiUrl = `https://whoisapi.domainsdb.eu/whois/${domain}`;
-    
-    https.get(apiUrl, { timeout: 10000 }, (res) => {
-      let data = '';
-      
-      res.on('data', (chunk) => {
-        data += chunk;
+    // Try multiple WHOIS APIs in order of reliability
+    const apiUrls = [
+      `https://whoisapi.domainsdb.eu/whois/${domain}`,
+      `https://whois.domaintools.com/whois/${domain}`,
+      `https://api.whoapi.com/?domain=${domain}&r=whois`
+    ];
+
+    let lastError: Error | null = null;
+    let attempts = 0;
+
+    const tryNextApi = (index: number) => {
+      if (index >= apiUrls.length) {
+        resolve({
+          error: `WHOIS lookup failed after ${attempts} attempts. Last error: ${lastError?.message}. Consider using a reliable WHOIS API service.`
+        });
+        return;
+      }
+
+      const apiUrl = apiUrls[index] as string;
+      attempts++;
+
+      https.get(apiUrl, { timeout: 10000 }, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            const parsed = parseWhoisData(data);
+            // If we got meaningful data, return it
+            if (parsed.expiryDate || parsed.registrar || parsed.nameServers) {
+              resolve(parsed);
+            } else {
+              // Try next API
+              tryNextApi(index + 1);
+            }
+          } catch {
+            tryNextApi(index + 1);
+          }
+        });
+      }).on('error', (error) => {
+        lastError = error;
+        tryNextApi(index + 1);
       });
-      
-      res.on('end', () => {
-        try {
-          // Parse the WHOIS response
-          const parsed = parseWhoisData(data);
-          resolve(parsed);
-        } catch (error) {
-          resolve({ error: 'Failed to parse WHOIS data' });
-        }
-      });
-    }).on('error', () => {
-      // Fallback: simulate expiry check for demo
-      // In production, use a real WHOIS API
-      resolve({
-        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        registrar: 'Example Registrar, Inc.'
-      });
-    });
+    };
+
+    tryNextApi(0);
   });
 }
 
 /**
- * Parse raw WHOIS data.
+ * Parse raw WHOIS data with enhanced field extraction.
  */
 function parseWhoisData(data: string): WhoisResult {
   const result: WhoisResult = {};
@@ -139,10 +147,29 @@ function parseWhoisData(data: string): WhoisResult {
   const expiryMatch = data.match(/(?:Registry Expiry Date|Expiration Date|expires(?:-on)?|Valid Until)[:\s]+([^\n]+)/i);
   if (expiryMatch && expiryMatch[1]) {
     const dateStr = expiryMatch[1].trim();
-    // Try to parse various date formats
     const date = new Date(dateStr);
     if (!isNaN(date.getTime())) {
       result.expiryDate = date.toISOString();
+    }
+  }
+
+  // Extract created date
+  const createdMatch = data.match(/(?:Creation Date|Registered On|Domain Registration Date|Created On)[:\s]+([^\n]+)/i);
+  if (createdMatch && createdMatch[1]) {
+    const dateStr = createdMatch[1].trim();
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      result.createdDate = date.toISOString();
+    }
+  }
+
+  // Extract updated date
+  const updatedMatch = data.match(/(?:Updated Date|Last Updated On|Domain Registration Updated Date)[:\s]+([^\n]+)/i);
+  if (updatedMatch && updatedMatch[1]) {
+    const dateStr = updatedMatch[1].trim();
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      result.updatedDate = date.toISOString();
     }
   }
 
@@ -151,6 +178,41 @@ function parseWhoisData(data: string): WhoisResult {
   if (registrarMatch && registrarMatch[1]) {
     result.registrar = registrarMatch[1].trim();
   }
+
+  // Extract registrar URL
+  const registrarUrlMatch = data.match(/(?:Registrar URL|Registrar Information)[:\s]+([^\n]+)/i);
+  if (registrarUrlMatch && registrarUrlMatch[1]) {
+    result.registrarUrl = registrarUrlMatch[1].trim();
+  }
+
+  // Extract registrar IANA ID
+  const registrarIanaIdMatch = data.match(/(?:Registrar IANA ID|Registrar ID)[:\s]+([^\n]+)/i);
+  if (registrarIanaIdMatch && registrarIanaIdMatch[1]) {
+    result.registrarIanaId = registrarIanaIdMatch[1].trim();
+  }
+
+  // Extract domain status
+  const statusMatches = data.matchAll(/(?:Domain Status|Status)[:\s]+([^\n]+)/gi);
+  const statuses = Array.from(statusMatches, m => m[1]?.trim()).filter((s): s is string => !!s);
+  if (statuses.length > 0) {
+    result.domainStatus = statuses;
+  }
+
+  // Extract name servers
+  const nsMatches = data.matchAll(/(?:Name Server|Nameserver|DNS)[:\s]+([^\n]+)/gi);
+  const nameServers = Array.from(nsMatches, m => m[1]?.trim()).filter((s): s is string => !!s);
+  if (nameServers.length > 0) {
+    result.nameServers = nameServers;
+  }
+
+  // Extract DNSSEC
+  const dnssecMatch = data.match(/(?:DNSSEC)[:\s]+([^\n]+)/i);
+  if (dnssecMatch && dnssecMatch[1]) {
+    result.dnssec = dnssecMatch[1].trim();
+  }
+
+  // Store raw data for debugging
+  result.raw = data;
 
   return result;
 }

@@ -68,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
             <LogOut size={20} />
           </button>
           <a
-            href="http://localhost:3002"
+            href={typeof import.meta !== 'undefined' && import.meta.env?.VITE_SITE_URL ? import.meta.env.VITE_SITE_URL : 'http://localhost:3002'}
             target="_blank"
             rel="noopener noreferrer"
             className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5 text-sm font-medium"

@@ -82,11 +82,25 @@ export const sendNotification = async (options: NotificationOptions): Promise<vo
   const settings = loadSettings();
   if (settings.webhooks && settings.webhooks.length > 0) {
     const enabledWebhooks = settings.webhooks.filter(w => w.enabled);
-    
+
     for (const webhook of enabledWebhooks) {
+      // Validate webhook URL
+      if (!webhook.url || !webhook.url.startsWith('http://') && !webhook.url.startsWith('https://')) {
+        logger.warn(`Invalid webhook URL for ${webhook.name}: ${webhook.url}`);
+        continue;
+      }
+
+      try {
+        // Validate URL format
+        new URL(webhook.url);
+      } catch {
+        logger.warn(`Malformed webhook URL for ${webhook.name}`);
+        continue;
+      }
+
       try {
         let payload = {};
-        
+
         if (webhook.type === 'slack') {
           payload = { text: `*${options.title}*\n${options.body}` };
         } else if (webhook.type === 'discord') {

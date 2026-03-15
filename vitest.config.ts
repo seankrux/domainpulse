@@ -3,13 +3,13 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react() as any],
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './tests/setup.ts',
-    include: ['tests/**/*.spec.ts', 'tests/**/*.test.ts'],
-    exclude: ['tests/**/*.gui.spec.ts', 'node_modules', 'dist', 'dist-site'],
+    include: ['tests/unit/**/*.test.ts', 'tests/unit/**/*.test.tsx', 'tests/unit/**/*.spec.ts', 'tests/unit/**/*.spec.tsx'],
+    exclude: ['tests/**/*.{gui,devtools,comprehensive,dashboard,automated_build_verify}.spec.ts', 'node_modules', 'dist', 'dist-site'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

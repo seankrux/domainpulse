@@ -1,12 +1,12 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-import { getCorsHeaders, isAuthBootstrapAllowed } from './_utils/auth';
+import { getCorsHeaders, isAuthBootstrapAllowed, generateToken } from './_utils/auth';
 
 let AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SESSION_TTL_MINUTES = Number(process.env.VITE_AUTH_SESSION_TTL_MINUTES || 720); // 12h
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Helper to set multiple headers since res.set is not available on VercelResponse
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);
@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const origin = req.headers.origin;
   const corsHeaders = getCorsHeaders(origin);
-  
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     setHeaders(corsHeaders);
@@ -35,21 +35,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Password is required' });
   }
 
-  // If no hash is set, first login can set the password only in explicit dev mode.
+  // If no hash is set, first login can set the password ONLY in explicit dev mode
+  // NEVER allowed in production
   if (!AUTH_PASSWORD_HASH) {
     if (!isAuthBootstrapAllowed()) {
       setHeaders(corsHeaders);
-      return res.status(500).json({ error: 'AUTH password hash not configured.' });
+      return res.status(500).json({ 
+        error: 'Authentication password hash not configured. Set VITE_PASSWORD_HASH environment variable.' 
+      });
     }
+    
     const salt = crypto.randomBytes(16).toString('hex');
     const hash = crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
     AUTH_PASSWORD_HASH = `${hash}:${salt}`;
-    // In production, we can't persistent the hash variable, but we should log it
-    // so the user can set it in their Vercel environment variables.
-    console.log('Vercel: Initial password set. Please save this hash for your VITE_PASSWORD_HASH env var:', AUTH_PASSWORD_HASH);
-    const expiresAt = Date.now() + Math.max(SESSION_TTL_MINUTES, 1) * 60 * 1000;
+    
+    // Generate JWT token
+    const { token, expiresAt } = generateToken();
+    
     setHeaders(corsHeaders);
-    return res.json({ token: hash, expiresAt, message: 'Password initialized. Set VITE_PASSWORD_HASH in environment variables.' });
+    return res.json({ 
+      token, 
+      expiresAt, 
+      message: 'Password initialized for development. Set VITE_PASSWORD_HASH in production environment variables.' 
+    });
   }
 
   const [hash, salt] = AUTH_PASSWORD_HASH.split(':');
@@ -61,9 +69,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const checkHash = crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
 
   if (checkHash === hash) {
-    const expiresAt = Date.now() + Math.max(SESSION_TTL_MINUTES, 1) * 60 * 1000;
+    const { token, expiresAt } = generateToken();
     setHeaders(corsHeaders);
-    res.json({ token: hash, expiresAt });
+    res.json({ token, expiresAt });
   } else {
     setHeaders(corsHeaders);
     res.status(401).json({ error: 'Invalid password' });

@@ -44,7 +44,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   showInfo,
   requestNotificationPermission
 }) => {
-  const [newWebhook, setNewWebhook] = React.useState({ name: '', url: '', type: 'slack' as const });
+  const [newWebhook, setNewWebhook] = React.useState<WebhookConfig>({ id: '', name: '', url: '', type: 'slack', enabled: true });
 
   const toggleAutoRefresh = () => {
     setSettings(prev => ({ ...prev, autoRefresh: !prev.autoRefresh }));
@@ -76,7 +76,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       ...prev,
       webhooks: [...(prev.webhooks || []), webhook]
     }));
-    setNewWebhook({ name: '', url: '', type: 'slack' });
+    setNewWebhook({ id: '', name: '', url: '', type: 'slack', enabled: true });
     showSuccess('Webhook added');
   };
 

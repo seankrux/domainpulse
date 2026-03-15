@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Domain, DomainStatus, SSLStatus, DomainGroup, SSLInfo, DomainExpiry } from '../types';
-import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, Search, History, Shield, Calendar, LayoutDashboard, Plus } from 'lucide-react';
+import { Domain, DomainStatus, SSLStatus, DomainGroup, SSLInfo, DomainExpiry /* TechStackInfo */ } from '../types';
+import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, Search, History, Shield, Calendar, LayoutDashboard, Plus, Copy, CheckCheck } from 'lucide-react';
 import { getSSLStatusColor, getSSLStatusLabel } from '../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../services/expiryService';
+import { TechStackBadge } from './TechStackBadge';
 
 interface DomainTableProps {
   domains: Domain[];
@@ -22,6 +23,30 @@ interface DomainTableProps {
 
 const Skeleton = ({ className = "w-16" }: { className?: string }) => (
   <div className={`h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse ${className}`} />
+);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const LoadingSkeletonRow = () => (
+  <tr className="animate-pulse">
+    <td className="p-4 text-center"><div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded mx-auto" /></td>
+    <td className="p-4 pl-2">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700" />
+        <div className="space-y-2">
+          <Skeleton className="w-32 h-4" />
+          <Skeleton className="w-20 h-3" />
+        </div>
+      </div>
+    </td>
+    <td className="p-4"><Skeleton className="w-20 h-6" /></td>
+    <td className="p-4"><Skeleton className="w-16 h-6" /></td>
+    <td className="p-4"><Skeleton className="w-16 h-6" /></td>
+    <td className="p-4 hidden xl:table-cell"><Skeleton className="w-24 h-4" /></td>
+    <td className="p-4"><Skeleton className="w-12 h-4" /></td>
+    <td className="p-4 hidden md:table-cell"><Skeleton className="w-16 h-4" /></td>
+    <td className="p-4 hidden lg:table-cell"><Skeleton className="w-20 h-4" /></td>
+    <td className="p-4 text-right"><Skeleton className="w-16 h-8" /></td>
+  </tr>
 );
 
 const Favicon = ({ url }: { url: string }) => {
@@ -202,6 +227,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [newTag, setNewTag] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (domain: Domain) => {
@@ -232,6 +258,31 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   const removeTag = (id: string, currentTags: string[], tag: string) => {
     if (!onEditTags) return;
     onEditTags(id, currentTags.filter(t => t !== tag));
+  };
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
+  const formatRelativeTime = (date?: Date) => {
+    if (!date) return 'Never';
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   };
 
   const allSelected = domains.length > 0 && domains.every(d => selectedIds.has(d.id));
@@ -282,28 +333,31 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden" role="region" aria-label="Domains table">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
+        <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0" role="grid" aria-rowcount={domains.length + 1}>
           <thead>
-            <tr className="bg-slate-50/50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-semibold">
-              <th className="p-4 w-12 text-center">
+            <tr className="bg-slate-50/50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-semibold" role="row">
+              <th className="p-4 w-12 text-center" role="columnheader" aria-label="Select">
                 <input
                     ref={headerCheckboxRef}
                     type="checkbox"
                     className="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer transition-all"
                     checked={allSelected}
                     onChange={onToggleAll}
+                    aria-label="Select all domains"
                 />
               </th>
-              <th className="p-4 pl-2">Domain</th>
-              <th className="p-4">Status</th>
-              <th className="p-4">SSL</th>
-              <th className="p-4">Expiry</th>
-              <th className="p-4">Latency</th>
-              <th className="p-4 hidden md:table-cell">Last Checked</th>
-              <th className="p-4 hidden lg:table-cell">History</th>
-              <th className="p-4 text-right">Actions</th>
+              <th className="p-4 pl-2" role="columnheader" scope="col">Domain</th>
+              <th className="p-4" role="columnheader" scope="col">Status</th>
+              <th className="p-4" role="columnheader" scope="col">Tech Stack</th>
+              <th className="p-4" role="columnheader" scope="col">SSL</th>
+              <th className="p-4" role="columnheader" scope="col">Expiry</th>
+              <th className="p-4 hidden xl:table-cell" role="columnheader" scope="col">Nameservers</th>
+              <th className="p-4" role="columnheader" scope="col">Latency</th>
+              <th className="p-4 hidden md:table-cell" role="columnheader" scope="col">Last Checked</th>
+              <th className="p-4 hidden lg:table-cell" role="columnheader" scope="col">History</th>
+              <th className="p-4 text-right" role="columnheader" scope="col">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
@@ -315,14 +369,18 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                 <tr
                   key={domain.id}
                   id={`domain-${domain.id}`}
+                  role="row"
+                  aria-rowindex={domains.indexOf(domain) + 2}
+                  aria-selected={isSelected}
                   className={`group transition-all duration-300 ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/50'}`}
                 >
-                  <td className="p-4 text-center align-middle">
+                  <td className="p-4 text-center align-middle" role="gridcell">
                      <input
                         type="checkbox"
                         className="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer transition-all opacity-100 md:opacity-30 md:group-hover:opacity-100 checked:opacity-100"
                         checked={isSelected}
                         onChange={() => onToggleSelect(domain.id)}
+                        aria-label={`Select ${domain.url}`}
                     />
                   </td>
                   <td className="p-4 pl-2 align-middle">
@@ -347,12 +405,27 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                         <Favicon url={domain.url} />
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
-                                <span 
+                                <span
                                   onClick={() => onViewDetails?.(domain)}
                                   data-testid={`domain-link-${domain.url}`}
-                                  className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] cursor-pointer hover:text-indigo-600 transition-colors"
+                                  className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-2 group/domain"
                                 >
                                   {domain.url}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyToClipboard(domain.url, domain.id);
+                                    }}
+                                    className="opacity-0 group-hover/domain:opacity-100 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-all"
+                                    title="Copy domain to clipboard"
+                                    aria-label={`Copy ${domain.url} to clipboard`}
+                                  >
+                                    {copiedId === domain.id ? (
+                                      <CheckCheck size={12} className="text-emerald-500" />
+                                    ) : (
+                                      <Copy size={12} className="text-slate-400" />
+                                    )}
+                                  </button>
                                 </span>
                                 <a
                                 href={`https://${domain.url}`}
@@ -460,10 +533,43 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                     <StatusBadge status={domain.status} statusCode={domain.statusCode} />
                   </td>
                   <td className="p-4 align-middle">
+                    <TechStackBadge 
+                      techStack={domain.techStack} 
+                      domain={domain.url}
+                      onClick={() => onViewDetails?.(domain)}
+                    />
+                  </td>
+                  <td className="p-4 align-middle">
                     <SSLBadge ssl={domain.ssl} onClick={() => onViewDetails?.(domain)} />
                   </td>
                   <td className="p-4 align-middle">
                     <ExpiryBadge expiry={domain.expiry} onClick={() => onViewDetails?.(domain)} />
+                  </td>
+                  <td className="p-4 align-middle hidden xl:table-cell">
+                    {isChecking ? (
+                      <Skeleton className="w-24 h-4" />
+                    ) : (
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {(domain.expiry?.nameServers && domain.expiry.nameServers.length > 0) ? (
+                          domain.expiry.nameServers.slice(0, 2).map((ns, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded text-[9px] font-mono text-indigo-700 dark:text-indigo-300 truncate max-w-[100px]">
+                              {ns}
+                            </span>
+                          ))
+                        ) : domain.dns?.ns && domain.dns.ns.length > 0 ? (
+                          domain.dns.ns.slice(0, 2).map((ns, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded text-[9px] font-mono text-slate-600 dark:text-slate-400 truncate max-w-[100px]">
+                              {ns}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">-</span>
+                        )}
+                        {((domain.expiry?.nameServers?.length || domain.dns?.ns?.length || 0) > 2) && (
+                          <span className="px-2 py-0.5 text-[9px] text-slate-400">+{((domain.expiry?.nameServers?.length || 0) + (domain.dns?.ns?.length || 0)) - 2}</span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="p-4 align-middle text-sm text-slate-600 dark:text-slate-300 font-mono">
                     {isChecking ? (
@@ -476,40 +582,50 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                     {isChecking ? (
                         <Skeleton className="w-20 h-4" />
                     ) : (
-                        domain.lastChecked ? domain.lastChecked.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : <span className="text-slate-300 dark:text-slate-600">Never</span>
+                        domain.lastChecked ? (
+                          <span className="flex items-center gap-2">
+                            {formatRelativeTime(domain.lastChecked)}
+                            <span className="text-xs text-slate-400">({domain.lastChecked.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
+                          </span>
+                        ) : <span className="text-slate-300 dark:text-slate-600">Never</span>
                     )}
                   </td>
                   <td className="p-4 align-middle hidden lg:table-cell">
                     <HistorySparkline history={domain.history} />
                   </td>
-                  <td className="p-4 align-middle text-right">
+                  <td className="p-4 align-middle text-right" role="gridcell">
                     <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => onViewHistory && onViewHistory(domain)}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors"
-                        title="View History"
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        title="View history"
+                        aria-label={`View history for ${domain.url}`}
                       >
                         <History size={16} />
                       </button>
                       <button
                         onClick={() => onCheck(domain.id)}
                         disabled={isChecking}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors disabled:opacity-50"
-                        title="Check Status"
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        title="Check status"
+                        aria-label={`Check status for ${domain.url}`}
+                        aria-busy={isChecking}
                       >
                         <RefreshCw size={16} className={isChecking ? "animate-spin" : ""} />
                       </button>
                       <button
                         onClick={() => startEdit(domain)}
-                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors"
-                        title="Edit Domain"
+                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        title="Edit domain"
+                        aria-label={`Edit domain ${domain.url}`}
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
                         onClick={() => onRemove(domain.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500"
                         title="Remove"
+                        aria-label={`Remove ${domain.url}`}
                       >
                         <Trash2 size={16} />
                       </button>

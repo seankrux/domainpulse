@@ -5,11 +5,8 @@ test.describe('Production Build Verification', () => {
   test.setTimeout(60000);
 
   test('should pass end-to-end on the production build', async ({ page }) => {
-    // 1. Navigate to the preview server
-    // Note: 'npm run preview' usually runs on port 4173 by default in Vite, 
-    // but we can also use port 3000 if we started it manually.
-    // We'll check both or assume the standard 4173 for preview.
-    await page.goto('http://localhost:4173');
+    // Navigate to the dev server (playwright.config.ts starts dev:all on port 3000)
+    await page.goto('http://localhost:3000');
     
     // Handle Login
     const passwordInput = page.locator('#password');

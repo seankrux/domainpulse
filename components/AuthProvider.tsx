@@ -1,15 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AuthState } from '../types';
-import { config } from '../lib/config';
 
+// Use sessionStorage instead of localStorage for better security (cleared on browser close)
 const AUTH_SESSION_KEY = 'domainpulse_auth_session';
-const SESSION_TTL_MS = config.auth.sessionTTL;
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
 
 interface StoredSession {
   token: string;
   expiresAt: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface AuthContextType extends AuthState {}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,8 +29,18 @@ interface AuthProviderProps {
 
 const getNow = () => Date.now();
 
+// Use ref to store session in memory (not accessible to XSS via localStorage)
+let inMemorySession: StoredSession | null = null;
+
 const readSession = (): StoredSession | null => {
-  const storedSession = localStorage.getItem(AUTH_SESSION_KEY);
+  // First check in-memory session
+  if (inMemorySession && inMemorySession.token && inMemorySession.expiresAt > getNow()) {
+    return inMemorySession;
+  }
+  
+  // Fallback to sessionStorage for persistence across page reloads
+  // Note: sessionStorage is still vulnerable to XSS but cleared when browser/tab closes
+  const storedSession = sessionStorage.getItem(AUTH_SESSION_KEY);
   if (!storedSession) {
     return null;
   }
@@ -41,13 +52,17 @@ const readSession = (): StoredSession | null => {
     }
 
     if (parsed.expiresAt <= getNow()) {
-      localStorage.removeItem(AUTH_SESSION_KEY);
+      sessionStorage.removeItem(AUTH_SESSION_KEY);
+      inMemorySession = null;
       return null;
     }
 
+    // Cache in memory
+    inMemorySession = parsed;
     return parsed;
   } catch {
-    localStorage.removeItem(AUTH_SESSION_KEY);
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    inMemorySession = null;
     return null;
   }
 };
@@ -57,7 +72,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const clearSession = useCallback(() => {
-    localStorage.removeItem(AUTH_SESSION_KEY);
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    inMemorySession = null;
     setIsAuthenticated(false);
   }, []);
 
@@ -80,20 +96,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => window.removeEventListener('domainpulse:auth-invalid', handleAuthInvalid);
   }, [clearSession]);
 
-  useEffect(() => {
-    const syncStorage = (event: StorageEvent) => {
-      if (event.key === AUTH_SESSION_KEY && event.newValue === null) {
-        clearSession();
-      }
-    };
-
-    window.addEventListener('storage', syncStorage);
-    return () => window.removeEventListener('storage', syncStorage);
-  }, [clearSession]);
+  // Note: Removed storage event listener since sessionStorage is tab-specific
+  // and inMemorySession is module-scoped
 
   const saveSession = (token: string, expiresAt: number) => {
     const safeExpiresAt = expiresAt > getNow() ? expiresAt : getNow() + SESSION_TTL_MS;
-    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ token, expiresAt: safeExpiresAt }));
+    // Store in memory first (not accessible via XSS)
+    inMemorySession = { token, expiresAt: safeExpiresAt };
+    // Also store in sessionStorage for page reload persistence
+    // Warning: sessionStorage is still vulnerable to XSS but cleared on browser/tab close
+    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ token, expiresAt: safeExpiresAt }));
   };
 
   const login = useCallback(async (password: string): Promise<boolean> => {

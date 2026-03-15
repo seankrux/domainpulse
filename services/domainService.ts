@@ -1,7 +1,8 @@
-import { DomainStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo } from '../types';
+import { DomainStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo } from '../types';
 import { checkSSL } from './sslService';
 import { checkDomainExpiry } from './expiryService';
 import { checkDNS } from './dnsService';
+import { detectTechStack } from './techDetectionService';
 import { logger } from '../utils/logger';
 import { config } from '../lib/config';
 
@@ -85,7 +86,7 @@ export const validateAndNormalizeUrl = (input: string): { valid: boolean; url?: 
 export const normalizeUrl = (input: string): string => {
   let url = input.trim().toLowerCase();
   url = url.replace(/^https?:\/\//, '');
-  url = url.replace(/\/$/, '');
+  url = url.replace(/\/.*$/, ''); // Remove path and trailing slashes
   return url;
 };
 
@@ -93,7 +94,7 @@ export const normalizeUrl = (input: string): string => {
  * Check domain with SSL, expiry, and DNS information.
  * Includes timeout to prevent hanging.
  */
-export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo }> => {
+export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
   // Create a timeout promise using centralized config
   const timeoutMs = serviceConfig?.timeout || config.timeouts.domainCheck;
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -101,7 +102,7 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
   });
 
   // Race between the actual check and timeout
-  const checkInternal = async (): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo }> => {
+  const checkInternal = async (): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
     const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
     // Determine proxy URL and token
@@ -173,17 +174,20 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
       throw new Error(`All endpoints unavailable for ${url}`);
     }
 
-    const [sslResult, expiryResult, dnsResult] = await Promise.all([
-      checkSSL(url, config),
-      checkDomainExpiry(url, config),
-      checkDNS(url, config)
+    // Use the serviceConfig parameter for SSL/expiry/DNS/Tech calls
+    const [sslResult, expiryResult, dnsResult, techResult] = await Promise.all([
+      checkSSL(url, serviceConfig),
+      checkDomainExpiry(url, serviceConfig),
+      checkDNS(url, serviceConfig),
+      detectTechStack(url, serviceConfig)
     ]);
 
     return {
       ...domainResult,
       ssl: sslResult,
       expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined,
-      dns: dnsResult && !dnsResult.error ? dnsResult : undefined
+      dns: dnsResult && !dnsResult.error ? dnsResult : undefined,
+      techStack: techResult.confidence !== 'low' ? techResult : undefined
     };
   };
 

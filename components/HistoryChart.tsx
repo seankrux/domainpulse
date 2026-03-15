@@ -5,7 +5,6 @@ import { TrendingUp, Activity, Clock } from 'lucide-react';
 
 interface HistoryChartProps {
   domain: Domain;
-  onClose: () => void;
 }
 
 interface ChartDataPoint {

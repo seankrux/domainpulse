@@ -2,6 +2,8 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import * as https from 'https';
 import * as tls from 'tls';
 import { getCorsHeaders, verifyAuth } from './_utils/auth';
+import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit';
+import { config } from '../lib/config';
 
 interface SSLResult {
   valid: boolean;
@@ -12,32 +14,7 @@ interface SSLResult {
   error?: string;
 }
 
-// Rate limiting: Track requests per IP
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT = 100; // requests per minute
-const RATE_WINDOW = 60 * 1000; // 1 minute
-
-// Rate limiting middleware
-const checkRateLimit = (ip: string): boolean => {
-  const now = Date.now();
-  const record = requestCounts.get(ip);
-  
-  if (!record || now > record.resetTime) {
-    requestCounts.set(ip, { count: 1, resetTime: now + RATE_WINDOW });
-    return true;
-  }
-  
-  if (record.count >= RATE_LIMIT) {
-    return false;
-  }
-  
-  record.count++;
-  requestCounts.set(ip, record);
-  return true;
-};
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Helper to set multiple headers since res.set is not available on VercelResponse
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);
@@ -46,15 +23,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const origin = req.headers.origin;
   const corsHeaders = getCorsHeaders(origin);
-  
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     setHeaders(corsHeaders);
     return res.status(200).end();
   }
 
-  // Only allow GET requests
+  // Rate limiting (async for Vercel KV support)
+  const ip = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
+  const isRateLimited = await checkRateLimit(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs });
+  if (!isRateLimited) {
+    setHeaders(corsHeaders);
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'Too many requests. Please wait a minute.'
+    });
+  }
+
+  // Add rate limit headers
+  setHeaders(await getRateLimitHeaders(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs }));
+
+  // Only allow GET requests (check method BEFORE auth to avoid leaking auth status)
   if (req.method !== 'GET') {
+    setHeaders(corsHeaders);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -64,18 +56,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Rate limiting
-  const ip = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
-  if (!checkRateLimit(ip)) {
-    return res.status(429).json({ 
-      error: 'Rate limit exceeded', 
-      message: 'Too many requests. Please wait a minute.' 
-    });
-  }
-
   const domain = req.query.domain as string;
 
   if (!domain) {
+    setHeaders(corsHeaders);
     return res.status(400).json({ error: 'Domain is required' });
   }
 
@@ -95,6 +79,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 /**
  * Get SSL certificate information for a domain.
+ * Note: rejectUnauthorized is false to retrieve certificates even for invalid/expired ones.
+ * The validity is determined by examining the certificate dates, not the TLS handshake.
  */
 function getSSLCertificate(domain: string): Promise<SSLResult> {
   return new Promise((resolve) => {
@@ -105,7 +91,7 @@ function getSSLCertificate(domain: string): Promise<SSLResult> {
       method: 'HEAD',
       timeout: 10000,
       agent: new https.Agent({
-        rejectUnauthorized: false // We want to get cert even if invalid
+        rejectUnauthorized: false // We retrieve cert even if invalid to report accurate status
       })
     };
 

@@ -1,4 +1,4 @@
-import { Domain, DomainStatus, DomainGroup, WebhookConfig } from '../types';
+import { Domain, DomainStatus, DomainGroup, WebhookConfig, SSLStatus } from '../types';
 import { SAMPLE_DOMAINS, SAMPLE_GROUPS } from '../data/seed';
 
 const STORAGE_KEY = 'domainpulse_domains';
@@ -28,7 +28,7 @@ interface StoredStatusRecord {
 }
 
 interface StoredSSLInfo {
-  status: string;
+  status: SSLStatus;
   issuer?: string;
   validFrom?: string;
   validTo?: string;
@@ -37,7 +37,14 @@ interface StoredSSLInfo {
 
 interface StoredDomainExpiry {
   expiryDate?: string;
+  createdDate?: string;
+  updatedDate?: string;
   registrar?: string;
+  registrarUrl?: string;
+  registrarIanaId?: string;
+  domainStatus?: string[];
+  nameServers?: string[];
+  dnssec?: string;
   daysUntilExpiry?: number;
   status: 'active' | 'expiring' | 'expired' | 'unknown';
 }
@@ -50,20 +57,22 @@ interface StoredGroup {
 
 const toStored = (domain: Domain): StoredDomain => ({
   ...domain,
-  lastChecked: domain.lastChecked?.toISOString(),
-  addedAt: domain.addedAt?.toISOString() ?? new Date().toISOString(),
+  lastChecked: domain.lastChecked ? (domain.lastChecked instanceof Date ? domain.lastChecked.toISOString() : domain.lastChecked) : undefined,
+  addedAt: domain.addedAt ? (domain.addedAt instanceof Date ? domain.addedAt.toISOString() : domain.addedAt) : new Date().toISOString(),
   history: domain.history.map(h => ({
     ...h,
-    timestamp: h.timestamp.toISOString()
+    timestamp: h.timestamp instanceof Date ? h.timestamp.toISOString() : h.timestamp
   })),
   ssl: domain.ssl ? {
     ...domain.ssl,
-    validFrom: domain.ssl.validFrom?.toISOString(),
-    validTo: domain.ssl.validTo?.toISOString()
+    validFrom: domain.ssl.validFrom ? (domain.ssl.validFrom instanceof Date ? domain.ssl.validFrom.toISOString() : domain.ssl.validFrom) : undefined,
+    validTo: domain.ssl.validTo ? (domain.ssl.validTo instanceof Date ? domain.ssl.validTo.toISOString() : domain.ssl.validTo) : undefined
   } : undefined,
   expiry: domain.expiry ? {
     ...domain.expiry,
-    expiryDate: domain.expiry.expiryDate?.toISOString()
+    expiryDate: domain.expiry.expiryDate ? (domain.expiry.expiryDate instanceof Date ? domain.expiry.expiryDate.toISOString() : domain.expiry.expiryDate) : undefined,
+    createdDate: domain.expiry.createdDate ? (domain.expiry.createdDate instanceof Date ? domain.expiry.createdDate.toISOString() : domain.expiry.createdDate) : undefined,
+    updatedDate: domain.expiry.updatedDate ? (domain.expiry.updatedDate instanceof Date ? domain.expiry.updatedDate.toISOString() : domain.expiry.updatedDate) : undefined
   } : undefined,
   tags: domain.tags || []
 });
@@ -78,12 +87,15 @@ const fromStored = (stored: StoredDomain): Domain => ({
   })),
   ssl: stored.ssl ? {
     ...stored.ssl,
+    status: stored.ssl.status as SSLStatus,
     validFrom: stored.ssl.validFrom ? new Date(stored.ssl.validFrom) : undefined,
     validTo: stored.ssl.validTo ? new Date(stored.ssl.validTo) : undefined
   } : undefined,
   expiry: stored.expiry ? {
     ...stored.expiry,
-    expiryDate: stored.expiry.expiryDate ? new Date(stored.expiry.expiryDate) : undefined
+    expiryDate: stored.expiry.expiryDate ? new Date(stored.expiry.expiryDate) : undefined,
+    createdDate: stored.expiry.createdDate ? new Date(stored.expiry.createdDate) : undefined,
+    updatedDate: stored.expiry.updatedDate ? new Date(stored.expiry.updatedDate) : undefined
   } : undefined,
   tags: stored.tags || []
 });
