@@ -72,7 +72,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
                 {darkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
               <a
-                href="https://github.com/bigsean"
+                href="https://github.com/seankrux"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
@@ -138,7 +138,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
             <div>
               <h4 className="font-semibold mb-4">Connect</h4>
               <div className="flex items-center gap-4">
-                <a href="https://github.com/bigsean" className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
+                <a href="https://github.com/seankrux" className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
                   <Github size={20} />
                 </a>
                 <a href="mailto:contact@domainpulse.app" className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
@@ -148,7 +148,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
             </div>
           </div>
           <div className="border-t border-slate-200 dark:border-slate-800 mt-8 pt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-            © {new Date().getFullYear()} DomainPulse. All rights reserved.
+            Made with 💛 by Sean G
           </div>
         </div>
       </footer>

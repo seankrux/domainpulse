@@ -97,7 +97,7 @@ The auth "token" is literally the PBKDF2 hash portion of the password. This is a
 
 **FIXED**: Updated branding to DomainPulse:
 - Logo text now says "DomainPulse"
-- GitHub link points to `https://github.com/bigsean`
+- GitHub link points to `https://github.com/seankrux`
 - Email is `mailto:contact@domainpulse.app`
 - Footer updated with DomainPulse branding
 - "Launch App" link now uses `VITE_APP_URL` environment variable

@@ -362,5 +362,5 @@ localStorage.clear(); location.reload()
 ---
 
 <div align="center">
-  <p>Made with care by BigSean</p>
+  <p>Made with 💛 by Sean G</p>
 </div>
