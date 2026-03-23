@@ -225,3 +225,12 @@ input:focus, select:focus, textarea:focus {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.slide-in-from-right {
+  animation-name: slideInFromRight;
+}
+
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}

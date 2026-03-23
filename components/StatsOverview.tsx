@@ -78,7 +78,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
   );
 };
 
-export const DistributionChart: React.FC<{ stats: DomainStats }> = React.memo(({ stats }) => {
+const DistributionChartInner: React.FC<{ stats: DomainStats }> = ({ stats }) => {
     const data = React.useMemo(() => [
         { name: 'Alive', value: stats.alive },
         { name: 'Down', value: stats.down },
@@ -134,4 +134,7 @@ export const DistributionChart: React.FC<{ stats: DomainStats }> = React.memo(({
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
         </div>
     );
-});
+};
+
+export const DistributionChart = React.memo(DistributionChartInner);
+DistributionChart.displayName = 'DistributionChart';

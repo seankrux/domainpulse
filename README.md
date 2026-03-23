@@ -13,83 +13,31 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License" />
 </p>
 
----
-
-DomainPulse is a self-hosted domain monitoring dashboard that tracks uptime, SSL certificates, DNS records, and domain expiry in real-time. It ships with a companion marketing site powered by a file-based CMS.
-
 <p align="center">
   <a href="https://domainpulse.vercel.app"><strong>Live Demo &rarr;</strong></a>
 </p>
 
 ---
 
-## Features
+## Screenshots
 
-- **Uptime monitoring** with latency tracking and history charts
-- **SSL certificate** status and expiry alerts
-- **Domain expiry** (WHOIS) tracking
-- **DNS record** lookup
-- **Groups and tags** for organizing domains
-- **Notifications** via browser, Slack, and Discord webhooks
-- **Sound alerts** via Web Audio API
-- **CSV import/export** and bulk domain import
-- **Dark mode**
-- **Password-protected auth** (PBKDF2 + salt)
-- **Web Worker** background monitoring (non-blocking UI)
-- **Companion marketing site** with file-based CMS and blog
+> Visit the [live demo](https://domainpulse.vercel.app) to explore the full dashboard.
 
 ---
 
-## Quick Start
+## Key Features
 
-```bash
-# Install dependencies
-npm install
-
-# Run DomainPulse dashboard + proxy server
-npm run dev:all
-# Open http://localhost:3000
-
-# Run the marketing site
-npm run dev
-# Open http://localhost:3002
-```
-
-### Authentication Setup
-
-Create `.env.local` for local development:
-
-```bash
-VITE_PASSWORD_HASH=<your-pbkdf2-hash:salt>
-```
-
-Generate a password hash:
-
-```bash
-node -e "const crypto = require('crypto'); const salt = crypto.randomBytes(16).toString('hex'); const hash = crypto.pbkdf2Sync('your-password', salt, 100000, 32, 'sha256').toString('hex'); console.log(hash + ':' + salt);"
-```
-
----
-
-## Architecture
-
-### Dual-Target Build
-
-Two separate React apps are built from a single codebase:
-
-| App | Entry | Config | Port | Output |
-|-----|-------|--------|------|--------|
-| DomainPulse | `index.html` / `App.tsx` | `vite.config.ts` | 3000 | `dist/` |
-| Marketing Site | `site.html` / `SiteApp.tsx` | `vite.site.config.ts` | 3002 | `dist-site/` |
-
-### Proxy Architecture
-
-- **Local dev** &mdash; Vite (port 3000) proxies `/api/*` to an Express server (port 3001)
-- **Production** &mdash; Vercel serverless functions handle `/api/*` via `vercel.json` rewrites
-
-### Web Worker Integration
-
-Monitoring checks run in a dedicated Web Worker to keep the UI responsive, with automatic fallback to main-thread processing.
+- 🔍 **Uptime Monitoring** — Latency tracking with history charts
+- 🔒 **SSL Tracking** — Certificate status and expiry alerts
+- 📅 **Domain Expiry** — WHOIS-based expiration tracking
+- 🌐 **DNS Lookup** — Full DNS record inspection
+- 🏷️ **Groups & Tags** — Organize domains into logical groups
+- 🔔 **Notifications** — Browser, Slack, and Discord webhooks
+- 🔊 **Sound Alerts** — Web Audio API notifications
+- 📥 **CSV Import/Export** — Bulk domain management
+- 🌙 **Dark Mode** — Full dark theme support
+- 🔑 **Password Auth** — PBKDF2 + salt authentication
+- ⚡ **Web Worker** — Non-blocking background monitoring
 
 ---
 
@@ -106,11 +54,42 @@ Monitoring checks run in a dedicated Web Worker to keep the UI responsive, with 
 
 ---
 
+## Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Run dashboard + proxy server
+npm run dev:all
+# Open http://localhost:3000
+
+# Run the marketing site
+npm run dev
+# Open http://localhost:3002
+```
+
+### Authentication Setup
+
+Create `.env.local`:
+
+```bash
+VITE_PASSWORD_HASH=<your-pbkdf2-hash:salt>
+```
+
+Generate a hash:
+
+```bash
+node -e "const crypto = require('crypto'); const salt = crypto.randomBytes(16).toString('hex'); const hash = crypto.pbkdf2Sync('your-password', salt, 100000, 32, 'sha256').toString('hex'); console.log(hash + ':' + salt);"
+```
+
+---
+
 ## Available Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev:all` | Dashboard + proxy server (recommended) |
+| `npm run dev:all` | Dashboard + proxy server |
 | `npm run dev` | Marketing site only |
 | `npm run build:all` | Build both apps |
 | `npm run lint` | ESLint |
@@ -120,25 +99,28 @@ Monitoring checks run in a dedicated Web Worker to keep the UI responsive, with 
 
 ---
 
-## Deployment
+## Architecture
 
-### Vercel (Recommended)
+Two React apps built from a single codebase:
+
+| App | Entry | Port |
+|-----|-------|------|
+| DomainPulse | `index.html` / `App.tsx` | 3000 |
+| Marketing Site | `site.html` / `SiteApp.tsx` | 3002 |
+
+- **Local dev** — Vite proxies `/api/*` to Express (port 3001)
+- **Production** — Vercel serverless functions via `vercel.json` rewrites
+
+---
+
+## Deployment
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/seankrux/domainpulse)
 
-Set these environment variables in Vercel:
-
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_PASSWORD_HASH` | Yes | PBKDF2 `hash:salt` for authentication |
+| `VITE_PASSWORD_HASH` | Yes | PBKDF2 `hash:salt` for auth |
 | `ALLOWED_ORIGINS` | No | CORS origins (comma-separated) |
-
-### CLI Deploy
-
-```bash
-npm i -g vercel
-vercel --prod
-```
 
 ---
 

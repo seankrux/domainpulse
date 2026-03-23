@@ -242,7 +242,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             </div>
             {domain.techStack && domain.techStack.confidence !== 'low' ? (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-800 flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20">
+                <div className="px-4 py-3 border-b border-zinc-800 flex justify-between items-center bg-emerald-500/10">
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded ${getTechStackColor(domain.techStack.cms || domain.techStack.ecommerce)}`}>
                       {domain.techStack.cms || domain.techStack.ecommerce || domain.techStack.framework || 'Detected'}
@@ -256,7 +256,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                       href={`https://${domain.url}${domain.techStack.adminUrl}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-sm"
+                      className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-sm"
                     >
                       Open Admin
                       <ExternalLink size={12} />
@@ -317,7 +317,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {domain.techStack.javascriptLibraries.map((lib, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 rounded text-xs text-emerald-300">
+                          <span key={i} className="px-2 py-0.5 bg-emerald-500/10 rounded text-xs text-emerald-300">
                             {lib}
                           </span>
                         ))}
@@ -343,14 +343,14 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
               <div className="space-y-4">
                 {/* Nameservers - from WHOIS */}
                 {(domain.expiry?.nameServers && domain.expiry.nameServers.length > 0) && (
-                  <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-emerald-500/20">
+                  <div className="bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20">
                     <div className="flex items-center gap-2 mb-3">
                       <Info size={14} className="text-emerald-400" />
                       <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Nameservers (from WHOIS)</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {domain.expiry.nameServers.map((ns, i) => (
-                        <span key={i} className="px-3 py-1.5 bg-zinc-900 border border-indigo-200 dark:border-indigo-700 rounded-lg text-xs font-mono text-emerald-300 shadow-sm">
+                        <span key={i} className="px-3 py-1.5 bg-zinc-900 border border-emerald-500/20 rounded-lg text-xs font-mono text-emerald-300 shadow-sm">
                           {ns}
                         </span>
                       ))}
@@ -436,7 +436,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
               href={`https://whois.com/whois/${domain.url}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-all text-sm shadow-md flex items-center gap-1.5"
               title="Check WHOIS registration information"
             >
               WHOIS

@@ -75,13 +75,13 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
           <div className="mt-6 flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="flex-1 px-4 py-2.5 border border-zinc-700 text-zinc-300 font-medium rounded-lg hover:bg-zinc-800 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleImport}
-              className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-md active:transform active:scale-95 transition-all flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white font-medium rounded-lg shadow-md active:transform active:scale-95 transition-all flex items-center justify-center gap-2 shadow-emerald-500/20"
             >
               <Plus size={18} />
               Import Domains

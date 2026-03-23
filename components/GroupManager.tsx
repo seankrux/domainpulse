@@ -70,8 +70,8 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
 
   return (
     <div data-testid="group-manager-modal" className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+      <div className="bg-zinc-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Manage Groups</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">Organize domains into groups</p>
@@ -97,7 +97,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   placeholder="e.g., Production, Personal, Client Work"
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 bg-zinc-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
                 />
@@ -168,7 +168,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                           type="text"
                           value={group.name}
                           onChange={(e) => onUpdateGroup(group.id, { name: e.target.value })}
-                          className="flex-1 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                          className="flex-1 px-2 py-1 bg-zinc-900 border border-slate-300 dark:border-slate-600 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                           autoFocus
                         />
                         <button
