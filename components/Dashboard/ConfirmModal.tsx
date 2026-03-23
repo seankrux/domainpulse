@@ -96,7 +96,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
             aria-label="Close confirmation dialog"
           >
             <X size={20} className="text-zinc-400" />
@@ -122,7 +122,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 onConfirm();
                 onClose();
               }}
-              className={`flex-1 px-6 py-2.5 ${style.button} text-white font-bold rounded-xl transition-all text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${variant === 'danger' ? 'focus:ring-rose-500' : variant === 'warning' ? 'focus:ring-amber-500' : 'focus:ring-indigo-500'}`}
+              className={`flex-1 px-6 py-2.5 ${style.button} text-white font-bold rounded-xl transition-all text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${variant === 'danger' ? 'focus:ring-rose-500' : variant === 'warning' ? 'focus:ring-amber-500' : 'focus:ring-emerald-500'}`}
             >
               {confirmText}
             </button>

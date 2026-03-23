@@ -29,9 +29,9 @@ const CMS_ICONS: Record<string, string> = {
 export const TechStackBadge: React.FC<TechStackBadgeProps> = ({ techStack, domain, onClick }) => {
   if (!techStack || (!techStack.cms && !techStack.ecommerce && !techStack.framework)) {
     return (
-      <button 
+      <button
         onClick={onClick}
-        className="text-slate-300 dark:text-slate-700 text-[10px] font-bold uppercase tracking-widest hover:text-indigo-500 transition-colors"
+        className="text-zinc-700 text-[10px] font-bold uppercase tracking-widest hover:text-emerald-400 transition-colors"
         title="Click to detect technology stack"
       >
         -
@@ -41,7 +41,7 @@ export const TechStackBadge: React.FC<TechStackBadgeProps> = ({ techStack, domai
 
   const platform = techStack.ecommerce || techStack.cms;
   const icon = platform ? (CMS_ICONS[platform] || '🌐') : '💻';
-  
+
   const getAdminUrl = () => {
     if (!domain || !techStack.adminUrl) return null;
     return `https://${domain}${techStack.adminUrl}`;
@@ -53,19 +53,19 @@ export const TechStackBadge: React.FC<TechStackBadgeProps> = ({ techStack, domai
     <div className="flex items-center gap-1">
       <button
         onClick={onClick}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border shadow-sm transition-all hover:shadow-md hover:scale-105 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700"
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border shadow-sm transition-all hover:shadow-md hover:scale-105 bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
         title={platform ? `Click to open ${platform} admin` : 'View technology stack'}
       >
         <span className="text-xs">{icon}</span>
         <span className="truncate max-w-[80px]">{platform || techStack.framework}</span>
       </button>
-      
+
       {adminUrl && (
         <a
           href={adminUrl}
           target="_blank"
           rel="noreferrer"
-          className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+          className="p-1 text-zinc-500 hover:text-emerald-400 transition-colors"
           title={`Open ${platform} admin panel`}
         >
           <ExternalLink size={10} />
@@ -77,16 +77,16 @@ export const TechStackBadge: React.FC<TechStackBadgeProps> = ({ techStack, domai
 
 export const getTechStackColor = (cms?: string): string => {
   const colors: Record<string, string> = {
-    'WordPress': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    'Shopify': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    'Wix': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-    'Squarespace': 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
-    'Webflow': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
-    'Drupal': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-    'Joomla': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-    'Magento': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    'Ghost': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    'WordPress': 'bg-blue-500/10 text-blue-400',
+    'Shopify': 'bg-green-500/10 text-green-400',
+    'Wix': 'bg-purple-500/10 text-purple-400',
+    'Squarespace': 'bg-zinc-800 text-zinc-300',
+    'Webflow': 'bg-cyan-500/10 text-cyan-400',
+    'Drupal': 'bg-violet-500/10 text-violet-400',
+    'Joomla': 'bg-orange-500/10 text-orange-400',
+    'Magento': 'bg-red-500/10 text-red-400',
+    'Ghost': 'bg-amber-500/10 text-amber-400',
   };
 
-  return colors[cms || ''] || 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300';
+  return colors[cms || ''] || 'bg-emerald-500/10 text-emerald-400';
 };

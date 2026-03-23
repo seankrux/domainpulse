@@ -97,7 +97,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   placeholder="e.g., Production, Personal, Client Work"
-                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-white"
+                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-white"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
                 />
@@ -168,7 +168,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                           type="text"
                           value={group.name}
                           onChange={(e) => onUpdateGroup(group.id, { name: e.target.value })}
-                          className="flex-1 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                          className="flex-1 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                           autoFocus
                         />
                         <button
@@ -192,14 +192,14 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                         </span>
                         <button
                           onClick={() => setEditingId(group.id)}
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                           title="Edit name"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteGroup(group.id, group.name)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="p-1.5 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                           title="Delete group"
                         >
                           <Trash2 size={16} />
