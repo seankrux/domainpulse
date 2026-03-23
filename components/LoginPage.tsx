@@ -93,13 +93,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </button>
           </form>
 
-          {/* First-time setup hint */}
-          <div className="mt-6 pt-6 border-t border-zinc-800">
-            <p className="text-xs text-zinc-500 text-center">
-              First time? Enter any password to set up authentication.
-              <br />
-              For production, set <code className="bg-zinc-800 px-1.5 py-0.5 rounded">VITE_PASSWORD_HASH</code> environment variable.
-            </p>
+          {/* Demo credentials hint */}
+          <div className="mt-6 pt-6 border-t border-zinc-800/50">
+            <div className="bg-emerald-500/5 backdrop-blur-sm border border-emerald-500/10 rounded-xl px-4 py-3">
+              <p className="text-[11px] text-emerald-400/80 text-center font-medium tracking-wide uppercase mb-1">Demo Mode</p>
+              <p className="text-xs text-zinc-500 text-center leading-relaxed">
+                Enter any password to explore the dashboard
+              </p>
+            </div>
           </div>
         </div>
 
