@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { logger } from '../utils/logger';
 
 /**
  * Simple content loader for file-based CMS
@@ -59,7 +60,7 @@ export async function loadPages(): Promise<ContentPage[]> {
 
     return pages;
   } catch (error) {
-    console.error('Error loading pages:', error);
+    logger.error('Error loading pages:', error);
     return [];
   }
 }
@@ -95,7 +96,7 @@ export async function loadPosts(): Promise<BlogPost[]> {
     // Sort by date descending
     return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
-    console.error('Error loading posts:', error);
+    logger.error('Error loading posts:', error);
     return [];
   }
 }

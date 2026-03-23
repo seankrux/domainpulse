@@ -62,7 +62,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain 
       {/* Collapse/Expand Toggle */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-all px-6 py-3 flex items-center justify-between group"
+        className="w-full bg-zinc-900/95 backdrop-blur-xl border-t border-zinc-800 shadow-lg hover:bg-zinc-800/95 transition-all px-6 py-3 flex items-center justify-between group"
         aria-expanded={isExpanded}
         aria-controls="bottom-panel-content"
       >
@@ -70,34 +70,34 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain 
           <div className="flex items-center gap-2">
             {alertCount > 0 ? (
               <div className="relative">
-                <AlertTriangle size={20} className="text-amber-500" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <AlertTriangle size={20} className="text-amber-400" />
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {alertCount}
                 </span>
               </div>
             ) : (
-              <CheckCircle2 size={20} className="text-emerald-500" />
+              <CheckCircle2 size={20} className="text-emerald-400" />
             )}
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <span className="text-sm font-semibold text-zinc-200">
               {alertCount > 0 ? `${alertCount} Alert${alertCount > 1 ? 's' : ''} Need Attention` : 'All Systems Operational'}
             </span>
           </div>
-          <div className="hidden sm:flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+          <div className="hidden sm:flex items-center gap-4 text-xs text-zinc-500">
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               {stats.alive} Alive
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+              <span className="w-2 h-2 rounded-full bg-red-500"></span>
               {stats.down} Down
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+              <span className="w-2 h-2 rounded-full bg-zinc-500"></span>
               {stats.unknown} Unknown
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-2 text-zinc-500">
           <span className="text-xs font-medium hidden sm:inline">
             {isExpanded ? 'Collapse' : 'Expand'}
           </span>
@@ -112,7 +112,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain 
       {/* Expandable Content */}
       <div
         id="bottom-panel-content"
-        className={`bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-xl transition-all duration-300 ease-in-out overflow-hidden ${
+        className={`bg-zinc-900/95 backdrop-blur-xl border-t border-zinc-800 shadow-xl transition-all duration-300 ease-in-out overflow-hidden ${
           isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
@@ -121,22 +121,22 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain 
             {/* Alerts Section */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                  <AlertTriangle size={16} className="text-amber-500" />
+                <h3 className="font-semibold text-sm uppercase tracking-wide text-zinc-300 flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-amber-400" />
                   Urgent Attention
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-slate-500">
+                <span className="text-[10px] font-bold px-2 py-0.5 bg-zinc-800 rounded text-zinc-500 border border-zinc-700">
                   {alerts.length} alerts
                 </span>
               </div>
 
               {alerts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-                  <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mb-3 text-emerald-500">
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-zinc-800/30 rounded-xl border border-dashed border-zinc-700">
+                  <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mb-3 text-emerald-400">
                     <CheckCircle2 size={24} />
                   </div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">All assets secure</p>
-                  <p className="text-xs text-slate-500 mt-1">No expiring SSL or domains detected.</p>
+                  <p className="text-sm font-medium text-white">All assets secure</p>
+                  <p className="text-xs text-zinc-500 mt-1">No expiring SSL or domains detected.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -144,19 +144,19 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain 
                     <button
                       key={alert.id}
                       onClick={() => onViewDomain(alert.domainId)}
-                      className="w-full flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/30 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl border border-slate-100 dark:border-slate-600 transition-all group text-left"
+                      className="w-full flex items-center justify-between p-3 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl border border-zinc-700/50 transition-all group text-left"
                     >
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${
-                          alert.severity === 'high' 
-                            ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' 
-                            : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                          alert.severity === 'high'
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                         }`}>
                           {alert.type === 'SSL' ? <Shield size={14} /> : <Calendar size={14} />}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-900 dark:text-white">{alert.url}</p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
+                          <p className="text-sm font-bold text-white">{alert.url}</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-tighter">
                             {alert.type} {alert.status === 'expired' || alert.status === SSLStatus.Expired ? 'Expired' : `Expires in ${alert.days}d`}
                           </p>
                         </div>

@@ -34,29 +34,29 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div 
-        className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-xl w-full animate-in zoom-in-95 duration-200"
+        className="bg-zinc-900 rounded-2xl shadow-2xl max-w-xl w-full animate-in zoom-in-95 duration-200 border border-zinc-800"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
           <div className="flex items-center gap-2">
-            <Clipboard className="text-indigo-600" size={20} />
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Bulk Import Domains</h2>
+            <Clipboard className="text-emerald-400" size={20} />
+            <h2 className="text-lg font-semibold text-white">Bulk Import Domains</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
           >
-            <X size={20} className="text-slate-500 dark:text-slate-400" />
+            <X size={20} className="text-zinc-400" />
           </button>
         </div>
 
         <div className="p-6">
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-            Paste your domains below. You can separate them by <strong>line breaks</strong> or <strong>commas</strong>.
+          <p className="text-sm text-zinc-400 mb-4">
+            Paste your domains below. You can separate them by <strong className="text-zinc-200">line breaks</strong> or <strong className="text-zinc-200">commas</strong>.
           </p>
 
           <textarea
-            className="w-full h-48 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-mono resize-none transition-all"
+            className="w-full h-48 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500/30 outline-none text-sm font-mono resize-none transition-all text-zinc-200 placeholder:text-zinc-600"
             placeholder="google.com&#10;example.com, amazon.com&#10;github.com"
             value={text}
             onChange={(e) => {

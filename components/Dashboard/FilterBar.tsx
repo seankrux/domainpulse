@@ -66,13 +66,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-end sm:items-center">
         {/* Search */}
         <div className="relative w-full sm:w-64 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-emerald-400 transition-colors" size={16} />
           <input
             type="text"
             placeholder="Filter domains... (⌘K)"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-sm shadow-sm transition-all text-slate-900 dark:text-white"
+            className="w-full pl-10 pr-4 py-2 bg-zinc-900/80 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none text-sm shadow-sm transition-all text-zinc-200 placeholder:text-zinc-600"
           />
         </div>
 
@@ -80,18 +80,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex items-center gap-2">
           {selectedCount > 0 && (
             <div className="flex items-center gap-2 mr-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded uppercase tracking-wider">{selectedCount} Selected</span>
-              
+              <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded uppercase tracking-wider">{selectedCount} Selected</span>
+
               {/* Bulk Group Dropdown */}
               <div className="relative group/bulk">
-                <button className="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1" title="Assign Group">
+                <button className="bg-zinc-800 p-2 rounded-lg text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 transition-colors flex items-center gap-1" title="Assign Group">
                   <FolderPlus size={18} />
                 </button>
-                <div className="absolute bottom-full mb-2 left-0 hidden group-hover/bulk:block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 min-w-[160px] z-30 animate-in fade-in zoom-in-95 origin-bottom">
-                  <p className="text-[10px] font-bold text-slate-400 px-3 py-1 uppercase tracking-wider">Assign to Group</p>
-                  <button 
+                <div className="absolute bottom-full mb-2 left-0 hidden group-hover/bulk:block bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl p-2 min-w-[160px] z-30 animate-in fade-in zoom-in-95 origin-bottom">
+                  <p className="text-[10px] font-bold text-zinc-600 px-3 py-1 uppercase tracking-wider">Assign to Group</p>
+                  <button
                     onClick={() => onAssignGroup(undefined)}
-                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+                    className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 rounded-md transition-colors"
                   >
                     No Group
                   </button>
@@ -99,7 +99,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     <button
                       key={group.id}
                       onClick={() => onAssignGroup(group.id)}
-                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors flex items-center gap-2"
+                      className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 rounded-md transition-colors flex items-center gap-2"
                     >
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: group.color }}></div>
                       {group.name}
@@ -111,29 +111,29 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               <button
                 onClick={onCheckBatch}
                 disabled={isCheckingAll}
-                className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 p-2 rounded-lg transition-colors"
+                className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 p-2 rounded-lg transition-colors border border-emerald-500/20"
                 title="Check Selected"
               >
                 <RefreshCw size={18} className={isCheckingAll ? "animate-spin" : ""} />
               </button>
               <button
                 onClick={onRemoveSelected}
-                className="bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 p-2 rounded-lg transition-colors"
+                className="bg-red-500/10 text-red-400 hover:bg-red-500/20 p-2 rounded-lg transition-colors border border-red-500/20"
                 title="Remove Selected"
               >
                 <Trash2 size={18} />
               </button>
-              <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+              <div className="w-px h-6 bg-zinc-800 mx-1"></div>
             </div>
           )}
 
-          <label className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors" title="Import CSV">
+          <label className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors" title="Import CSV">
             <Upload size={18} />
             <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
           </label>
           <button
             onClick={onExportCSV}
-            className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
             title="Export CSV"
             disabled={domainCount === 0}
           >
@@ -142,7 +142,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <button
             onClick={onCheckAll}
             disabled={isCheckingAll || domainCount === 0}
-            className={`flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-all active:scale-95 ${isCheckingAll ? 'opacity-80' : ''}`}
+            className={`flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-all active:scale-95 shadow-emerald-500/20 ${isCheckingAll ? 'opacity-80' : ''}`}
           >
             {isCheckingAll ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Play size={16} fill="currentColor" />}
             <span>Check All</span>
@@ -153,7 +153,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       {/* Status Filter & Sort */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500 dark:text-slate-400">Status:</span>
+          <span className="text-sm text-zinc-500">Status:</span>
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -162,7 +162,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 setStatusFilter(value);
               }
             }}
-            className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
           >
             <option value="ALL">All ({domainCount})</option>
             <option value={DomainStatus.Alive}>Alive ({filterCounts.statusCounts[DomainStatus.Alive] || 0})</option>
@@ -172,7 +172,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500 dark:text-slate-400">SSL:</span>
+          <span className="text-sm text-zinc-500">SSL:</span>
           <select
             value={sslFilter}
             onChange={(e) => {
@@ -181,7 +181,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 setSslFilter(value);
               }
             }}
-            className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
           >
             <option value="ALL">All ({domainCount})</option>
             <option value={SSLStatus.Valid}>Valid ({filterCounts.sslCounts[SSLStatus.Valid] || 0})</option>
@@ -191,11 +191,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500 dark:text-slate-400">Group:</span>
+          <span className="text-sm text-zinc-500">Group:</span>
           <select
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value as string | 'ALL')}
-            className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
           >
             <option value="ALL">All ({filterCounts.groupCounts.get('ALL') || 0})</option>
             {groups.map(group => (
@@ -204,14 +204,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
           <button
             onClick={() => setShowGroupManager(true)}
-            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+            className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
             title="Manage Groups"
           >
             <FolderPlus size={16} />
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500 dark:text-slate-400">Sort:</span>
+          <span className="text-sm text-zinc-500">Sort:</span>
           {[
             { field: 'url', label: 'Name' },
             { field: 'status', label: 'Status' },
@@ -223,7 +223,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <button
               key={field}
               onClick={() => handleSort(field as SortField)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${sortField === field ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${sortField === field ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
               title={`Sort by ${label.toLowerCase()} (${sortOrder === 'asc' ? 'ascending' : 'descending'})`}
             >
               {label}

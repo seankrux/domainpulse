@@ -4,6 +4,7 @@ import { Trash2, RefreshCw, ExternalLink, Edit2, Check, X, Search, History, Shie
 import { getSSLStatusColor, getSSLStatusLabel } from '../services/sslService';
 import { getExpiryStatusColor, getExpiryStatusLabel } from '../services/expiryService';
 import { TechStackBadge } from './TechStackBadge';
+import { logger } from '../utils/logger';
 
 interface DomainTableProps {
   domains: Domain[];
@@ -22,16 +23,16 @@ interface DomainTableProps {
 }
 
 const Skeleton = ({ className = "w-16" }: { className?: string }) => (
-  <div className={`h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse ${className}`} />
+  <div className={`h-4 bg-zinc-800 rounded animate-pulse ${className}`} />
 );
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const LoadingSkeletonRow = () => (
   <tr className="animate-pulse">
-    <td className="p-4 text-center"><div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded mx-auto" /></td>
+    <td className="p-4 text-center"><div className="w-4 h-4 bg-zinc-800 rounded mx-auto" /></td>
     <td className="p-4 pl-2">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700" />
+        <div className="w-8 h-8 rounded-full bg-zinc-800" />
         <div className="space-y-2">
           <Skeleton className="w-32 h-4" />
           <Skeleton className="w-20 h-3" />
@@ -55,7 +56,7 @@ const Favicon = ({ url }: { url: string }) => {
 
   if (status === 'error') {
     return (
-      <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs border border-indigo-100 dark:border-indigo-800 flex-shrink-0">
+      <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold text-xs border border-emerald-500/20 flex-shrink-0">
         {url.charAt(0).toUpperCase()}
       </div>
     );
@@ -64,12 +65,12 @@ const Favicon = ({ url }: { url: string }) => {
   return (
     <div className="relative w-8 h-8 flex-shrink-0">
       {status === 'loading' && (
-        <div className="absolute inset-0 rounded-full bg-slate-100 dark:bg-slate-700 animate-pulse" />
+        <div className="absolute inset-0 rounded-full bg-zinc-800 animate-pulse" />
       )}
       <img
         src={faviconUrl}
         alt=""
-        className={`w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 object-contain p-0.5 transition-opacity duration-300 ${status === 'success' ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 object-contain p-0.5 transition-opacity duration-300 ${status === 'success' ? 'opacity-100' : 'opacity-0'}`}
         onLoad={() => setStatus('success')}
         onError={() => setStatus('error')}
       />
@@ -79,11 +80,11 @@ const Favicon = ({ url }: { url: string }) => {
 
 const StatusBadge: React.FC<{ status: DomainStatus; statusCode?: number }> = ({ status, statusCode }) => {
   const configs = {
-    [DomainStatus.Alive]: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500', border: 'border-emerald-100 dark:border-emerald-800/50' },
-    [DomainStatus.Down]: { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-700 dark:text-rose-400', dot: 'bg-rose-500', border: 'border-rose-100 dark:border-rose-800/50' },
-    [DomainStatus.Checking]: { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-700 dark:text-indigo-400', dot: 'bg-indigo-500', border: 'border-indigo-100 dark:border-indigo-800/50' },
-    [DomainStatus.Unknown]: { bg: 'bg-slate-50 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400', dot: 'bg-slate-400', border: 'border-slate-200 dark:border-slate-700' },
-    [DomainStatus.Error]: { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500', border: 'border-amber-100 dark:border-amber-800/50' },
+    [DomainStatus.Alive]: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-500 status-dot-green', border: 'border-emerald-500/20' },
+    [DomainStatus.Down]: { bg: 'bg-red-500/10', text: 'text-red-400', dot: 'bg-red-500 status-dot-red', border: 'border-red-500/20' },
+    [DomainStatus.Checking]: { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-500', border: 'border-blue-500/20' },
+    [DomainStatus.Unknown]: { bg: 'bg-zinc-800', text: 'text-zinc-400', dot: 'bg-zinc-500', border: 'border-zinc-700' },
+    [DomainStatus.Error]: { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-500', border: 'border-amber-500/20' },
   };
 
   const config = configs[status];
@@ -106,7 +107,7 @@ const StatusBadge: React.FC<{ status: DomainStatus; statusCode?: number }> = ({ 
 const SSLBadge: React.FC<{ ssl?: SSLInfo, onClick?: () => void }> = ({ ssl, onClick }) => {
   if (!ssl || ssl.status === SSLStatus.Unknown) {
     return (
-      <button onClick={onClick} className="text-slate-300 dark:text-slate-700 text-[10px] font-bold uppercase tracking-widest pl-2 hover:text-indigo-500 transition-colors">
+      <button onClick={onClick} className="text-zinc-700 text-[10px] font-bold uppercase tracking-widest pl-2 hover:text-emerald-400 transition-colors">
         -
       </button>
     );
@@ -150,12 +151,12 @@ const GroupBadge: React.FC<{ group?: DomainGroup }> = ({ group }) => {
 const ExpiryBadge: React.FC<{ expiry?: DomainExpiry, onClick?: () => void }> = ({ expiry, onClick }) => {
   if (!expiry || expiry.status === 'unknown') {
     return (
-      <button onClick={onClick} className="text-slate-300 dark:text-slate-700 text-[10px] font-bold uppercase tracking-widest pl-2 hover:text-indigo-500 transition-colors">
+      <button onClick={onClick} className="text-zinc-700 text-[10px] font-bold uppercase tracking-widest pl-2 hover:text-emerald-400 transition-colors">
         -
       </button>
     );
   }
-  
+
   const colorClass = getExpiryStatusColor(expiry.status);
   const label = getExpiryStatusLabel(expiry.status);
   
@@ -180,7 +181,7 @@ const ExpiryBadge: React.FC<{ expiry?: DomainExpiry, onClick?: () => void }> = (
 
 // History sparkline component
 const HistorySparkline: React.FC<{ history: { status: DomainStatus; latency: number }[] }> = ({ history }) => {
-  if (history.length === 0) return <span className="text-slate-300 dark:text-slate-600">-</span>;
+  if (history.length === 0) return <span className="text-zinc-700">-</span>;
   
   const recentHistory = history.slice(-10);
   
@@ -190,8 +191,8 @@ const HistorySparkline: React.FC<{ history: { status: DomainStatus; latency: num
         const color = record.status === DomainStatus.Alive 
           ? 'bg-emerald-500' 
           : record.status === DomainStatus.Down 
-            ? 'bg-rose-500' 
-            : 'bg-slate-300 dark:bg-slate-600';
+            ? 'bg-red-500'
+            : 'bg-zinc-700';
         const height = record.status === DomainStatus.Alive 
           ? Math.max(4, Math.min(12, 12 - (record.latency / 100))) 
           : 4;
@@ -266,7 +267,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy to clipboard:', error);
     }
   };
 
@@ -298,51 +299,51 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   if (domains.length === 0) {
     if (isFiltered) {
         return (
-            <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center">
-                <div className="w-12 h-12 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mb-3 text-slate-400">
+            <div className="text-center py-16 glass-card rounded-2xl flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center mb-3 text-zinc-500">
                     <Search size={24} />
                 </div>
-                <h3 className="text-slate-900 dark:text-white font-medium text-lg">No matching domains</h3>
-                <p className="text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto text-sm">Try adjusting your filters to find what you're looking for.</p>
+                <h3 className="text-white font-medium text-lg">No matching domains</h3>
+                <p className="text-zinc-400 mt-1 max-w-sm mx-auto text-sm">Try adjusting your filters to find what you're looking for.</p>
             </div>
         );
     }
 
     return (
-      <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/20 to-transparent dark:from-indigo-900/10 pointer-events-none" />
-        <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-6 text-indigo-500 transform group-hover:scale-110 transition-transform duration-500 shadow-glow">
+      <div className="text-center py-24 glass-card rounded-3xl border-dashed flex flex-col items-center justify-center relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
+        <div className="w-20 h-20 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 text-emerald-400 transform group-hover:scale-110 transition-transform duration-500 shadow-glow-emerald border border-emerald-500/20">
             <LayoutDashboard size={32} />
         </div>
-        <h3 className="text-slate-900 dark:text-white font-display font-bold text-xl mb-2">Ready to monitor your domains?</h3>
-        <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto text-sm mb-8 leading-relaxed">
+        <h3 className="text-white font-display font-bold text-xl mb-2">Ready to monitor your domains?</h3>
+        <p className="text-zinc-400 max-w-sm mx-auto text-sm mb-8 leading-relaxed">
             Track uptime, latency, SSL status, and domain expiry in one powerful dashboard. Start by adding your first domain above.
         </p>
         <div className="flex items-center gap-4">
             <div className="flex -space-x-2">
                 {[1, 2, 3].map(i => (
-                    <div key={i} className={`w-8 h-8 rounded-full border-2 border-white dark:border-slate-800 bg-slate-${100 + i*100} dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold`}>
+                    <div key={i} className={`w-8 h-8 rounded-full border-2 border-zinc-900 bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400`}>
                         {['G', 'A', 'M'][i-1]}
                     </div>
                 ))}
             </div>
-            <p className="text-xs text-slate-400 font-medium">Trusted by teams worldwide</p>
+            <p className="text-xs text-zinc-500 font-medium">Trusted by teams worldwide</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden" role="region" aria-label="Domains table">
+    <div className="glass-card rounded-2xl overflow-hidden" role="region" aria-label="Domains table">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0" role="grid" aria-rowcount={domains.length + 1}>
           <thead>
-            <tr className="bg-slate-50/50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-semibold" role="row">
+            <tr className="bg-zinc-900/80 border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider font-semibold" role="row">
               <th className="p-4 w-12 text-center" role="columnheader" aria-label="Select">
                 <input
                     ref={headerCheckboxRef}
                     type="checkbox"
-                    className="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer transition-all"
+                    className="rounded border-zinc-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer transition-all bg-zinc-800"
                     checked={allSelected}
                     onChange={onToggleAll}
                     aria-label="Select all domains"
@@ -360,7 +361,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               <th className="p-4 text-right" role="columnheader" scope="col">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+          <tbody className="divide-y divide-zinc-800/50">
             {domains.map((domain) => {
               const isChecking = domain.status === DomainStatus.Checking;
               const isSelected = selectedIds.has(domain.id);
@@ -372,12 +373,12 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                   role="row"
                   aria-rowindex={domains.indexOf(domain) + 2}
                   aria-selected={isSelected}
-                  className={`group transition-all duration-300 ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/50'}`}
+                  className={`group table-row-hover transition-all duration-300 ${isSelected ? 'bg-emerald-500/5' : 'hover:bg-zinc-800/50'}`}
                 >
                   <td className="p-4 text-center align-middle" role="gridcell">
                      <input
                         type="checkbox"
-                        className="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer transition-all opacity-100 md:opacity-30 md:group-hover:opacity-100 checked:opacity-100"
+                        className="rounded border-zinc-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer transition-all opacity-100 md:opacity-30 md:group-hover:opacity-100 checked:opacity-100 bg-zinc-800"
                         checked={isSelected}
                         onChange={() => onToggleSelect(domain.id)}
                         aria-label={`Select ${domain.url}`}
@@ -391,7 +392,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                           type="text"
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="border border-indigo-300 dark:border-indigo-600 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full max-w-[240px] shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                          className="border border-emerald-500/30 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 w-full max-w-[240px] shadow-sm bg-zinc-900 text-white"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') saveEdit(domain.id);
                             if (e.key === 'Escape') cancelEdit();
@@ -408,7 +409,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                 <span
                                   onClick={() => onViewDetails?.(domain)}
                                   data-testid={`domain-link-${domain.url}`}
-                                  className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-2 group/domain"
+                                  className="font-semibold text-zinc-100 text-sm truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] cursor-pointer hover:text-emerald-400 transition-colors flex items-center gap-2 group/domain"
                                 >
                                   {domain.url}
                                   <button
@@ -416,7 +417,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                       e.stopPropagation();
                                       void copyToClipboard(domain.url, domain.id);
                                     }}
-                                    className="opacity-0 group-hover/domain:opacity-100 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-all"
+                                    className="opacity-0 group-hover/domain:opacity-100 p-0.5 hover:bg-zinc-800 rounded transition-all"
                                     title="Copy domain to clipboard"
                                     aria-label={`Copy ${domain.url} to clipboard`}
                                   >
@@ -431,7 +432,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                 href={`https://${domain.url}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-slate-300 hover:text-indigo-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                                className="text-zinc-600 hover:text-emerald-400 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                                 >
                                 <ExternalLink size={12} />
                                 </a>
@@ -445,22 +446,22 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                 {domain.groupId ? (
                                   <GroupBadge group={groups?.find(g => g.id === domain.groupId)} />
                                 ) : (
-                                  <span className="text-[10px] uppercase font-bold text-slate-300 dark:text-slate-600 border border-dashed border-slate-200 dark:border-slate-700 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Group</span>
+                                  <span className="text-[10px] uppercase font-bold text-zinc-600 border border-dashed border-zinc-700 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Group</span>
                                 )}
                               </button>
                               
                               {editingGroupId === domain.id && (
-                                <div className="absolute top-full left-0 mt-1 z-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 min-w-[160px] animate-in fade-in zoom-in-95 origin-top-left">
+                                <div className="absolute top-full left-0 mt-1 z-40 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl p-2 min-w-[160px] animate-in fade-in zoom-in-95 origin-top-left">
                                   <div className="flex items-center justify-between mb-2 px-2">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Group</span>
-                                    <button onClick={() => setEditingGroupId(null)}><X size={12} className="text-slate-400 hover:text-slate-600" /></button>
+                                    <button onClick={() => setEditingGroupId(null)}><X size={12} className="text-zinc-500 hover:text-zinc-300" /></button>
                                   </div>
                                   <button 
                                     onClick={() => {
                                       onEditGroup?.(domain.id, undefined);
                                       setEditingGroupId(null);
                                     }}
-                                    className="w-full text-left px-2 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+                                    className="w-full text-left px-2 py-1.5 text-xs hover:bg-zinc-800 rounded-md transition-colors"
                                   >
                                     No Group
                                   </button>
@@ -471,7 +472,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                         onEditGroup?.(domain.id, group.id);
                                         setEditingGroupId(null);
                                       }}
-                                      className="w-full text-left px-2 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors flex items-center gap-2"
+                                      className="w-full text-left px-2 py-1.5 text-xs hover:bg-zinc-800 rounded-md transition-colors flex items-center gap-2"
                                     >
                                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: group.color }}></div>
                                       {group.name}
@@ -484,7 +485,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                 {domain.tags?.map((tag, i) => (
                                   <span 
                                     key={i} 
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 group/tag hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-400 group/tag hover:bg-red-500/10 hover:text-red-400 cursor-pointer transition-colors"
                                     onClick={() => removeTag(domain.id, domain.tags, tag)}
                                     title="Click to remove"
                                   >
@@ -494,21 +495,21 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                 ))}
                                 <button 
                                   onClick={() => setEditingTagsId(domain.id)}
-                                  className="text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                                  className="text-zinc-600 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
                                   title="Add Tag"
                                 >
                                   <Plus size={10} />
                                 </button>
 
                                 {editingTagsId === domain.id && (
-                                  <div className="absolute top-full left-0 mt-1 z-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 min-w-[140px] animate-in fade-in zoom-in-95 origin-top-left flex gap-1">
+                                  <div className="absolute top-full left-0 mt-1 z-40 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl p-2 min-w-[140px] animate-in fade-in zoom-in-95 origin-top-left flex gap-1">
                                     <input
                                       autoFocus
                                       type="text"
                                       placeholder="New tag..."
                                       value={newTag}
                                       onChange={(e) => setNewTag(e.target.value)}
-                                      className="bg-transparent border-none outline-none text-xs w-full text-slate-900 dark:text-white"
+                                      className="bg-transparent border-none outline-none text-xs w-full text-white"
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                           addTag(domain.id, domain.tags);
@@ -520,7 +521,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                     <button onClick={() => {
                                       addTag(domain.id, domain.tags);
                                       setEditingTagsId(null);
-                                    }} className="text-indigo-600"><Check size={14} /></button>
+                                    }} className="text-emerald-400"><Check size={14} /></button>
                                   </div>
                                 )}
                               </div>
@@ -552,18 +553,18 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
                         {(domain.expiry?.nameServers && domain.expiry.nameServers.length > 0) ? (
                           domain.expiry.nameServers.slice(0, 2).map((ns, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded text-[9px] font-mono text-indigo-700 dark:text-indigo-300 truncate max-w-[100px]">
+                            <span key={i} className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[9px] font-mono text-emerald-400 truncate max-w-[100px]">
                               {ns}
                             </span>
                           ))
                         ) : domain.dns?.ns && domain.dns.ns.length > 0 ? (
                           domain.dns.ns.slice(0, 2).map((ns, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded text-[9px] font-mono text-slate-600 dark:text-slate-400 truncate max-w-[100px]">
+                            <span key={i} className="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[9px] font-mono text-zinc-400 truncate max-w-[100px]">
                               {ns}
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-slate-400 italic">-</span>
+                          <span className="text-xs text-zinc-600 italic">-</span>
                         )}
                         {((domain.expiry?.nameServers?.length || domain.dns?.ns?.length || 0) > 2) && (
                           <span className="px-2 py-0.5 text-[9px] text-slate-400">+{((domain.expiry?.nameServers?.length || 0) + (domain.dns?.ns?.length || 0)) - 2}</span>
@@ -571,23 +572,23 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       </div>
                     )}
                   </td>
-                  <td className="p-4 align-middle text-sm text-slate-600 dark:text-slate-300 font-mono">
+                  <td className="p-4 align-middle text-sm text-zinc-300 font-mono">
                     {isChecking ? (
                         <Skeleton className="w-12 h-4" />
                     ) : (
-                        domain.latency ? <span className={domain.latency > 500 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}>{domain.latency}ms</span> : <span className="text-slate-300 dark:text-slate-600">-</span>
+                        domain.latency ? <span className={domain.latency > 500 ? 'text-amber-400' : 'text-zinc-300'}>{domain.latency}ms</span> : <span className="text-zinc-700">-</span>
                     )}
                   </td>
-                  <td className="p-4 align-middle text-sm text-slate-500 dark:text-slate-400 hidden md:table-cell">
+                  <td className="p-4 align-middle text-sm text-zinc-400 hidden md:table-cell">
                     {isChecking ? (
                         <Skeleton className="w-20 h-4" />
                     ) : (
                         domain.lastChecked ? (
                           <span className="flex items-center gap-2">
                             {formatRelativeTime(domain.lastChecked)}
-                            <span className="text-xs text-slate-400">({domain.lastChecked.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
+                            <span className="text-xs text-zinc-600">({domain.lastChecked.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
                           </span>
-                        ) : <span className="text-slate-300 dark:text-slate-600">Never</span>
+                        ) : <span className="text-zinc-700">Never</span>
                     )}
                   </td>
                   <td className="p-4 align-middle hidden lg:table-cell">
@@ -597,7 +598,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                     <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => onViewHistory && onViewHistory(domain)}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                         title="View history"
                         aria-label={`View history for ${domain.url}`}
                       >
@@ -606,7 +607,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       <button
                         onClick={() => onCheck(domain.id)}
                         disabled={isChecking}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         title="Check status"
                         aria-label={`Check status for ${domain.url}`}
                         aria-busy={isChecking}
@@ -615,7 +616,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       </button>
                       <button
                         onClick={() => startEdit(domain)}
-                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                         title="Edit domain"
                         aria-label={`Edit domain ${domain.url}`}
                       >
@@ -623,7 +624,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       </button>
                       <button
                         onClick={() => onRemove(domain.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500"
+                        className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50"
                         title="Remove"
                         aria-label={`Remove ${domain.url}`}
                       >

@@ -26,18 +26,18 @@ export const Header: React.FC<HeaderProps> = ({
   logout
 }) => {
   return (
-    <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-20">
+    <header className="bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/80 sticky top-0 z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-glow">
+          <div className="bg-emerald-500 p-2 rounded-xl text-white shadow-glow-emerald">
             <BarChart3 size={20} />
           </div>
-          <h1 className="text-xl font-display font-bold text-slate-900 dark:text-white tracking-tight" data-testid="header-title">
-            Domain<span className="text-indigo-600">Pulse</span>
+          <h1 className="text-xl font-display font-bold text-white tracking-tight" data-testid="header-title">
+            Domain<span className="text-emerald-400">Pulse</span>
           </h1>
         </div>
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <div className="hidden md:flex items-center gap-2 text-sm text-zinc-500">
             {settings.autoRefresh && (
               <>
                 <Clock size={14} />
@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <button
             onClick={toggleDarkMode}
-            className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
+            className="text-zinc-500 hover:text-zinc-200 transition-colors p-2 rounded-lg hover:bg-zinc-800/50"
             title="Toggle dark mode"
           >
             {settings.darkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -55,14 +55,14 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => setShowSettings(!showSettings)}
             data-testid="settings-button"
-            className={`text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors ${showSettings ? 'text-indigo-600' : ''}`}
+            className={`p-2 rounded-lg transition-colors ${showSettings ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50'}`}
             title="Settings"
           >
             <Settings size={20} />
           </button>
           <button
             onClick={logout}
-            className="text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            className="text-zinc-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-zinc-800/50"
             title="Sign out"
           >
             <LogOut size={20} />
@@ -71,13 +71,13 @@ export const Header: React.FC<HeaderProps> = ({
             href={typeof import.meta !== 'undefined' && import.meta.env?.VITE_SITE_URL ? import.meta.env.VITE_SITE_URL : 'http://localhost:3002'}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5 text-sm font-medium"
+            className="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-sm font-medium p-2 rounded-lg hover:bg-zinc-800/50"
             title="View Website"
           >
             <span className="hidden lg:inline">Website</span>
             <ArrowRight size={16} />
           </a>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white cursor-pointer" title="Sean G">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-zinc-800 cursor-pointer" title="Sean G">
             SG
           </div>
         </div>

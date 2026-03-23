@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,13 +17,15 @@
               display: ['"Plus Jakarta Sans"', 'sans-serif'],
             },
             colors: {
-              slate: {
-                850: '#151e2e',
+              zinc: {
+                850: '#1c1c1f',
+                950: '#09090b',
               }
             },
             boxShadow: {
-              'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
-              'glow': '0 0 15px rgba(99, 102, 241, 0.3)',
+              'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.3)',
+              'glow': '0 0 15px rgba(16, 185, 129, 0.3)',
+              'glow-emerald': '0 0 20px rgba(16, 185, 129, 0.25), 0 0 40px rgba(16, 185, 129, 0.1)',
             }
           }
         }
@@ -36,9 +38,24 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+        border-radius: 3px;
+      }
+      ::selection {
+        background-color: rgba(16, 185, 129, 0.25);
+        color: #ecfdf5;
+      }
     </style>
   </head>
-  <body class="bg-white text-slate-900 antialiased selection:bg-indigo-100 selection:text-indigo-900">
+  <body class="bg-zinc-950 text-zinc-100 antialiased">
     <div id="root"></div>
     <script type="module" src="/siteIndex.tsx"></script>
   </body>

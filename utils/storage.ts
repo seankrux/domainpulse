@@ -1,5 +1,6 @@
 import { Domain, DomainStatus, DomainGroup, WebhookConfig, SSLStatus } from '../types';
 import { SAMPLE_DOMAINS, SAMPLE_GROUPS } from '../data/seed';
+import { logger } from './logger';
 
 const STORAGE_KEY = 'domainpulse_domains';
 const SETTINGS_KEY = 'domainpulse_settings';
@@ -111,7 +112,7 @@ export const loadDomains = (): Domain[] => {
     const parsed: StoredDomain[] = JSON.parse(stored);
     return parsed.map(fromStored);
   } catch (error) {
-    console.error('Failed to load domains from localStorage:', error);
+    logger.error('Failed to load domains from localStorage:', error);
     return [];
   }
 };
@@ -123,7 +124,7 @@ export const saveDomains = (domains: Domain[]): void => {
 
     // Protection against LocalStorage QuotaExceededError (typically 5MB)
     if (serialized.length > 4 * 1024 * 1024) {
-      console.warn('LocalStorage limit approaching, trimming history records...');
+      logger.warn('LocalStorage limit approaching, trimming history records...');
       stored = stored.map(d => ({
         ...d,
         history: d.history.slice(-20)
@@ -134,12 +135,12 @@ export const saveDomains = (domains: Domain[]): void => {
     localStorage.setItem(STORAGE_KEY, serialized);
   } catch (error) {
     if (error instanceof Error && error.name === 'QuotaExceededError') {
-      console.error('LocalStorage quota exceeded! Clearing old history...');
+      logger.error('LocalStorage quota exceeded! Clearing old history...');
       const domains = loadDomains();
       const trimmed = domains.map(d => ({ ...d, history: d.history.slice(-5) }));
       saveDomains(trimmed);
     } else {
-      console.error('Failed to save domains to localStorage:', error);
+      logger.error('Failed to save domains to localStorage:', error);
     }
   }
 };
@@ -148,7 +149,7 @@ export const clearDomains = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
-    console.error('Failed to clear domains from localStorage:', error);
+    logger.error('Failed to clear domains from localStorage:', error);
   }
 };
 
@@ -163,7 +164,7 @@ export const loadGroups = (): DomainGroup[] => {
     const parsed: StoredGroup[] = JSON.parse(stored);
     return parsed;
   } catch (error) {
-    console.error('Failed to load groups from localStorage:', error);
+    logger.error('Failed to load groups from localStorage:', error);
     return [];
   }
 };
@@ -172,7 +173,7 @@ export const saveGroups = (groups: DomainGroup[]): void => {
   try {
     localStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
   } catch (error) {
-    console.error('Failed to save groups to localStorage:', error);
+    logger.error('Failed to save groups to localStorage:', error);
   }
 };
 
@@ -209,7 +210,7 @@ export const loadSettings = (): AppSettings => {
       ...parsed
     };
   } catch (error) {
-    console.error('Failed to load settings:', error);
+    logger.error('Failed to load settings:', error);
     return defaultSettings;
   }
 };
@@ -218,7 +219,7 @@ export const saveSettings = (settings: AppSettings): void => {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   } catch (error) {
-    console.error('Failed to save settings:', error);
+    logger.error('Failed to save settings:', error);
   }
 };
 

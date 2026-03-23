@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AuthState } from '../types';
+import { logger } from '../utils/logger';
 
 // Use sessionStorage instead of localStorage for better security (cleared on browser close)
 const AUTH_SESSION_KEY = 'domainpulse_auth_session';
@@ -124,7 +125,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       return false;
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       return false;
     }
   }, []);

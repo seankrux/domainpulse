@@ -8,7 +8,7 @@ interface SiteLayoutProps {
 
 export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 'home' }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
   const navItems = [
     { slug: 'home', label: 'Home' },
@@ -27,13 +27,13 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
   };
 
   return (
-    <div className={`min-h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300`}>
+    <div className={`min-h-screen bg-zinc-950 text-zinc-100 transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-100`}>
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+      <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/80">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <a href="/" className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+            <a href="/" className="text-xl font-bold text-emerald-400 hover:text-emerald-300 transition-colors">
               DomainPulse
             </a>
 
@@ -45,8 +45,8 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
                   href={`/${item.slug === 'home' ? '' : item.slug}`}
                   className={`text-sm font-medium transition-colors ${
                     currentPage === item.slug
-                      ? 'text-indigo-600 dark:text-indigo-400'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'text-emerald-400'
+                      : 'text-zinc-400 hover:text-white'
                   }`}
                 >
                   {item.label}
@@ -56,7 +56,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
                 href={typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_URL ? import.meta.env.VITE_APP_URL : 'http://localhost:3000'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                className="text-sm font-medium bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-emerald-500/20"
               >
                 Launch App
                 <ArrowRight size={16} />
@@ -67,7 +67,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
             <div className="flex items-center gap-4">
               <button
                 onClick={toggleDarkMode}
-                className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                className="text-zinc-500 hover:text-white transition-colors"
               >
                 {darkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
@@ -75,13 +75,13 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
                 href="https://github.com/seankrux"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                className="text-zinc-500 hover:text-white transition-colors"
               >
                 <Github size={20} />
               </a>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden text-slate-500 dark:text-slate-400"
+                className="md:hidden text-zinc-500"
               >
                 {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -91,7 +91,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="md:hidden border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-xl">
             <nav className="px-4 py-4 space-y-2">
               {navItems.map(item => (
                 <a
@@ -99,8 +99,8 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
                   href={`/${item.slug === 'home' ? '' : item.slug}`}
                   className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentPage === item.slug
-                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -116,39 +116,39 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({ children, currentPage = 
       <main>{children}</main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 mt-20">
+      <footer className="border-t border-zinc-800 mt-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mb-4">
+              <h3 className="text-lg font-bold text-emerald-400 mb-4">
                 DomainPulse
               </h3>
-              <p className="text-slate-600 dark:text-slate-400 text-sm">
+              <p className="text-zinc-400 text-sm">
                 Professional domain monitoring and SSL tracking.
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <h4 className="font-semibold mb-4 text-zinc-200">Quick Links</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="/about" className="text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">About</a></li>
-                <li><a href="/blog" className="text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">Blog</a></li>
-                <li><a href="/contact" className="text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">Contact</a></li>
+                <li><a href="/about" className="text-zinc-400 hover:text-emerald-400 transition-colors">About</a></li>
+                <li><a href="/blog" className="text-zinc-400 hover:text-emerald-400 transition-colors">Blog</a></li>
+                <li><a href="/contact" className="text-zinc-400 hover:text-emerald-400 transition-colors">Contact</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Connect</h4>
+              <h4 className="font-semibold mb-4 text-zinc-200">Connect</h4>
               <div className="flex items-center gap-4">
-                <a href="https://github.com/seankrux" className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
+                <a href="https://github.com/seankrux" className="text-zinc-500 hover:text-emerald-400 transition-colors">
                   <Github size={20} />
                 </a>
-                <a href="mailto:contact@domainpulse.app" className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
+                <a href="mailto:contact@domainpulse.app" className="text-zinc-500 hover:text-emerald-400 transition-colors">
                   <Mail size={20} />
                 </a>
               </div>
             </div>
           </div>
-          <div className="border-t border-slate-200 dark:border-slate-800 mt-8 pt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-            Made with 💛 by Sean G
+          <div className="border-t border-zinc-800 mt-8 pt-8 text-center text-sm text-zinc-500">
+            Made with care by Sean G
           </div>
         </div>
       </footer>

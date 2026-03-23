@@ -99,63 +99,26 @@ export type SortField = 'url' | 'status' | 'latency' | 'lastChecked' | 'ssl' | '
 export type SortOrder = 'asc' | 'desc';
 
 export interface WebhookConfig {
-
   id: string;
-
   name: string;
-
   url: string;
-
   type: 'slack' | 'discord';
-
   enabled: boolean;
-
 }
-
-
 
 // Authentication types
-
 export interface AuthState {
-
   isAuthenticated: boolean;
-
   isLoading: boolean;
-
   login: (password: string) => Promise<boolean>;
-
   logout: () => void;
-
 }
-
-
 
 // Service configuration for API calls (especially for workers)
-
-
-
 export interface ServiceConfig {
-
-
-
   proxyUrl?: string;
-
-
-
   authToken?: string;
-
-
-
   userAgent?: string;
-
-
-
   timeout?: number;
-
-
-
 }
-
-
-
 

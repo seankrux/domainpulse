@@ -439,13 +439,13 @@ const App: React.FC = () => {
     const element = document.getElementById(`domain-${domainId}`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      element.classList.add('ring-2', 'ring-indigo-500', 'ring-offset-2', 'dark:ring-offset-slate-900');
-      setTimeout(() => element.classList.remove('ring-2', 'ring-indigo-500', 'ring-offset-2', 'dark:ring-offset-slate-900'), 3000);
+      element.classList.add('ring-2', 'ring-emerald-500', 'ring-offset-2', 'ring-offset-zinc-950');
+      setTimeout(() => element.classList.remove('ring-2', 'ring-emerald-500', 'ring-offset-2', 'ring-offset-zinc-950'), 3000);
     }
   }, []);
 
   return (
-    <div className={`min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-100 dark:selection:bg-indigo-900 transition-colors duration-300 ${isCheckingAll ? 'animate-pulse-slow' : ''}`}>
+    <div className={`min-h-screen bg-zinc-950 bg-premium-dark-subtle text-zinc-100 font-sans transition-colors duration-300 ${isCheckingAll ? 'animate-pulse-slow' : ''}`}>
       {/* Accessibility: Skip Links */}
       <SkipLinks />
       
@@ -460,7 +460,7 @@ const App: React.FC = () => {
         logout={logout}
       />
 
-      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 bg-dot-pattern">
         {showSettings && (
           <SettingsPanel 
             settings={settings}
@@ -494,13 +494,13 @@ const App: React.FC = () => {
 
         {isCheckingAll && checkProgress.total > 0 && (
           <div className="mb-6 animate-in fade-in slide-in-from-top-2">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4">
+            <div className="glass-card rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Checking domains...</span>
-                <span className="text-xs font-mono">{checkProgress.current} / {checkProgress.total}</span>
+                <span className="text-sm font-medium text-zinc-200">Checking domains...</span>
+                <span className="text-xs font-mono text-zinc-400">{checkProgress.current} / {checkProgress.total}</span>
               </div>
-              <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${(checkProgress.current / checkProgress.total) * 100}%` }} />
+              <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300 shadow-glow-emerald" style={{ width: `${(checkProgress.current / checkProgress.total) * 100}%` }} />
               </div>
             </div>
           </div>
@@ -562,12 +562,12 @@ const App: React.FC = () => {
       {/* Bottom Panel - Alerts & Stats (Collapsible) */}
       <BottomPanel domains={domains} onViewDomain={scrollToDomain} />
 
-      <footer id="footer" className="text-center py-8 text-sm text-slate-400" role="contentinfo">
+      <footer id="footer" className="text-center py-8 text-sm text-zinc-500" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4">
-          <p>Made with 💛 by Sean G</p>
-          <div className="mt-2 text-xs text-slate-500">
-            <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded mx-1">⌘K</kbd> Focus search
-            <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded mx-1">⌘Enter</kbd> Check all
+          <p className="text-zinc-400">Made with 💛 by Sean G</p>
+          <div className="mt-2 text-xs text-zinc-600">
+            <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘K</kbd> Focus search
+            <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘Enter</kbd> Check all
           </div>
         </div>
       </footer>
@@ -580,11 +580,11 @@ const App: React.FC = () => {
       )}
 
       {viewingHistory && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingHistoryId(null)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">History - {viewingHistory.url}</h2>
-              <button onClick={() => setViewingHistoryId(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingHistoryId(null)}>
+          <div className="bg-zinc-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-zinc-800" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-zinc-100">History - {viewingHistory.url}</h2>
+              <button onClick={() => setViewingHistoryId(null)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-200 transition-colors"><X size={20} /></button>
             </div>
             <div className="p-6">
               <HistoryChart domain={viewingHistory} />

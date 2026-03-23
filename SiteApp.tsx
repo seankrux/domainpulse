@@ -86,11 +86,11 @@ const App: React.FC = () => {
     return (
       <SiteLayout currentPage="blog">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-8">Blog</h1>
+          <h1 className="text-4xl font-bold text-white mb-8">Blog</h1>
           {posts.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-slate-500 dark:text-slate-400 mb-4">No posts yet</p>
-              <p className="text-sm text-slate-400 dark:text-slate-500">
+              <p className="text-zinc-400 mb-4">No posts yet</p>
+              <p className="text-sm text-zinc-500">
                 Ask AI to create content or add posts manually to /content/posts/
               </p>
             </div>
@@ -100,9 +100,9 @@ const App: React.FC = () => {
                 <article
                   key={post.slug}
                   onClick={() => navigate('post', { slug: post.slug })}
-                  className="group p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer"
+                  className="group p-6 bg-zinc-900/80 backdrop-blur-sm rounded-2xl border border-zinc-800 hover:border-emerald-500/30 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-2">
+                  <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2">
                     <Calendar size={14} />
                     <time dateTime={post.date}>
                       {new Date(post.date).toLocaleDateString('en-US', {
@@ -112,11 +112,11 @@ const App: React.FC = () => {
                       })}
                     </time>
                   </div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <h2 className="text-xl font-bold text-white mb-2 group-hover:text-emerald-400 transition-colors">
                     {post.title}
                   </h2>
-                  <p className="text-slate-600 dark:text-slate-400 line-clamp-2">{post.excerpt}</p>
-                  <div className="mt-4 flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium">
+                  <p className="text-zinc-400 line-clamp-2">{post.excerpt}</p>
+                  <div className="mt-4 flex items-center text-emerald-400 text-sm font-medium">
                     Read more <ArrowRight size={16} className="ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </article>
