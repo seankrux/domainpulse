@@ -10,11 +10,11 @@ interface FilterCounts {
 
 // Type guards for filter values
 const isValidStatusFilter = (value: string): value is DomainStatus | 'ALL' => {
-  return ['ALL', DomainStatus.Alive, DomainStatus.Down, DomainStatus.Unknown, DomainStatus.Checking, DomainStatus.Error].includes(value as any);
+  return (['ALL', DomainStatus.Alive, DomainStatus.Down, DomainStatus.Unknown, DomainStatus.Checking, DomainStatus.Error] as string[]).includes(value);
 };
 
 const isValidSSLFilter = (value: string): value is SSLStatus | 'ALL' => {
-  return ['ALL', SSLStatus.Valid, SSLStatus.Expiring, SSLStatus.Expired, SSLStatus.Invalid, SSLStatus.Unknown].includes(value as any);
+  return (['ALL', SSLStatus.Valid, SSLStatus.Expiring, SSLStatus.Expired, SSLStatus.Invalid, SSLStatus.Unknown] as string[]).includes(value);
 };
 
 interface FilterBarProps {

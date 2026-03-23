@@ -41,8 +41,8 @@ const App: React.FC = () => {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [viewingDetailId, setViewingDetailId] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
-  const [statusFilter, setStatusFilter] = useState<DomainStatus | 'ALL'>(() => (localStorage.getItem('domainpulse_status_filter') as any) || 'ALL');
-  const [sslFilter, setSslFilter] = useState<SSLStatus | 'ALL'>(() => (localStorage.getItem('domainpulse_ssl_filter') as any) || 'ALL');
+  const [statusFilter, setStatusFilter] = useState<DomainStatus | 'ALL'>(() => (localStorage.getItem('domainpulse_status_filter') as DomainStatus | 'ALL' | null) || 'ALL');
+  const [sslFilter, setSslFilter] = useState<SSLStatus | 'ALL'>(() => (localStorage.getItem('domainpulse_ssl_filter') as SSLStatus | 'ALL' | null) || 'ALL');
   const [groupFilter, setGroupFilter] = useState<string | 'ALL'>(() => localStorage.getItem('domainpulse_group_filter') || 'ALL');
   const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
   const [showGroupManager, setShowGroupManager] = useState(false);
@@ -133,7 +133,7 @@ const App: React.FC = () => {
     setDomains(prev => [newDomain, ...prev]);
     setNewDomainUrl('');
     showSuccess(`Added ${normalized} to monitoring`);
-    checkSingleDomain(newDomain.id, normalized);
+    void checkSingleDomain(newDomain.id, normalized);
   }, [domains, checkSingleDomain, showSuccess]);
 
   const handleBulkImport = useCallback((newUrls: string[]) => {
@@ -170,7 +170,7 @@ const App: React.FC = () => {
     if (validNewDomains.length > 0) {
       setDomains(prev => [...validNewDomains, ...prev]);
       showSuccess(`Successfully imported ${validNewDomains.length} domains`);
-      checkBatch(validNewDomains);
+      void checkBatch(validNewDomains);
     }
 
     if (errorCount > 0 || duplicateCount > 0) {
@@ -203,7 +203,7 @@ const App: React.FC = () => {
     if (isCheckingAll || selectedIds.size === 0) return;
     const domainsToCheck = domainsRef.current.filter(d => selectedIds.has(d.id) && d.status !== DomainStatus.Checking);
     if (domainsToCheck.length === 0) return;
-    checkBatch(domainsToCheck);
+    void checkBatch(domainsToCheck);
     showSuccess(`Checking ${domainsToCheck.length} domains`);
   }, [isCheckingAll, selectedIds, checkBatch, showSuccess]);
 
@@ -295,7 +295,7 @@ const App: React.FC = () => {
       // Cmd+Enter: Check all domains
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
-        checkAllDomains();
+        void checkAllDomains();
       }
     };
 
@@ -544,11 +544,11 @@ const App: React.FC = () => {
                   return;
                 }
                 setDomains(prev => prev.map(d => d.id === id ? { ...d, url: validation.url! } : d));
-                checkSingleDomain(id, validation.url);
+                void checkSingleDomain(id, validation.url);
               }}
               onCheck={(id) => {
                 const domain = domains.find(d => d.id === id);
-                if (domain?.url) checkSingleDomain(id, domain.url);
+                if (domain?.url) void checkSingleDomain(id, domain.url);
               }}
               onEditTags={(id, tags) => setDomains(prev => prev.map(d => d.id === id ? { ...d, tags } : d))}
               onEditGroup={(id, groupId) => setDomains(prev => prev.map(d => d.id === id ? { ...d, groupId } : d))}
@@ -564,7 +564,7 @@ const App: React.FC = () => {
 
       <footer id="footer" className="text-center py-8 text-sm text-slate-400" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4">
-          <p>Made with 💛 by BigSean</p>
+          <p>Made with 💛 by Sean G</p>
           <div className="mt-2 text-xs text-slate-500">
             <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded mx-1">⌘K</kbd> Focus search
             <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded mx-1">⌘Enter</kbd> Check all
@@ -614,9 +614,6 @@ const App: React.FC = () => {
         variant="danger"
       />
 
-      <footer className="text-center py-8 text-sm text-slate-400">
-        Made with 💛 by BigSean
-      </footer>
     </div>
   );
 };

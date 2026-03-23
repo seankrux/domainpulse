@@ -40,12 +40,20 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain 
   }, [domains]);
 
   const alertCount = alerts.length;
-  const stats = React.useMemo(() => ({
-    total: domains.length,
-    alive: domains.filter(d => d.status === 'ALIVE').length,
-    down: domains.filter(d => d.status === 'DOWN').length,
-    unknown: domains.filter(d => d.status === 'UNKNOWN' || d.status === 'CHECKING').length
-  }), [domains]);
+  const stats: import('../types').DomainStats = React.useMemo(() => {
+    const alive = domains.filter(d => d.status === 'ALIVE').length;
+    const down = domains.filter(d => d.status === 'DOWN').length;
+    const unknown = domains.filter(d => d.status === 'UNKNOWN' || d.status === 'CHECKING').length;
+    const responsiveDomains = domains.filter(d => d.latency !== undefined && d.latency > 0);
+    const avgLatency = responsiveDomains.length > 0
+      ? responsiveDomains.reduce((acc, curr) => acc + (curr.latency || 0), 0) / responsiveDomains.length
+      : 0;
+    const totalRecords = domains.reduce((acc, d) => acc + d.history.length, 0);
+    const aliveRecords = domains.reduce((acc, d) =>
+      acc + d.history.filter(h => h.status === 'ALIVE').length, 0);
+    const uptime = totalRecords > 0 ? (aliveRecords / totalRecords) * 100 : 100;
+    return { total: domains.length, alive, down, unknown, avgLatency, uptime };
+  }, [domains]);
 
   if (domains.length === 0) return null;
 
@@ -161,7 +169,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain 
 
             {/* Distribution Chart */}
             <div>
-              <DistributionChart stats={stats as any} />
+              <DistributionChart stats={stats} />
             </div>
           </div>
         </div>

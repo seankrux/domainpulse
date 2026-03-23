@@ -148,7 +148,7 @@ export const useMonitoring = ({
       domains: domainsToProcess,
       config: serviceConfig
     });
-  }, [setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid, maxHistoryRecords, setCheckProgress]);
+  }, [setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid, setCheckProgress]);
 
   const checkAllDomains = useCallback(async (silent = false) => {
     if (isCheckingAll) return;
@@ -249,7 +249,8 @@ export const useMonitoring = ({
       MonitoringWorker.terminate();
       workerRef.current = null;
     };
-  }, []); // Empty deps - worker created once
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - worker created once, callbacks accessed via refs
 
   // Send config updates to worker when values change
   useEffect(() => {

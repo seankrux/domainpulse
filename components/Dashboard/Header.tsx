@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden lg:inline">Website</span>
             <ArrowRight size={16} />
           </a>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white cursor-pointer" title="Sean Guillermo">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white cursor-pointer" title="Sean G">
             SG
           </div>
         </div>

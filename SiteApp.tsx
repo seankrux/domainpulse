@@ -51,10 +51,10 @@ const App: React.FC = () => {
       setCurrentPage(path as Page || 'home');
     };
 
-    handleRoute();
+    void handleRoute();
 
     // Listen for navigation
-    const onPopState = () => handleRoute();
+    const onPopState = () => void handleRoute();
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
@@ -146,80 +146,60 @@ const App: React.FC = () => {
 function getDefaultPage(path: string) {
   const defaults: Record<string, { title: string; content: string; excerpt?: string }> = {
     home: {
-      title: 'Welcome',
-      excerpt: 'Building amazing things, one step at a time.',
-      content: `# Welcome to Your Website
+      title: 'DomainPulse',
+      excerpt: 'Professional domain monitoring and SSL tracking, built by Sean G.',
+      content: `# Welcome to DomainPulse
 
-This is your **file-based CMS** website. No signup required, no complex setup.
+Your **all-in-one domain monitoring dashboard**. Track uptime, SSL certificates, and get instant alerts when something goes wrong.
 
-## How It Works
+## What DomainPulse Does
 
-1. **Content lives in files** - Markdown files in \`/content/pages/\` and \`/content/posts/\`
-2. **Ask AI to create content** - Just say "create a blog post about X"
-3. **Edit manually anytime** - Files are in your repo, edit in GitHub or locally
+1. **Monitors your domains** - Real-time uptime checks with latency tracking
+2. **Tracks SSL certificates** - Know before your certs expire
+3. **Sends alerts** - Browser notifications, Slack, and Discord webhooks
+4. **Provides analytics** - Response time history and uptime percentages
 
-## Quick Start
+## Key Features
 
-- Edit this page: \`/content/pages/home.md\`
-- Add a blog post: Create file in \`/content/posts/\`
-- Deploy to Vercel: Push to GitHub, auto-deploys
-
-## Features
-
-- ✅ No CMS signup required
-- ✅ AI can write content
-- ✅ Full control over files
-- ✅ Dark mode support
-- ✅ Responsive design
-- ✅ Vercel ready
+- Real-time domain health monitoring
+- SSL certificate expiry tracking
+- Bulk domain import via CSV
+- Dark mode support
+- Keyboard shortcuts for power users
+- Fully responsive design
 `
     },
     about: {
-      title: 'About Us',
-      content: `# About Us
+      title: 'About',
+      content: `# About DomainPulse
 
-Tell your story here. This page is perfect for:
+DomainPulse is a domain monitoring dashboard built by **Sean G** as a portfolio project.
 
-- Company background
-- Team introductions
-- Mission and values
-- Your journey
+## Tech Stack
 
-## Edit This Page
+- **Frontend:** React 19 + TypeScript
+- **Styling:** Tailwind CSS 4
+- **Charts:** Recharts
+- **Build Tool:** Vite 6
+- **Deployment:** Vercel
 
-Create or edit \`/content/pages/about.md\` to customize this content.
+## Why DomainPulse?
 
-### Example Content
-
-\`\`\`markdown
-# Our Story
-
-Started in 2024, we've been building...
-
-## Our Team
-
-Meet the people behind the product...
-\`\`\`
+Managing multiple domains means keeping track of uptime, SSL certificates, and response times. DomainPulse brings all of that into one clean, fast dashboard.
 `
     },
     contact: {
       title: 'Contact',
       content: `# Get In Touch
 
-We'd love to hear from you!
+Interested in DomainPulse or want to collaborate?
 
-## Contact Information
+## Connect
 
-- **Email:** hello@example.com
-- **Location:** Your City, Country
+- **GitHub:** [github.com/seankrux](https://github.com/seankrux)
+- **Email:** contact@domainpulse.app
 
-## Reach Out
-
-Fill out the form below or send us an email directly.
-
----
-
-*Edit this page at \`/content/pages/contact.md\`*
+Feel free to open an issue on GitHub or reach out directly.
 `
     }
   };

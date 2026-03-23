@@ -136,7 +136,7 @@ export const sendNotification = async (options: NotificationOptions): Promise<vo
  * Send notification when a domain goes down.
  */
 export const sendDomainDownNotification = (domainUrl: string, statusCode?: number): void => {
-  sendNotification({
+  void sendNotification({
     title: '🔴 Domain Down',
     body: `${domainUrl} is ${statusCode ? `returning ${statusCode}` : 'unreachable'}`,
     icon: '/favicon.ico',
@@ -150,7 +150,7 @@ export const sendDomainDownNotification = (domainUrl: string, statusCode?: numbe
  * Send notification when a domain comes back up.
  */
 export const sendDomainUpNotification = (domainUrl: string, latency?: number): void => {
-  sendNotification({
+  void sendNotification({
     title: '🟢 Domain Back Up',
     body: `${domainUrl} is back online${latency ? ` (${latency}ms)` : ''}`,
     icon: '/favicon.ico'
@@ -162,7 +162,7 @@ export const sendDomainUpNotification = (domainUrl: string, latency?: number): v
  */
 export const playAlertSound = (): void => {
   try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) {
       logger.warn('Web Audio API not supported');
       return;

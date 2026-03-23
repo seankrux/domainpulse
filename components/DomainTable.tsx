@@ -414,7 +414,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      copyToClipboard(domain.url, domain.id);
+                                      void copyToClipboard(domain.url, domain.id);
                                     }}
                                     className="opacity-0 group-hover/domain:opacity-100 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-all"
                                     title="Copy domain to clipboard"
