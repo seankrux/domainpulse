@@ -4,7 +4,7 @@ interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 class Logger {
@@ -15,7 +15,7 @@ class Logger {
 
   private constructor() {
     // Detect production environment
-    this.isProduction = typeof process !== 'undefined' 
+    this.isProduction = typeof process !== 'undefined'
       ? process.env?.NODE_ENV === 'production'
       : false;
   }
@@ -27,7 +27,7 @@ class Logger {
     return Logger.instance;
   }
 
-  private log(level: LogLevel, message: string, data?: any) {
+  private log(level: LogLevel, message: string, data?: unknown) {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -43,8 +43,10 @@ class Logger {
     // Console output for development
     const consoleMethod = level === 'debug' ? 'log' : level;
     if (data) {
+      // eslint-disable-next-line no-console
       console[consoleMethod](`[${entry.timestamp}] [${level.toUpperCase()}] ${message}`, data);
     } else {
+      // eslint-disable-next-line no-console
       console[consoleMethod](`[${entry.timestamp}] [${level.toUpperCase()}] ${message}`);
     }
 
@@ -54,19 +56,19 @@ class Logger {
     }
   }
 
-  public info(message: string, data?: any) {
+  public info(message: string, data?: unknown) {
     this.log('info', message, data);
   }
 
-  public warn(message: string, data?: any) {
+  public warn(message: string, data?: unknown) {
     this.log('warn', message, data);
   }
 
-  public error(message: string, data?: any) {
+  public error(message: string, data?: unknown) {
     this.log('error', message, data);
   }
 
-  public debug(message: string, data?: any) {
+  public debug(message: string, data?: unknown) {
     this.log('debug', message, data);
   }
 
@@ -77,7 +79,7 @@ class Logger {
   public clearLogs() {
     this.logs = [];
   }
-  
+
   /**
    * Manually set production mode (useful for testing)
    */

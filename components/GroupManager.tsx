@@ -73,23 +73,23 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
       <div className="bg-zinc-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Manage Groups</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Organize domains into groups</p>
+            <h2 className="text-lg font-semibold text-white">Manage Groups</h2>
+            <p className="text-sm text-zinc-400">Organize domains into groups</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
           >
-            <X size={20} className="text-slate-500 dark:text-slate-400" />
+            <X size={20} className="text-zinc-400" />
           </button>
         </div>
 
         <div className="p-6 space-y-4">
           {/* Add New Group */}
           {isAdding ? (
-            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-4">
+            <div className="bg-zinc-800/50 rounded-xl p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
                   Group Name
                 </label>
                 <input
@@ -97,14 +97,14 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   placeholder="e.g., Production, Personal, Client Work"
-                  className="w-full px-3 py-2 bg-zinc-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-white"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
                   <Palette size={16} className="inline mr-1" />
                   Color
                 </label>
@@ -127,14 +127,14 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                 <button
                   onClick={handleAddGroup}
                   disabled={!newGroupName.trim()}
-                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-500/50 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
                 >
                   <Save size={16} />
                   Save Group
                 </button>
                 <button
                   onClick={handleCancelAdd}
-                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                  className="px-4 py-2 text-zinc-400 hover:bg-zinc-700 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -143,7 +143,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
           ) : (
             <button
               onClick={() => setIsAdding(true)}
-              className="w-full border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-4 text-slate-500 dark:text-slate-400 hover:border-indigo-500 hover:text-indigo-600 dark:hover:border-indigo-400 dark:hover:text-indigo-400 transition-colors flex items-center justify-center gap-2"
+              className="w-full border-2 border-dashed border-zinc-700 rounded-xl p-4 text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-400 transition-colors flex items-center justify-center gap-2"
             >
               <Plus size={20} />
               Add New Group
@@ -153,14 +153,14 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
           {/* Existing Groups */}
           {groups.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <h3 className="text-sm font-semibold text-zinc-300">
                 Existing Groups ({groups.length})
               </h3>
               <div className="space-y-2">
                 {groups.map((group) => (
                   <div
                     key={group.id}
-                    className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 group"
+                    className="flex items-center gap-3 bg-zinc-800/50 rounded-xl p-3 group"
                   >
                     {editingId === group.id ? (
                       <>
@@ -168,7 +168,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                           type="text"
                           value={group.name}
                           onChange={(e) => onUpdateGroup(group.id, { name: e.target.value })}
-                          className="flex-1 px-2 py-1 bg-zinc-900 border border-slate-300 dark:border-slate-600 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                          className="flex-1 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                           autoFocus
                         />
                         <button
@@ -184,10 +184,10 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                           className="w-3 h-3 rounded-full flex-shrink-0"
                           style={{ backgroundColor: group.color }}
                         />
-                        <span className="flex-1 font-medium text-slate-900 dark:text-white">
+                        <span className="flex-1 font-medium text-white">
                           {group.name}
                         </span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs text-zinc-400">
                           {group.color}
                         </span>
                         <button
@@ -213,7 +213,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
           )}
 
           {groups.length === 0 && !isAdding && (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+            <div className="text-center py-8 text-zinc-400">
               <Palette size={48} className="mx-auto mb-3 opacity-50" />
               <p>No groups yet</p>
               <p className="text-sm">Create your first group to organize domains</p>

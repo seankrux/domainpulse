@@ -47,7 +47,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
 
   if (!stats) {
     return (
-      <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+      <div className="text-center py-12 text-zinc-400">
         <Activity size={48} className="mx-auto mb-3 opacity-50" />
         <p>No history data available yet</p>
       </div>
@@ -58,46 +58,46 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-3 text-center">
-          <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 text-xs mb-1">
+        <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-zinc-400 text-xs mb-1">
             <Activity size={12} />
             <span>Avg</span>
           </div>
-          <div className="text-lg font-bold text-slate-900 dark:text-white">{stats.avgLatency}ms</div>
+          <div className="text-lg font-bold text-white">{stats.avgLatency}ms</div>
         </div>
-        <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-3 text-center">
-          <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 text-xs mb-1">
+        <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-zinc-400 text-xs mb-1">
             <TrendingUp size={12} />
             <span>Min</span>
           </div>
-          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{stats.minLatency}ms</div>
+          <div className="text-lg font-bold text-emerald-400">{stats.minLatency}ms</div>
         </div>
-        <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-3 text-center">
-          <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 text-xs mb-1">
+        <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-zinc-400 text-xs mb-1">
             <TrendingUp size={12} className="rotate-180" />
             <span>Max</span>
           </div>
-          <div className="text-lg font-bold text-rose-600 dark:text-rose-400">{stats.maxLatency}ms</div>
+          <div className="text-lg font-bold text-red-400">{stats.maxLatency}ms</div>
         </div>
-        <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-3 text-center">
-          <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 text-xs mb-1">
+        <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-zinc-400 text-xs mb-1">
             <Clock size={12} />
             <span>Uptime</span>
           </div>
-          <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{stats.uptime}%</div>
+          <div className="text-lg font-bold text-emerald-400">{stats.uptime}%</div>
         </div>
-        <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-3 text-center">
-          <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 text-xs mb-1">
+        <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-zinc-400 text-xs mb-1">
             <Activity size={12} />
             <span>Checks</span>
           </div>
-          <div className="text-lg font-bold text-slate-900 dark:text-white">{stats.totalChecks}</div>
+          <div className="text-lg font-bold text-white">{stats.totalChecks}</div>
         </div>
       </div>
 
       {/* Latency Chart */}
       <div>
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Response Time (ms)</h3>
+        <h3 className="text-sm font-semibold text-zinc-300 mb-3">Response Time (ms)</h3>
         <div className="h-64 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
           <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={200} debounce={100}>
             <AreaChart data={chartData}>
@@ -143,7 +143,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
 
       {/* Status Timeline */}
       <div>
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Status Timeline</h3>
+        <h3 className="text-sm font-semibold text-zinc-300 mb-3">Status Timeline</h3>
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
           <div className="flex flex-wrap gap-1">
             {domain.history.slice(-50).map((record, i) => {
@@ -164,7 +164,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
               );
             })}
           </div>
-          <div className="flex items-center gap-4 mt-3 text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-4 mt-3 text-xs text-zinc-400">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded bg-emerald-500" />
               <span>Alive</span>
