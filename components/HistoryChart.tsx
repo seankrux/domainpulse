@@ -98,39 +98,40 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
       {/* Latency Chart */}
       <div>
         <h3 className="text-sm font-semibold text-zinc-300 mb-3">Response Time (ms)</h3>
-        <div className="h-64 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <div className="h-64 bg-zinc-900/80 rounded-xl border border-zinc-800 p-4">
           <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={200} debounce={100}>
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="latencyGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.5} />
               <XAxis
                 dataKey="time"
-                tick={{ fontSize: 12, fill: '#64748b' }}
-                axisLine={{ stroke: '#e2e8f0' }}
+                tick={{ fontSize: 12, fill: '#71717a' }}
+                axisLine={{ stroke: '#3f3f46' }}
               />
               <YAxis
-                tick={{ fontSize: 12, fill: '#64748b' }}
-                axisLine={{ stroke: '#e2e8f0' }}
-                label={{ value: 'ms', angle: -90, position: 'insideLeft', fill: '#64748b' }}
+                tick={{ fontSize: 12, fill: '#71717a' }}
+                axisLine={{ stroke: '#3f3f46' }}
+                label={{ value: 'ms', angle: -90, position: 'insideLeft', fill: '#71717a' }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  backgroundColor: 'rgba(24, 24, 27, 0.95)',
+                  border: '1px solid #3f3f46',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+                  color: '#e4e4e7'
                 }}
-                labelStyle={{ color: '#475569', fontWeight: 600 }}
+                labelStyle={{ color: '#a1a1aa', fontWeight: 600 }}
               />
               <Area
                 type="monotone"
                 dataKey="latency"
-                stroke="#6366f1"
+                stroke="#10b981"
                 strokeWidth={2}
                 fill="url(#latencyGradient)"
                 name="Latency"
@@ -144,14 +145,14 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
       {/* Status Timeline */}
       <div>
         <h3 className="text-sm font-semibold text-zinc-300 mb-3">Status Timeline</h3>
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <div className="bg-zinc-900/80 rounded-xl border border-zinc-800 p-4">
           <div className="flex flex-wrap gap-1">
             {domain.history.slice(-50).map((record, i) => {
               const color = record.status === DomainStatus.Alive
                 ? 'bg-emerald-500'
                 : record.status === DomainStatus.Down
                   ? 'bg-rose-500'
-                  : 'bg-slate-300 dark:bg-slate-600';
+                  : 'bg-zinc-700';
               
               const tooltip = `${record.timestamp.toLocaleString()} - ${record.status} (${record.latency}ms)`;
               
@@ -174,7 +175,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
               <span>Down</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-slate-300 dark:bg-slate-600" />
+              <div className="w-3 h-3 rounded bg-zinc-700" />
               <span>Unknown</span>
             </div>
           </div>
