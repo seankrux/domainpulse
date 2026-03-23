@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, Sun, Moon, Settings, LogOut, ArrowRight, Clock } from 'lucide-react';
+import { BarChart3, Sun, Moon, Settings, ArrowRight, Clock } from 'lucide-react';
 import { AppSettings } from '../../utils/storage';
 
 interface HeaderProps {
@@ -59,13 +59,6 @@ export const Header: React.FC<HeaderProps> = ({
             title="Settings"
           >
             <Settings size={20} />
-          </button>
-          <button
-            onClick={logout}
-            className="text-zinc-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-zinc-800/50"
-            title="Sign out"
-          >
-            <LogOut size={20} />
           </button>
           <a
             href={typeof import.meta !== 'undefined' && import.meta.env?.VITE_SITE_URL ? import.meta.env.VITE_SITE_URL : 'http://localhost:3002'}
