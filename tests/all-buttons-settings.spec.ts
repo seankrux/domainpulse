@@ -26,8 +26,8 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     test('should toggle dark mode', async ({ page }) => {
       // Initial state - light mode
       const html = page.locator('html');
-      const initialClass = await html.getAttribute('class');
-      
+      await html.getAttribute('class');
+
       // Click dark mode toggle
       const moonButton = page.locator('button[title="Toggle dark mode"]');
       await moonButton.click();
@@ -105,7 +105,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       
       // Sound checkbox (should be disabled if notifications are off)
       const soundCheckbox = page.locator('label:has-text("Sound") input[type="checkbox"]');
-      const isDisabled = await soundCheckbox.isDisabled();
+      await soundCheckbox.isDisabled();
       // Sound is only enabled if notifications are enabled
     });
 
@@ -779,8 +779,9 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
   test.describe('Bottom Panel', () => {
     test('should toggle bottom panel', async ({ page }) => {
       // Bottom panel should be visible
-      const panel = page.locator('[aria-label*="Alert"]');
-      
+      // Bottom panel locator
+      page.locator('[aria-label*="Alert"]');
+
       // Click toggle
       const toggleButton = page.locator('button[aria-expanded]');
       await toggleButton.click();
