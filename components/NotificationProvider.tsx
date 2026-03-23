@@ -55,9 +55,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
 const NotificationItem: React.FC<{ notification: Notification; onClose: () => void }> = ({ notification, onClose }) => {
   const configs = {
-    success: { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: CheckCircle, iconColor: 'text-emerald-600' },
-    error: { bg: 'bg-rose-50', border: 'border-rose-200', icon: AlertCircle, iconColor: 'text-rose-600' },
-    info: { bg: 'bg-indigo-50', border: 'border-indigo-200', icon: Info, iconColor: 'text-indigo-600' }
+    success: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: CheckCircle, iconColor: 'text-emerald-400' },
+    error: { bg: 'bg-red-500/10', border: 'border-red-500/20', icon: AlertCircle, iconColor: 'text-red-400' },
+    info: { bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: Info, iconColor: 'text-blue-400' }
   };
 
   const config = configs[notification.type];
@@ -66,8 +66,8 @@ const NotificationItem: React.FC<{ notification: Notification; onClose: () => vo
   return (
     <div className={`${config.bg} border ${config.border} rounded-lg p-4 shadow-lg flex items-start gap-3 animate-in slide-in-from-right duration-300`}>
       <Icon className={`${config.iconColor} flex-shrink-0 mt-0.5`} size={20} />
-      <p className="text-sm text-slate-700 flex-1">{notification.message}</p>
-      <button onClick={onClose} className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+      <p className="text-sm text-zinc-200 flex-1">{notification.message}</p>
+      <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 flex-shrink-0">
         <X size={16} />
       </button>
     </div>
