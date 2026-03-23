@@ -12,13 +12,16 @@ export default {
         display: ['"Plus Jakarta Sans"', 'sans-serif'],
       },
       colors: {
-        slate: {
-          850: '#151e2e',
+        zinc: {
+          850: '#1c1c1f',
+          950: '#09090b',
         }
       },
       boxShadow: {
-        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
-        'glow': '0 0 15px rgba(99, 102, 241, 0.3)',
+        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.3)',
+        'glow': '0 0 15px rgba(16, 185, 129, 0.3)',
+        'glow-emerald': '0 0 20px rgba(16, 185, 129, 0.25), 0 0 40px rgba(16, 185, 129, 0.1)',
+        'glow-red': '0 0 20px rgba(239, 68, 68, 0.25), 0 0 40px rgba(239, 68, 68, 0.1)',
       }
     },
   },
