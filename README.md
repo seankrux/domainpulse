@@ -11,7 +11,6 @@
     <img src="https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React" />
     <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
     <img src="https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
-    <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License" />
   </p>
 
   <br />
@@ -180,10 +179,6 @@ Contributions are welcome. If you want to improve DomainPulse, keep changes focu
 4. Use `npm run test:gui` when your change touches interactive dashboard behavior.
 5. Open a pull request with a concise summary of the problem, approach, and user-facing impact.
 
-## License
-
-[MIT](LICENSE)
-
 ---
 
-<p align="center">Made with 💛 by Sean G</p>
+<p align="center">Made with 💛 by <a href="https://www.seanguillermo.com"><strong>Sean G</strong></a></p>
