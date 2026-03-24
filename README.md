@@ -3,18 +3,21 @@
 </div>
 
 <div align="center">
-  <h1>DomainPulse</h1>
-  <p><strong>Real-time domain monitoring dashboard for uptime, SSL, DNS, and expiry tracking</strong></p>
+  <h1>DomainPulse <sup>v1.0</sup></h1>
+  <p>Real-time domain monitoring dashboard for uptime, SSL, DNS, and expiry tracking</p>
 
   <p>
-    <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-    <img src="https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React" />
-    <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
-    <img src="https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+    <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+    <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+    <img src="https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
   </p>
 
-  <br />
-  <a href="https://domainpulse.vercel.app"><strong>Live Demo →</strong></a>
+  <br><br>
+
+  <a href="https://domainpulse.vercel.app"><strong>Live Demo &rarr;</strong></a>
+
+  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/seankrux/domainpulse)
 </div>
 
 ---
@@ -23,39 +26,41 @@
 
 Full-featured domain monitoring dashboard that tracks uptime, SSL certificate status, DNS records, and domain expiration dates. Supports browser notifications, Slack/Discord webhooks, Web Audio alerts, and bulk CSV import/export. Runs two React apps from a single codebase — the dashboard and a marketing site.
 
+<br>
+
 ## Why DomainPulse?
 
-- **Unified monitoring surface** — DomainPulse is a modern React SPA that brings uptime, DNS, WHOIS, and SSL monitoring into one workflow instead of splitting critical domain intelligence across separate tools.
+> **Unified monitoring surface** — DomainPulse is a modern React SPA that brings uptime, DNS, WHOIS, and SSL monitoring into one workflow instead of splitting critical domain intelligence across separate tools.
 
-- **Built for fast operational signal** — Checks run in the background, historical status is retained locally, and alerts can reach the browser, Slack, Discord, and Web Audio channels without adding heavy infrastructure.
+> **Built for fast operational signal** — Checks run in the background, historical status is retained locally, and alerts can reach the browser, Slack, Discord, and Web Audio channels without adding heavy infrastructure.
 
-- **Productized beyond a demo** — It ships with a protected dashboard, bulk domain management, a dedicated marketing site, and a deployment-ready serverless API layer from a single codebase.
+> **Productized beyond a demo** — Ships with a protected dashboard, bulk domain management, a dedicated marketing site, and a deployment-ready serverless API layer from a single codebase.
 
-## Preview
-
-> [View the live application →](https://domainpulse.vercel.app)
+<br>
 
 ## Features
 
-▸ **Uptime Monitoring** — Latency tracking with history charts
+> **Uptime Monitoring** — Latency tracking with history charts
 
-▸ **SSL Tracking** — Certificate status and expiry alerts
+> **SSL Tracking** — Certificate status and expiry alerts
 
-▸ **Domain Expiry** — WHOIS-based expiration tracking
+> **Domain Expiry** — WHOIS-based expiration tracking
 
-▸ **DNS Lookup** — Full DNS record inspection
+> **DNS Lookup** — Full DNS record inspection
 
-▸ **Groups and Tags** — Organize domains into logical groups
+> **Groups and Tags** — Organize domains into logical groups
 
-▸ **Notifications** — Browser, Slack, and Discord webhook support
+> **Notifications** — Browser, Slack, and Discord webhook support
 
-▸ **Sound Alerts** — Web Audio API notifications
+> **Sound Alerts** — Web Audio API notifications
 
-▸ **CSV Import/Export** — Bulk domain management
+> **CSV Import/Export** — Bulk domain management
 
-▸ **Password Auth** — PBKDF2 + salt authentication
+> **Password Auth** — PBKDF2 + salt authentication
 
-▸ **Web Worker** — Non-blocking background monitoring
+> **Web Worker** — Non-blocking background monitoring
+
+<br>
 
 ## How It Works
 
@@ -64,8 +69,10 @@ DomainPulse routes domain checks through a single authenticated API surface: Ver
 1. **Normalize and queue domains** — User input is validated, normalized to a clean domain, and queued for checking by the monitoring hook or Web Worker batch runner.
 2. **Measure uptime first** — `/api/check` performs a fast `HEAD` request against the target domain to determine availability, status code, and latency.
 3. **Enrich results in parallel** — After uptime succeeds, DomainPulse concurrently calls `/api/ssl`, `/api/whois`, and `/api/dns` to gather certificate validity, expiration metadata, registrar details, and live DNS records.
-4. **Persist and visualize state** — Results are merged into the dashboard, appended to each domain’s history, and stored in `localStorage` so operators keep context across sessions.
+4. **Persist and visualize state** — Results are merged into the dashboard, appended to each domain's history, and stored in `localStorage` so operators keep context across sessions.
 5. **Notify on meaningful changes** — Status transitions can trigger browser notifications, Slack or Discord webhooks, and optional sound alerts for immediate operator feedback.
+
+<br>
 
 ## Tech Stack
 
@@ -82,6 +89,8 @@ DomainPulse routes domain checks through a single authenticated API surface: Ver
 | Client Persistence | `localStorage`, `sessionStorage` | Domain lists, settings, history, and authenticated session state |
 | Testing & Quality | Vitest, Testing Library, Playwright, ESLint | Unit coverage, UI verification, end-to-end tests, and code quality checks |
 | Deployment | Vercel, `vercel.json` rewrites | Serverless production deployment and API routing |
+
+<br>
 
 ## Getting Started
 
@@ -101,9 +110,6 @@ npm install
 Use the commands below to run the full monitoring dashboard with the local proxy server, or launch the standalone marketing site.
 
 ```bash
-# Install dependencies
-npm install
-
 # Run dashboard + proxy server
 npm run dev:all
 # Open http://localhost:3000
@@ -135,6 +141,8 @@ Generate a hash:
 node -e "const crypto = require('crypto'); const salt = crypto.randomBytes(16).toString('hex'); const hash = crypto.pbkdf2Sync('your-password', salt, 100000, 32, 'sha256').toString('hex'); console.log(hash + ':' + salt);"
 ```
 
+<br>
+
 ## Available Commands
 
 | Command | Description |
@@ -147,6 +155,8 @@ node -e "const crypto = require('crypto'); const salt = crypto.randomBytes(16).t
 | `npm run test` | Vitest unit tests |
 | `npm run test:gui` | Playwright E2E tests |
 
+<br>
+
 ## Architecture
 
 Two React apps built from a single codebase:
@@ -156,22 +166,24 @@ Two React apps built from a single codebase:
 | DomainPulse | `index.html` / `App.tsx` | 3000 |
 | Marketing Site | `site.html` / `SiteApp.tsx` | 3002 |
 
-● **Local dev** — Vite proxies `/api/*` to Express on port 3001
+> **Local dev** — Vite proxies `/api/*` to Express on port 3001
 
-● **Production** — Vercel serverless functions via `vercel.json` rewrites
+> **Production** — Vercel serverless functions via `vercel.json` rewrites
+
+<br>
 
 ## Deployment
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/seankrux/domainpulse)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VITE_PASSWORD_HASH` | Yes | PBKDF2 `hash:salt` for auth |
 | `ALLOWED_ORIGINS` | No | CORS origins (comma-separated) |
 
+<br>
+
 ## Contributing
 
-Contributions are welcome. If you want to improve DomainPulse, keep changes focused, tested, and aligned with the existing product direction.
+> Contributions are welcome. Keep changes focused, tested, and aligned with the existing product direction.
 
 1. Fork the repository and create a feature branch.
 2. Install dependencies with `npm install`.
@@ -181,4 +193,8 @@ Contributions are welcome. If you want to improve DomainPulse, keep changes focu
 
 ---
 
-<p align="center">Made with 💛 by <a href="https://www.seanguillermo.com"><strong>Sean G</strong></a></p>
+<br>
+
+<div align="center">
+  <sub>Built by <a href="https://www.seanguillermo.com"><strong>Sean G</strong></a></sub>
+</div>
