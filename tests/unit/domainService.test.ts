@@ -81,15 +81,15 @@ describe('domainService', () => {
     it('should reject invalid domain formats', () => {
       expect(validateAndNormalizeUrl('not-a-domain')).toEqual({
         valid: false,
-        error: 'Please enter a valid domain name (e.g., google.com)'
+        error: 'Invalid domain (e.g., google.com)'
       });
       expect(validateAndNormalizeUrl('.com')).toEqual({
         valid: false,
-        error: 'Please enter a valid domain name (e.g., google.com)'
+        error: 'Invalid domain (e.g., google.com)'
       });
       expect(validateAndNormalizeUrl('domain.')).toEqual({
         valid: false,
-        error: 'Please enter a valid domain name (e.g., google.com)'
+        error: 'Invalid domain (e.g., google.com)'
       });
     });
 
@@ -103,11 +103,11 @@ describe('domainService', () => {
     it('should reject domains starting or ending with hyphens', () => {
       expect(validateAndNormalizeUrl('-google.com')).toEqual({
         valid: false,
-        error: 'Please enter a valid domain name (e.g., google.com)'
+        error: 'Invalid domain (e.g., google.com)'
       });
       expect(validateAndNormalizeUrl('google-.com')).toEqual({
         valid: false,
-        error: 'Please enter a valid domain name (e.g., google.com)'
+        error: 'Invalid domain (e.g., google.com)'
       });
     });
   });

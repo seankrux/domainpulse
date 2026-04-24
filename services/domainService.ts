@@ -67,7 +67,7 @@ export const validateAndNormalizeUrl = (input: string): { valid: boolean; url?: 
   const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}(\/[^\s]*)?$/;
   
   if (!domainRegex.test(normalized)) {
-    return { valid: false, error: 'Please enter a valid domain name (e.g., google.com)' };
+    return { valid: false, error: 'Invalid domain (e.g., google.com)' };
   }
   
   // Remove trailing slashes and convert to lowercase

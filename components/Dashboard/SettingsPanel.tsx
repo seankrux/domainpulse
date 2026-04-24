@@ -102,7 +102,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <Settings size={20} className="text-emerald-400" />
           Settings
         </h3>
-        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors">
+        <button onClick={onClose} aria-label="Close" className="text-zinc-500 hover:text-zinc-200 transition-colors">
           <X size={20} />
         </button>
       </div>
@@ -249,7 +249,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
               {(!settings.webhooks || settings.webhooks.length === 0) ? (
                 <div className="text-center py-4 bg-zinc-800/30 rounded-xl border border-dashed border-zinc-700">
-                  <p className="text-xs text-slate-500">No webhooks configured</p>
+                  <p className="text-xs text-slate-500">None configured</p>
                 </div>
               ) : (
                 settings.webhooks.map(webhook => (
@@ -289,7 +289,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="text"
-                  placeholder="Name (e.g. Alerts)"
+                  placeholder="Name (e.g. Alerts"
                   value={newWebhook.name}
                   onChange={(e) => setNewWebhook(prev => ({ ...prev, name: e.target.value }))}
                   className="px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 focus:ring-2 focus:ring-emerald-500/30 outline-none"
@@ -317,6 +317,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 <button
                   onClick={addWebhook}
                   disabled={!newWebhook.name || !newWebhook.url}
+                  data-testid="add-webhook-btn"
+                  aria-label="Add webhook"
                   className="bg-emerald-500 hover:bg-emerald-400 text-white p-2 rounded-lg disabled:opacity-50 transition-colors"
                 >
                   <Plus size={20} />

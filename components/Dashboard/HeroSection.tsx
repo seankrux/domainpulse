@@ -50,7 +50,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               className="text-zinc-500 hover:text-emerald-400 px-3 py-2 text-sm font-medium transition-colors"
               title="Bulk Import"
             >
-              Bulk
+              Bulk Import
             </button>
             <button
               onClick={() => onAddDomain(newDomainUrl)}

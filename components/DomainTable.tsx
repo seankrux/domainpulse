@@ -398,7 +398,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                             if (e.key === 'Escape') cancelEdit();
                           }}
                         />
-                        <button onClick={() => saveEdit(domain.id)} className="p-1.5 rounded-md bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50"><Check size={14} /></button>
+                        <button onClick={() => saveEdit(domain.id)} title="Save" className="p-1.5 rounded-md bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50"><Check size={14} /></button>
                         <button onClick={cancelEdit} className="p-1.5 rounded-md bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50"><X size={14} /></button>
                       </div>
                     ) : (
@@ -422,7 +422,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                                     aria-label={`Copy ${domain.url} to clipboard`}
                                   >
                                     {copiedId === domain.id ? (
-                                      <CheckCheck size={12} className="text-emerald-500" />
+                                      <CheckCheck size={12} className="text-emerald-500" data-testid="CheckCheckIcon" />
                                     ) : (
                                       <Copy size={12} className="text-slate-400" />
                                     )}
@@ -599,7 +599,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       <button
                         onClick={() => onViewHistory && onViewHistory(domain)}
                         className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                        title="View history"
+                        title="View History"
                         aria-label={`View history for ${domain.url}`}
                       >
                         <History size={16} />
@@ -608,7 +608,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                         onClick={() => onCheck(domain.id)}
                         disabled={isChecking}
                         className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                        title="Check status"
+                        title="Check"
                         aria-label={`Check status for ${domain.url}`}
                         aria-busy={isChecking}
                       >
@@ -617,7 +617,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       <button
                         onClick={() => startEdit(domain)}
                         className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                        title="Edit domain"
+                        title="Edit"
                         aria-label={`Edit domain ${domain.url}`}
                       >
                         <Edit2 size={16} />
@@ -625,7 +625,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                       <button
                         onClick={() => onRemove(domain.id)}
                         className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                        title="Remove"
+                        title="Delete"
                         aria-label={`Remove ${domain.url}`}
                       >
                         <Trash2 size={16} />

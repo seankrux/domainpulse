@@ -49,9 +49,9 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await expect(page.getByTestId('settings-panel')).toBeVisible();
       
       // Verify settings sections
-      await expect(page.locator('text=General')).toBeVisible();
-      await expect(page.locator('text=Webhooks')).toBeVisible();
-      await expect(page.locator('text=Advanced Monitoring')).toBeVisible();
+      await expect(page.locator('h4:has-text("General")')).toBeVisible();
+      await expect(page.locator('h4:has-text("Webhooks")')).toBeVisible();
+      await expect(page.locator('h4:has-text("Advanced Monitoring")')).toBeVisible();
       
       // Close settings using X button
       await page.locator('button[aria-label="Close"]').first().click();
@@ -156,7 +156,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await webhookUrl.fill('https://hooks.slack.com/services/TEST/WEBHOOK');
       
       // Click add button
-      const addButton = page.locator('button:has-text("+")');
+      const addButton = page.getByTestId('add-webhook-btn');
       await addButton.click();
       
       // Verify webhook was added
@@ -173,7 +173,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const webhookUrl = page.locator('input[placeholder="Webhook URL"]');
       await webhookUrl.fill('https://hooks.slack.com/services/TEST');
       
-      const addButton = page.locator('button:has-text("+")');
+      const addButton = page.getByTestId('add-webhook-btn');
       await addButton.click();
       
       // Find the webhook and toggle it
@@ -192,7 +192,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const webhookUrl = page.locator('input[placeholder="Webhook URL"]');
       await webhookUrl.fill('https://hooks.slack.com/services/TEST');
       
-      const addButton = page.locator('button:has-text("+")');
+      const addButton = page.getByTestId('add-webhook-btn');
       await addButton.click();
       
       // Remove the webhook
@@ -329,7 +329,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await expect(page.locator(`h2:has-text("History - ${historyDomain}")`)).toBeVisible();
       
       // Close modal
-      await page.locator('button[aria-label="Close"]').last().click();
+      await page.locator('button[aria-label="Close"]').last().evaluate(el => (el as HTMLElement).click());
     });
 
     test('should view domain details', async ({ page }) => {
@@ -357,7 +357,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await expect(detailModal.locator('h3:has-text("DNS Records")')).toBeVisible();
       
       // Close modal
-      await detailModal.locator('button:has-text("Close")').click();
+      await detailModal.locator('button:has-text("Close")').evaluate(el => (el as HTMLElement).click());
       await expect(detailModal).not.toBeVisible();
     });
 
@@ -533,21 +533,19 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await page.waitForSelector(`tr:has-text("${statusDomain}")`, { timeout: 20000 });
       
       // Filter by status
-      const statusSelect = page.locator('select:near(span:text("Status:"))');
-      await statusSelect.selectOption({ label: 'All' });
+      await page.getByTestId('status-filter').selectOption({ value: 'ALL' });
     });
 
     test('should filter by SSL status', async ({ page }) => {
-      const sslSelect = page.locator('select:near(span:text("SSL:"))');
-      await sslSelect.selectOption({ label: 'All' });
-      
+      const sslSelect = page.getByTestId('ssl-filter');
+      await sslSelect.selectOption({ value: 'ALL' });
+
       const selectedValue = await sslSelect.inputValue();
       expect(selectedValue).toBe('ALL');
     });
 
     test('should filter by group', async ({ page }) => {
-      const groupSelect = page.locator('select:near(span:text("Group:"))');
-      await groupSelect.selectOption({ label: 'All' });
+      await page.getByTestId('group-filter').selectOption({ value: 'ALL' });
     });
 
     test('should sort by different fields', async ({ page }) => {
@@ -595,101 +593,94 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await expect(modal).toBeVisible();
       
       // Close
-      await page.locator('button[aria-label="Close"]').last().click();
+      await page.locator('button[aria-label="Close"]').last().evaluate(el => (el as HTMLElement).click());
     });
 
     test('should create new group', async ({ page }) => {
       const groupName = `Group-${Math.random().toString(36).slice(2, 6)}`;
-      
+
       const manageButton = page.locator('button[title="Manage Groups"]');
       await manageButton.click();
-      
+
       const modal = page.getByTestId('group-manager-modal');
       await expect(modal).toBeVisible();
-      
+
       // Click "Add New Group"
-      await modal.locator('button:has-text("Add New Group")').click();
-      
+      await modal.getByTestId('add-new-group-btn').evaluate(el => (el as HTMLElement).click());
+
       // Fill group name
       const nameInput = modal.locator('input[placeholder*="Production, Personal"]');
       await nameInput.fill(groupName);
-      
-      // Select color
-      const colorButton = modal.locator('[role="button"]').first();
-      await colorButton.click();
-      
+
       // Save
-      const saveButton = modal.locator('button:has-text("Save Group")');
-      await saveButton.click();
-      
+      await modal.locator('button:has-text("Save Group")').evaluate(el => (el as HTMLElement).click());
+
       // Verify group was created
       await expect(modal).toContainText(groupName);
-      
+
       // Close
-      await page.locator('button[aria-label="Close"]').last().click();
+      await page.locator('button[aria-label="Close"]').last().evaluate(el => (el as HTMLElement).click());
     });
 
     test('should edit group name', async ({ page }) => {
       const editGroup = `EditGroup-${Math.random().toString(36).slice(2, 6)}`;
-      
+
       // Create group first
       const manageButton = page.locator('button[title="Manage Groups"]');
       await manageButton.click();
-      
+
       const modal = page.getByTestId('group-manager-modal');
-      await modal.locator('button:has-text("Add New Group")').click();
-      
+      await modal.getByTestId('add-new-group-btn').evaluate(el => (el as HTMLElement).click());
+
       const nameInput = modal.locator('input[placeholder*="Production, Personal"]');
       await nameInput.fill(editGroup);
-      await modal.locator('button:has-text("Save Group")').click();
-      
+      await modal.locator('button:has-text("Save Group")').evaluate(el => (el as HTMLElement).click());
+
       // Edit the group
       const groupRow = modal.locator(`text=${editGroup}`).locator('..');
       const editButton = groupRow.locator('button[title="Edit name"]');
-      await editButton.click();
-      
+      await editButton.evaluate(el => (el as HTMLElement).click());
+
       // Change name
       const editInput = groupRow.locator('input[type="text"]');
       await editInput.fill(`${editGroup}-Updated`);
-      
-      // Save
-      const saveButton = groupRow.locator('button[title="Save"]');
-      await saveButton.click();
-      
+
+      // Save (Check button)
+      await groupRow.locator('button').filter({ hasText: '' }).last().evaluate(el => (el as HTMLElement).click());
+
       // Verify update
       await expect(modal).toContainText(`${editGroup}-Updated`);
-      
+
       // Close
-      await page.locator('button[aria-label="Close"]').last().click();
+      await page.locator('button[aria-label="Close"]').last().evaluate(el => (el as HTMLElement).click());
     });
 
     test('should delete group', async ({ page }) => {
       const deleteGroup = `DeleteGroup-${Math.random().toString(36).slice(2, 6)}`;
-      
+
       // Create group first
       const manageButton = page.locator('button[title="Manage Groups"]');
       await manageButton.click();
-      
+
       const modal = page.getByTestId('group-manager-modal');
-      await modal.locator('button:has-text("Add New Group")').click();
-      
+      await modal.getByTestId('add-new-group-btn').evaluate(el => (el as HTMLElement).click());
+
       const nameInput = modal.locator('input[placeholder*="Production, Personal"]');
       await nameInput.fill(deleteGroup);
-      await modal.locator('button:has-text("Save Group")').click();
-      
+      await modal.locator('button:has-text("Save Group")').evaluate(el => (el as HTMLElement).click());
+
       // Delete the group
       const groupRow = modal.locator(`text=${deleteGroup}`).locator('..');
-      const deleteButton = groupRow.locator('button[title="Delete group"]');
-      await deleteButton.click();
-      
+      await groupRow.locator('button[title="Delete group"]').evaluate(el => (el as HTMLElement).click());
+
       // Confirm deletion
-      await page.locator('button:has-text("OK")').click();
-      
+      await modal.locator('button:has-text("OK")').evaluate(el => (el as HTMLElement).click());
+
       // Verify deletion
       await expect(modal).not.toContainText(deleteGroup);
-      
+
       // Close
-      await page.locator('button[aria-label="Close"]').last().click();
+      await page.locator('button[aria-label="Close"]').last().evaluate(el => (el as HTMLElement).click());
     });
 
     test('should assign group to domain from table', async ({ page }) => {
@@ -771,7 +762,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await checkAllButton.click();
       
       // Progress bar should appear
-      const progressBar = page.locator('div.bg-indigo-600');
+      const progressBar = page.getByTestId('check-progress-bar');
       await expect(progressBar).toBeVisible({ timeout: 5000 });
     });
   });

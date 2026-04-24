@@ -420,7 +420,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-zinc-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row justify-between gap-3">
+        <div className="sticky bottom-0 p-6 border-t border-zinc-800 bg-zinc-900 flex flex-col sm:flex-row justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-zinc-400">
             <Link2 size={14} />
             <span>External tools:</span>

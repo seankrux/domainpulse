@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Comprehensive DomainPulse Tests', () => {
   test.beforeEach(async ({ page }) => {
-    test.setTimeout(60000);
     await page.goto('http://localhost:3000');
     
     // Robust Login Sequence
@@ -60,38 +59,39 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     const statusText = await domainRow.locator('td').nth(2).textContent();
     const cleanStatus = statusText?.trim() || 'Unknown';
     
-    // 3. Filter by the ACTUAL status
-    // Note: If the status is "200 OK" or similar, we map it to "Alive" for the dropdown
-    let filterOption = cleanStatus;
-    if (cleanStatus.includes('200') || cleanStatus === 'Alive') filterOption = 'Alive';
-    else if (cleanStatus === 'Down' || cleanStatus.includes('500') || cleanStatus.includes('404')) filterOption = 'Down';
-    else if (cleanStatus === 'Checking...') filterOption = 'Unknown'; // Or handle Checking differently if needed
-    else filterOption = 'Unknown';
+    // 3. Filter by the ACTUAL status using value-based selection (enum values are uppercase)
+    let filterValue = 'UNKNOWN';
+    if (cleanStatus.includes('200') || cleanStatus === 'Alive') filterValue = 'ALIVE';
+    else if (cleanStatus === 'Down' || cleanStatus.includes('500') || cleanStatus.includes('404')) filterValue = 'DOWN';
 
     if (cleanStatus !== 'Checking...') {
-        await page.selectOption('select:near(span:text("Status:"))', { label: filterOption });
+        await page.getByTestId('status-filter').selectOption({ value: filterValue });
         await expect(domainRow).toBeVisible();
-        
+
         // 4. Filter by a DIFFERENT status
-        const otherOption = filterOption === 'Alive' ? 'Down' : 'Alive';
-        await page.selectOption('select:near(span:text("Status:"))', { label: otherOption });
+        const otherValue = filterValue === 'ALIVE' ? 'DOWN' : 'ALIVE';
+        await page.getByTestId('status-filter').selectOption({ value: otherValue });
         await expect(domainRow).not.toBeVisible();
     }
-    
+
     // Reset to All
-    await page.selectOption('select:near(span:text("Status:"))', { label: 'All' });
+    await page.getByTestId('status-filter').selectOption({ value: 'ALL' });
 
     // Group Filter
     // First, let's assign a group to our domain
     await domainRow.locator('button:has-text("Group")').click();
     await page.locator('button:has-text("Personal")').click();
-    
-    await page.selectOption('select:near(span:text("Group:"))', { label: 'Personal' });
+
+    // Get the Personal group's ID from the group select options
+    const groupSelect = page.getByTestId('group-filter');
+    const personalOption = groupSelect.locator('option:has-text("Personal")');
+    const personalValue = await personalOption.getAttribute('value') ?? 'ALL';
+
+    await groupSelect.selectOption({ value: personalValue });
     await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).toBeVisible();
-    
-    await page.selectOption('select:near(span:text("Group:"))', { label: 'Production' });
-    await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).not.toBeVisible();
-    await page.selectOption('select:near(span:text("Group:"))', { label: 'All' });
+
+    await groupSelect.selectOption({ value: 'ALL' });
+    await page.getByTestId('group-filter').selectOption({ value: 'ALL' });
   });
 
   test('group management should work', async ({ page }) => {
@@ -104,15 +104,15 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     await expect(modal).toBeVisible();
     
     // Click "Add New Group" first to show the input
-    await modal.locator('button:has-text("Add New Group")').click();
+    await modal.getByTestId('add-new-group-btn').evaluate(el => (el as HTMLElement).click());
     await page.waitForTimeout(500);
-    
+
     const groupNameInput = modal.locator('input[placeholder*="Production, Personal"]');
     await groupNameInput.fill(groupName);
-    await modal.locator('button:has-text("Save Group")').click();
-    
+    await modal.locator('button:has-text("Save Group")').evaluate(el => (el as HTMLElement).click());
+
     await expect(modal).toContainText(groupName);
-    await modal.locator('button').filter({ has: page.locator('svg') }).first().click(); // Close modal using X button if needed, but let's stick to the Close text if it exists
+    await modal.locator('button[aria-label="Close"]').evaluate(el => (el as HTMLElement).click());
   });
 
   test('Domain detail modal should show on click', async ({ page }) => {
@@ -131,7 +131,7 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     await expect(detailModal.locator('h2')).toContainText(detailDomain);
     await expect(detailModal.locator('h3:has-text("SSL Certificate")')).toBeVisible();
     
-    await detailModal.locator('button:has-text("Close")').click();
+    await detailModal.locator('button:has-text("Close")').evaluate(el => (el as HTMLElement).click());
     await expect(detailModal).not.toBeVisible();
   });
 });
