@@ -636,17 +636,14 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await nameInput.fill(editGroup);
       await modal.locator('button:has-text("Save Group")').evaluate(el => (el as HTMLElement).click());
 
-      // Edit the group
-      const groupRow = modal.locator(`text=${editGroup}`).locator('..');
-      const editButton = groupRow.locator('button[title="Edit name"]');
-      await editButton.evaluate(el => (el as HTMLElement).click());
+      // Wait for group to appear, then click its edit button
+      await expect(modal).toContainText(editGroup);
+      await modal.locator('button[title="Edit name"]').last().evaluate(el => (el as HTMLElement).click());
 
-      // Change name
-      const editInput = groupRow.locator('input[type="text"]');
+      // Change name in edit input
+      const editInput = modal.getByTestId('edit-group-input');
       await editInput.fill(`${editGroup}-Updated`);
-
-      // Save (Check button)
-      await groupRow.locator('button').filter({ hasText: '' }).last().evaluate(el => (el as HTMLElement).click());
+      await editInput.press('Enter');
 
       // Verify update
       await expect(modal).toContainText(`${editGroup}-Updated`);
@@ -700,7 +697,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await page.locator('button:has-text("Personal")').click();
       
       // Verify group badge appears
-      await expect(page.locator(`tr:has-text("${domain}") text=Personal`)).toBeVisible();
+      await expect(page.locator(`tr:has-text("${domain}")`).locator('text=Personal')).toBeVisible();
     });
   });
 

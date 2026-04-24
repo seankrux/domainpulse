@@ -174,13 +174,16 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                       <>
                         <input
                           type="text"
+                          data-testid="edit-group-input"
                           value={group.name}
                           onChange={(e) => onUpdateGroup(group.id, { name: e.target.value })}
                           className="flex-1 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                           autoFocus
+                          onKeyDown={(e) => e.key === 'Enter' && setEditingId(null)}
                         />
                         <button
                           onClick={() => setEditingId(null)}
+                          aria-label="Confirm edit"
                           className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"
                         >
                           <Check size={16} />
