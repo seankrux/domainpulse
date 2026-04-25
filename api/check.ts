@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyAuth, getCorsHeaders } from './_utils/auth';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit';
+import { normalizePublicHttpTarget, normalizeTimeoutMs } from './_utils/networkGuard';
 import { config } from '../lib/config';
 
 interface CheckResult {
@@ -55,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const url = req.query.url as string;
   const userAgent = (req.query.ua as string) || 'DomainPulse/1.0 (Domain Monitor)';
-  const timeoutMs = parseInt(req.query.timeout as string) || 10000;
+  const timeoutMs = normalizeTimeoutMs(req.query.timeout);
 
   if (!url) {
     setHeaders(corsHeaders);
@@ -63,26 +64,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const startTime = Date.now();
-  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
   try {
+    const targetUrl = await normalizePublicHttpTarget(url);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const response = await fetch(targetUrl, {
       method: 'HEAD',
       signal: controller.signal,
-      redirect: 'follow',
+      redirect: 'manual',
       headers: {
         'User-Agent': userAgent
       }
-    });
-
-    clearTimeout(timeoutId);
+    }).finally(() => clearTimeout(timeoutId));
     const latency = Date.now() - startTime;
 
     const result: CheckResult = {
-      status: response.ok ? 'ALIVE' : 'DOWN',
+      status: response.status >= 200 && response.status < 400 ? 'ALIVE' : 'DOWN',
       statusCode: response.status,
       latency
     };

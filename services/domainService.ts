@@ -10,10 +10,11 @@ const DEFAULT_PROXY_URL = config.proxy.defaultUrl;
 const AUTH_SESSION_KEY = 'domainpulse_auth_session';
 const getStoredToken = (): string | null => {
   try {
-    const storedSession = localStorage.getItem(AUTH_SESSION_KEY);
+    const storedSession = sessionStorage.getItem(AUTH_SESSION_KEY);
     if (!storedSession) return null;
     const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
     if (!parsed?.token || !parsed.expiresAt || parsed.expiresAt <= Date.now()) {
+      sessionStorage.removeItem(AUTH_SESSION_KEY);
       return null;
     }
     return parsed.token;
