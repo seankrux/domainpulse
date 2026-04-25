@@ -47,22 +47,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const variantStyles = {
     danger: {
-      bg: 'bg-red-500/10',
-      text: 'text-red-400',
-      border: 'border-red-500/20',
-      button: 'bg-red-500 hover:bg-red-400'
+      bg: 'bg-rose-500/10',
+      text: 'text-rose-400',
+      border: 'border-rose-500/20',
+      button: 'bg-rose-600 hover:bg-rose-500'
     },
     warning: {
       bg: 'bg-amber-500/10',
       text: 'text-amber-400',
       border: 'border-amber-500/20',
-      button: 'bg-amber-500 hover:bg-amber-400'
+      button: 'bg-amber-600 hover:bg-amber-500'
     },
     info: {
-      bg: 'bg-emerald-500/10',
-      text: 'text-emerald-400',
-      border: 'border-emerald-500/20',
-      button: 'bg-emerald-500 hover:bg-emerald-400'
+      bg: 'bg-indigo-500/10',
+      text: 'text-indigo-400',
+      border: 'border-indigo-500/20',
+      button: 'bg-indigo-600 hover:bg-indigo-500'
     }
   };
 
@@ -122,7 +122,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 onConfirm();
                 onClose();
               }}
-              className={`flex-1 px-6 py-2.5 ${style.button} text-white font-bold rounded-xl transition-all text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${variant === 'danger' ? 'focus:ring-rose-500' : variant === 'warning' ? 'focus:ring-amber-500' : 'focus:ring-emerald-500'}`}
+              className={`flex-1 px-6 py-2.5 ${style.button} text-white font-bold rounded-xl transition-all text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${variant === 'danger' ? 'focus:ring-rose-500' : variant === 'warning' ? 'focus:ring-amber-500' : 'focus:ring-indigo-500'}`}
             >
               {confirmText}
             </button>
