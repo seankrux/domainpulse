@@ -16,9 +16,9 @@ We're thrilled to announce the launch of our brand new website. This isn't just 
 
 Forget about creating accounts, managing subscriptions, or dealing with complex CMS setups. Our content lives directly in the repository as simple markdown files.
 
-### AI-Friendly Content Creation
+### Quick Content Creation
 
-Need a new blog post? Just ask! Our AI assistant can create content files directly in your repository. Say something like:
+Need a new blog post? Just create a new markdown file or use your preferred editor. For example:
 
 > "Write a blog post about our new product launch"
 

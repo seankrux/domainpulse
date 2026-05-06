@@ -68,7 +68,7 @@ npm run test:watch
 
 ## 🔧 MCP Server
 
-The MCP (Model Context Protocol) server provides automated testing capabilities to AI assistants.
+The MCP (Model Context Protocol) server provides automated testing capabilities to automated tools.
 
 ### Start MCP Server
 ```bash
@@ -146,7 +146,7 @@ chmod +x .git/hooks/pre-commit
 
 ## 🎯 Auto-Test Skill
 
-The auto-test skill (`.qwen/skills/auto-tester/`) enables automatic testing when:
+The auto-test skill enables automatic testing when:
 
 ### Triggers
 - User says: "test", "validate", "check", "run auto-tests"

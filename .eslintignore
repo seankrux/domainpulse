@@ -2,7 +2,7 @@ node_modules/
 dist/
 dist-site/
 venv/
-.qwen/
-.qwen-clipboard/
+.automation/
+.automation-clipboard/
 playwright-report/
 test-results/

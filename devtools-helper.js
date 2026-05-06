@@ -107,7 +107,7 @@ function generateDebugReport() {
   };
   
   console.log('📋 Debug Report Generated');
-  console.log('Copy this output and share with your AI assistant');
+  console.log('Copy this output and share with your helper');
   console.table(report);
   
   return report;

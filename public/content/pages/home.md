@@ -5,7 +5,7 @@ This is your **file-based CMS** website. No signup required, no complex setup.
 ## How It Works
 
 1. **Content lives in files** - Markdown files in `/content/pages/` and `/content/posts/`
-2. **Ask AI to create content** - Just say "create a blog post about X"
+2. **Create content quickly** - Just say "create a blog post about X"
 3. **Edit manually anytime** - Files are in your repo, edit in GitHub or locally
 
 ## Quick Start
@@ -17,7 +17,7 @@ This is your **file-based CMS** website. No signup required, no complex setup.
 ## Features
 
 - ✅ No CMS signup required
-- ✅ AI can write content
+- ✅ Content can be drafted quickly
 - ✅ Full control over files
 - ✅ Dark mode support
 - ✅ Responsive design

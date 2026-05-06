@@ -36,10 +36,10 @@ dist-site
 build/
 *.tgz
 
-# Qwen
-.qwen-clipboard/
+# Automation artifacts
+.automation-clipboard/
 
-.qwen/
+.automation/
 gha-creds-*.json
 
 # Debug artifacts

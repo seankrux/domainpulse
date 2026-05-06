@@ -47,7 +47,7 @@ Content lives in markdown files:
 
 ### Create Content
 
-**Ask AI to write content:**
+**Write content:**
 ```
 "Create a blog post about our new product launch"
 "Add an about page for my consulting business"
@@ -74,7 +74,7 @@ Write your blog post in markdown...
 ## Features
 
 - ✅ **No CMS signup** - Content is just files in your repo
-- ✅ **AI-editable** - Ask AI to create/update content
+- ✅ **File-editable** - Update content directly in markdown
 - ✅ **Full control** - Edit files directly in GitHub or locally
 - ✅ **Dark mode** - Built-in dark/light theme toggle
 - ✅ **Responsive** - Mobile-friendly design
@@ -129,4 +129,4 @@ Uses Tailwind CSS. Customize in:
 
 ---
 
-**Ready to build?** Just ask AI to create content or edit the markdown files directly!
+**Ready to build?** Edit the markdown files directly or create new posts as needed!

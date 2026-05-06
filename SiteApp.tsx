@@ -91,7 +91,7 @@ const App: React.FC = () => {
             <div className="text-center py-12">
               <p className="text-zinc-400 mb-4">No posts yet</p>
               <p className="text-sm text-zinc-500">
-                Ask AI to create content or add posts manually to /content/posts/
+                Create content or add posts manually to /content/posts/
               </p>
             </div>
           ) : (
