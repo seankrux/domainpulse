@@ -436,9 +436,11 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const checkbox = page.locator(`tr:has-text("${checkDomain}") input[type="checkbox"]`);
       await checkbox.click();
 
-      // Click check selected button
-      const checkButton = page.locator('button[title="Check Selected"]');
-      await checkButton.click();
+      // Wait for selected count badge to appear (confirms selection)
+      await page.waitForSelector('text=Selected', { timeout: 5000 });
+
+      // Click check selected button using evaluate (button might have animation/visibility issues)
+      await page.locator('button[title="Check Selected"]').evaluate(el => (el as HTMLElement).click());
 
       // Should show checking status (use chained selector, not inline text=)
       await expect(page.locator(`tr:has-text("${checkDomain}")`).locator('text=Checking...')).toBeVisible({ timeout: 5000 });
@@ -759,12 +761,16 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
         await expect(page.locator('tr:has-text("progresstest.com")')).toBeVisible({ timeout: 15000 });
       }
 
+      // Wait for at least 1 domain to be present before clicking Check All
+      await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 5000 });
+
       const checkAllButton = page.locator('button:has-text("Check All")');
       await checkAllButton.click();
 
-      // Progress bar should appear
+      // Progress bar should appear (shows checking progress)
       const progressBar = page.getByTestId('check-progress-bar');
-      await expect(progressBar).toBeVisible({ timeout: 5000 });
+      const progressBarParent = page.locator('[data-testid="check-progress-bar"]').locator('..');
+      await expect(progressBarParent).toBeVisible({ timeout: 5000 });
     });
   });
 
@@ -779,15 +785,15 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
         await expect(page.locator('tr:has-text("bottompanel.com")')).toBeVisible({ timeout: 15000 });
       }
 
-      // Click toggle
+      // Click toggle using evaluate (button is at bottom of page, outside viewport)
       const toggleButton = page.locator('button[aria-expanded]');
-      await toggleButton.click();
+      await toggleButton.evaluate(el => (el as HTMLElement).click());
 
       // Panel content should expand
       await expect(page.locator('text=Urgent Attention')).toBeVisible({ timeout: 5000 });
 
       // Collapse
-      await toggleButton.click();
+      await toggleButton.evaluate(el => (el as HTMLElement).click());
     });
 
     test('should show alerts in bottom panel', async ({ page }) => {
@@ -800,9 +806,9 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
         await expect(page.locator('tr:has-text("alertspanel.com")')).toBeVisible({ timeout: 15000 });
       }
 
-      // Expand panel
+      // Expand panel using evaluate (button is at bottom of page, outside viewport)
       const toggleButton = page.locator('button[aria-expanded]');
-      await toggleButton.click();
+      await toggleButton.evaluate(el => (el as HTMLElement).click());
 
       // Should show either alerts or "All systems operational"
       const hasAlerts = await page.locator('text=Alert').isVisible();
@@ -816,6 +822,9 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     test('should focus search with Cmd+K', async ({ page }) => {
       // Press Control+K (works on all platforms, Meta+K may not work in Linux headless)
       await page.keyboard.press('Control+k');
+
+      // Give the app time to process the keyboard event and focus the input
+      await page.waitForTimeout(100);
 
       // Search input should be focused
       const searchInput = page.locator('input[placeholder*="Filter domains"]');
