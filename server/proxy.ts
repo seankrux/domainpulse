@@ -6,6 +6,7 @@ import path from 'path';
 import * as https from 'https';
 import * as tls from 'tls';
 import * as dns from 'dns';
+import { normalizePublicHttpTarget, normalizeTimeoutMs } from '../api/_utils/networkGuard';
 
 // Manual env loading for local dev stability
 try {
@@ -30,8 +31,23 @@ const PORT = process.env.PROXY_PORT || 3001;
 let AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
 const SESSION_TTL_MINUTES = Number(process.env.VITE_AUTH_SESSION_TTL_MINUTES || 720); // 12h
 const ALLOW_INITIAL_LOGIN = process.env.VITE_ALLOW_INITIAL_LOGIN === 'true';
+const allowedOrigins = new Set([
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'http://127.0.0.1:3002',
+  ...(process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()).filter(Boolean) || [])
+]);
 
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    callback(null, !origin || allowedOrigins.has(origin));
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Middleware to verify auth token
@@ -106,26 +122,25 @@ app.get('/api/check', verifyToken, async (req, res) => {
   }
 
   const startTime = Date.now();
-  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
   try {
+    const targetUrl = await normalizePublicHttpTarget(url);
+    const timeoutMs = normalizeTimeoutMs(req.query.timeout as string | string[] | undefined);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const response = await fetch(targetUrl, {
       method: 'HEAD',
       signal: controller.signal,
-      redirect: 'follow',
+      redirect: 'manual',
       headers: {
         'User-Agent': 'DomainPulse/1.0 (Domain Monitor)'
       }
-    });
-
-    clearTimeout(timeoutId);
+    }).finally(() => clearTimeout(timeoutId));
     const latency = Date.now() - startTime;
 
     const result: CheckResult = {
-      status: response.ok ? 'ALIVE' : 'DOWN',
+      status: response.status >= 200 && response.status < 400 ? 'ALIVE' : 'DOWN',
       statusCode: response.status,
       latency
     };

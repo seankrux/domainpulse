@@ -13,6 +13,7 @@
     "server": "tsx server/proxy.ts",
     "preview:all": "concurrently \"npm run server\" \"vite preview --port 3000 --host 0.0.0.0\"",
     "dev:all": "concurrently \"npm run server\" \"npm run dev:app\"",
+    "dev:local": "node scripts/start-local-fullstack.mjs",
     "lint": "eslint . --ext ts,tsx --format ./eslint-formatter.cjs",
     "lint:fix": "eslint . --ext ts,tsx --fix --format ./eslint-formatter.cjs",
     "type-check": "tsc --noEmit",

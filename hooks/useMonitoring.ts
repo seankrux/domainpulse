@@ -74,7 +74,7 @@ export const useMonitoring = ({
           authToken = session.token;
         }
       } catch {
-        localStorage.removeItem('domainpulse_auth_session');
+        sessionStorage.removeItem('domainpulse_auth_session');
       }
     }
     const proxyUrl = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001';

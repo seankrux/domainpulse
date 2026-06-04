@@ -22,8 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   settings,
   toggleDarkMode,
   showSettings,
-  setShowSettings,
-  logout
+  setShowSettings
 }) => {
   return (
     <header className="bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/80 sticky top-0 z-20">
