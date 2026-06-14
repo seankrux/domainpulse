@@ -58,19 +58,19 @@ describe('ConfirmModal', () => {
   it('should use danger variant styles', () => {
     render(<ConfirmModal {...defaultProps} variant="danger" />);
     const confirmButton = screen.getByText('Confirm');
-    expect(confirmButton).toHaveClass('bg-rose-600');
+    expect(confirmButton).toHaveClass('bg-red-500');
   });
 
   it('should use warning variant styles', () => {
     render(<ConfirmModal {...defaultProps} variant="warning" />);
     const confirmButton = screen.getByText('Confirm');
-    expect(confirmButton).toHaveClass('bg-amber-600');
+    expect(confirmButton).toHaveClass('bg-amber-500');
   });
 
   it('should use info variant styles', () => {
     render(<ConfirmModal {...defaultProps} variant="info" />);
     const confirmButton = screen.getByText('Confirm');
-    expect(confirmButton).toHaveClass('bg-indigo-600');
+    expect(confirmButton).toHaveClass('bg-emerald-500');
   });
 
   it('should display custom confirm and cancel text', () => {
