@@ -27,11 +27,14 @@
     "mcp:start": "node .mcp/auto-test/index.js"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "cors": "^2.8.5",
     "express": "^4.21.0",
+    "geist": "^1.7.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.564.0",
     "marked": "^17.0.2",
+    "motion": "^12.40.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-is": "^19.2.4",
