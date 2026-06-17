@@ -132,39 +132,3 @@ const extractDomain = (url: string): string | null => {
   
   return domain;
 };
-
-/**
- * Get SSL status badge color.
- */
-export const getSSLStatusColor = (status: SSLStatus): string => {
-  switch (status) {
-    case SSLStatus.Valid:
-      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
-    case SSLStatus.Expiring:
-      return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
-    case SSLStatus.Expired:
-      return 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400';
-    case SSLStatus.Invalid:
-      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-    default:
-      return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-400';
-  }
-};
-
-/**
- * Get SSL status label.
- */
-export const getSSLStatusLabel = (status: SSLStatus): string => {
-  switch (status) {
-    case SSLStatus.Valid:
-      return 'Valid';
-    case SSLStatus.Expiring:
-      return 'Expiring';
-    case SSLStatus.Expired:
-      return 'Expired';
-    case SSLStatus.Invalid:
-      return 'Invalid';
-    default:
-      return 'Unknown';
-  }
-};

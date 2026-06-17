@@ -35,7 +35,13 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain,
         days: d.expiry?.daysUntilExpiry,
         severity: d.expiry?.status === 'expired' ? 'high' : 'medium'
       }))
-    ].sort((a, b) => (a.days || 0) - (b.days || 0));
+    ].sort((a, b) => {
+      // Expired first, then sort by fewest days remaining
+      const aSeverity = a.status === 'expired' || a.status === SSLStatus.Expired ? 0 : 1;
+      const bSeverity = b.status === 'expired' || b.status === SSLStatus.Expired ? 0 : 1;
+      if (aSeverity !== bSeverity) return aSeverity - bSeverity;
+      return (a.days ?? 999) - (b.days ?? 999);
+    });
 
     return combined.slice(0, 5);
   }, [domains]);

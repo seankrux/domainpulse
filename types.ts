@@ -93,6 +93,13 @@ export interface DomainStats {
   unknown: number;
   avgLatency: number;
   uptime: number;
+  /** Trend direction for each KPI — computed from history mid-point split */
+  trends?: {
+    alive: 'up' | 'down' | 'stable';
+    down: 'up' | 'down' | 'stable';
+    latency: 'up' | 'down' | 'stable';
+    uptime: 'up' | 'down' | 'stable';
+  };
 }
 
 export type SortField = 'url' | 'status' | 'latency' | 'lastChecked' | 'ssl' | 'expiry';

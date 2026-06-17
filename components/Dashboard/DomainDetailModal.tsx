@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3 } from 'lucide-react';
 import { Domain, DomainStatus, SSLStatus } from '../../types';
-import { getSSLStatusColor, getSSLStatusLabel } from '../../services/sslService';
-import { getExpiryStatusColor, getExpiryStatusLabel } from '../../services/expiryService';
+import { sslColor, sslLabel, expiryColor, expiryLabel } from '../../theme/statusColors';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getTechStackColor } from '../../components/TechStackBadge';
 
@@ -131,8 +130,8 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             </div>
             {domain.ssl && domain.ssl.status !== SSLStatus.Unknown ? (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                <div className={`px-4 py-3 border-b border-zinc-800 flex justify-between items-center ${getSSLStatusColor(domain.ssl.status)}`}>
-                  <span className="text-xs font-bold uppercase tracking-wider">{getSSLStatusLabel(domain.ssl.status)}</span>
+                <div className={`px-4 py-3 border-b border-zinc-800 flex justify-between items-center ${sslColor(domain.ssl.status)}`}>
+                  <span className="text-xs font-bold uppercase tracking-wider">{sslLabel(domain.ssl.status)}</span>
                   <span className="text-xs font-bold">{domain.ssl.daysUntilExpiry} days remaining</span>
                 </div>
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -163,8 +162,8 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             </div>
             {domain.expiry && domain.expiry.status !== 'unknown' ? (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                <div className={`px-4 py-3 border-b border-zinc-800 flex justify-between items-center ${getExpiryStatusColor(domain.expiry.status)}`}>
-                  <span className="text-xs font-bold uppercase tracking-wider">{getExpiryStatusLabel(domain.expiry.status)}</span>
+                <div className={`px-4 py-3 border-b border-zinc-800 flex justify-between items-center ${expiryColor(domain.expiry.status)}`}>
+                  <span className="text-xs font-bold uppercase tracking-wider">{expiryLabel(domain.expiry.status)}</span>
                   <span className="text-xs font-bold">{domain.expiry.daysUntilExpiry} days remaining</span>
                 </div>
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">

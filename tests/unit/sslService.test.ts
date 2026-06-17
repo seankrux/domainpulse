@@ -1,56 +1,57 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { checkSSL, getSSLStatusColor, getSSLStatusLabel } from '../../services/sslService';
+import { checkSSL } from '../../services/sslService';
+import { sslColor, sslLabel } from '../../theme/statusColors';
 import { SSLStatus } from '../../types';
 
 type Mock = ReturnType<typeof vi.fn>;
 
 describe('sslService', () => {
-  describe('getSSLStatusColor', () => {
+  describe('sslColor', () => {
     it('should return valid color for VALID status', () => {
-      const result = getSSLStatusColor(SSLStatus.Valid);
+      const result = sslColor(SSLStatus.Valid);
       expect(result).toContain('bg-emerald');
     });
 
     it('should return warning color for EXPIRING status', () => {
-      const result = getSSLStatusColor(SSLStatus.Expiring);
+      const result = sslColor(SSLStatus.Expiring);
       expect(result).toContain('bg-amber');
     });
 
     it('should return error color for EXPIRED status', () => {
-      const result = getSSLStatusColor(SSLStatus.Expired);
+      const result = sslColor(SSLStatus.Expired);
       expect(result).toContain('bg-rose');
     });
 
     it('should return error color for INVALID status', () => {
-      const result = getSSLStatusColor(SSLStatus.Invalid);
+      const result = sslColor(SSLStatus.Invalid);
       expect(result).toContain('bg-red');
     });
 
     it('should return neutral color for UNKNOWN status', () => {
-      const result = getSSLStatusColor(SSLStatus.Unknown);
+      const result = sslColor(SSLStatus.Unknown);
       expect(result).toContain('bg-slate');
     });
   });
 
-  describe('getSSLStatusLabel', () => {
+  describe('sslLabel', () => {
     it('should return correct label for VALID', () => {
-      expect(getSSLStatusLabel(SSLStatus.Valid)).toBe('Valid');
+      expect(sslLabel(SSLStatus.Valid)).toBe('Valid');
     });
 
     it('should return correct label for EXPIRING', () => {
-      expect(getSSLStatusLabel(SSLStatus.Expiring)).toBe('Expiring');
+      expect(sslLabel(SSLStatus.Expiring)).toBe('Expiring');
     });
 
     it('should return correct label for EXPIRED', () => {
-      expect(getSSLStatusLabel(SSLStatus.Expired)).toBe('Expired');
+      expect(sslLabel(SSLStatus.Expired)).toBe('Expired');
     });
 
     it('should return correct label for INVALID', () => {
-      expect(getSSLStatusLabel(SSLStatus.Invalid)).toBe('Invalid');
+      expect(sslLabel(SSLStatus.Invalid)).toBe('Invalid');
     });
 
     it('should return correct label for UNKNOWN', () => {
-      expect(getSSLStatusLabel(SSLStatus.Unknown)).toBe('Unknown');
+      expect(sslLabel(SSLStatus.Unknown)).toBe('Unknown');
     });
   });
 

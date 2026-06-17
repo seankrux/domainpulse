@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   Globe,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Clock,
 } from "lucide-react";
 
@@ -20,8 +22,15 @@ interface StatCardProps {
   icon: React.ElementType;
   iconColor: string;
   glowColor?: string;
-  trend?: string;
+  trendLabel?: string;
+  trendDir?: 'up' | 'down' | 'stable';
 }
+
+const TrendIcon: React.FC<{ dir: 'up' | 'down' | 'stable' | undefined }> = ({ dir }) => {
+  if (dir === 'up')    return <TrendingUp size={12} />;
+  if (dir === 'down')  return <TrendingDown size={12} />;
+  return <Minus size={12} />;
+};
 
 const StatCard: React.FC<StatCardProps> = ({
   title,
@@ -29,7 +38,8 @@ const StatCard: React.FC<StatCardProps> = ({
   icon: Icon,
   iconColor,
   glowColor,
-  trend,
+  trendLabel,
+  trendDir,
 }) => (
   <div className="glass-card rounded-2xl p-6 hover:border-zinc-700 transition-all duration-300 group">
     <div className="flex items-start justify-between">
@@ -45,10 +55,16 @@ const StatCard: React.FC<StatCardProps> = ({
         <Icon size={22} className={iconColor} />
       </div>
     </div>
-    {trend && (
-      <div className="mt-4 flex items-center text-xs font-medium text-emerald-400 bg-emerald-500/10 w-fit px-2 py-1 rounded-full border border-emerald-500/20">
-        <TrendingUp size={12} className="mr-1" />
-        {trend}
+    {trendDir && (
+      <div className={`mt-4 flex items-center text-xs font-medium w-fit px-2 py-1 rounded-full border ${
+        trendDir === 'up'
+          ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+          : trendDir === 'down'
+          ? 'text-red-400 bg-red-500/10 border-red-500/20'
+          : 'text-zinc-400 bg-zinc-800 border-zinc-700'
+      }`}>
+        <TrendIcon dir={trendDir} />
+        {trendLabel && <span className="ml-1">{trendLabel}</span>}
       </div>
     )}
   </div>
@@ -60,24 +76,37 @@ interface KpiDef {
   icon: React.ElementType;
   iconColor: string;
   glowColor?: string;
-  trend?: string;
+  trendDir?: 'up' | 'down' | 'stable';
+  trendLabel?: string;
 }
 
 export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
-  const kpis: KpiDef[] = [{ title: "Total Monitored", value: stats.total, icon: Globe, iconColor: "text-emerald-400" }];
+  const t = stats.trends;
+  const kpis: KpiDef[] = [
+    { title: "Total Monitored", value: stats.total, icon: Globe, iconColor: "text-emerald-400" },
+  ];
 
   if (stats.total > 0) {
-    kpis.push({ title: "Operational", value: stats.alive, icon: CheckCircle2, iconColor: "text-emerald-400", glowColor: "shadow-glow-emerald" });
-    if (stats.down > 0) {
-      kpis.push({ title: "Issues Detected", value: stats.down, icon: AlertCircle, iconColor: "text-red-400", glowColor: "shadow-glow-red" });
-    }
-    kpis.push({ title: "Avg. Latency", value: stats.avgLatency > 0 ? `${Math.round(stats.avgLatency)}ms` : "\u2014", icon: Activity, iconColor: "text-emerald-400" });
     kpis.push({
-      title: "Uptime",
-      value: `${stats.uptime.toFixed(1)}%`,
+      title: "Operational", value: stats.alive, icon: CheckCircle2, iconColor: "text-emerald-400",
+      glowColor: "shadow-glow-emerald", trendDir: t?.alive,
+    });
+    if (stats.down > 0) {
+      kpis.push({
+        title: "Issues Detected", value: stats.down, icon: AlertCircle, iconColor: "text-red-400",
+        glowColor: "shadow-glow-red", trendDir: t?.down,
+      });
+    }
+    kpis.push({
+      title: "Avg. Latency", value: stats.avgLatency > 0 ? `${Math.round(stats.avgLatency)}ms` : "\u2014",
+      icon: Activity, iconColor: "text-emerald-400", trendDir: t?.latency,
+    });
+    kpis.push({
+      title: "Uptime", value: `${stats.uptime.toFixed(1)}%",
       icon: Clock,
       iconColor: stats.uptime >= 99 ? "text-emerald-400" : stats.uptime >= 95 ? "text-amber-400" : "text-red-400",
-      trend: stats.uptime >= 99.9 ? "99.9% SLA met" : undefined,
+      trendDir: t?.uptime,
+      trendLabel: stats.uptime >= 99.9 ? "99.9% SLA met" : undefined,
     });
   }
 

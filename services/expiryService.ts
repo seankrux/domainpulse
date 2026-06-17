@@ -133,35 +133,3 @@ const parseWhoisResponse = (data: WhoisApiResponse): DomainExpiry => {
     daysUntilExpiry
   };
 };
-
-/**
- * Get expiry status badge color.
- */
-export const getExpiryStatusColor = (status: string): string => {
-  switch (status) {
-    case 'active':
-      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
-    case 'expiring':
-      return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
-    case 'expired':
-      return 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400';
-    default:
-      return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-400';
-  }
-};
-
-/**
- * Get expiry status label.
- */
-export const getExpiryStatusLabel = (status: string): string => {
-  switch (status) {
-    case 'active':
-      return 'Active';
-    case 'expiring':
-      return 'Expiring';
-    case 'expired':
-      return 'Expired';
-    default:
-      return 'Unknown';
-  }
-};

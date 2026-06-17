@@ -1,0 +1,1 @@
+export { SSLBadge } from "./SSLBadge";

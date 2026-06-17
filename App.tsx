@@ -318,7 +318,42 @@ const App: React.FC = () => {
       acc + d.history.filter(h => h.status === DomainStatus.Alive).length, 0
     );
     const uptime = totalRecords > 0 ? (aliveRecords / totalRecords) * 100 : 100;
-    return { total, alive, down, unknown, avgLatency, uptime };
+
+    // Trend comparison: split each domain's history at the mid-point
+    // and compare the second-half alive rate / avgLatency vs first-half
+    let prevAlive = 0, prevTotal = 0, prevLatSum = 0, prevLatCount = 0;
+    let currAlive = 0, currTotal = 0, currLatSum = 0, currLatCount = 0;
+
+    for (const d of domains) {
+      const half = Math.floor(d.history.length / 2);
+      const first = d.history.slice(0, half);
+      const second = d.history.slice(half);
+      prevAlive  += first.filter(h => h.status === DomainStatus.Alive).length;
+      prevTotal  += first.length;
+      for (const r of first) { if (r.latency > 0) { prevLatSum += r.latency; prevLatCount++; } }
+      currAlive  += second.filter(h => h.status === DomainStatus.Alive).length;
+      currTotal  += second.length;
+      for (const r of second) { if (r.latency > 0) { currLatSum += r.latency; currLatCount++; } }
+    }
+
+    const prevUptime = prevTotal > 0 ? (prevAlive / prevTotal) * 100 : 100;
+    const currUptime = currTotal > 0 ? (currAlive / currTotal) * 100 : 100;
+    const prevDown = prevTotal - prevAlive;
+    const currDown = currTotal - currAlive;
+    const prevAvgLat = prevLatCount > 0 ? prevLatSum / prevLatCount : 0;
+    const currAvgLat = currLatCount > 0 ? currLatSum / currLatCount : 0;
+
+    const pct = (a: number, b: number) => (b > 0 ? ((a - b) / b) * 100 : 0);
+
+    return {
+      total, alive, down, unknown, avgLatency, uptime,
+      trends: {
+        alive:  pct(alive, prevAlive * (prevTotal > 0 ? total / prevTotal : 1)) > 5  ? 'up' : pct(alive, prevAlive * (prevTotal > 0 ? total / prevTotal : 1)) < -5 ? 'down' : 'stable',
+        down:   pct(currDown, prevDown) > 5  ? 'up' : pct(currDown, prevDown) < -5 ? 'down' : 'stable',
+        latency: pct(currAvgLat, prevAvgLat) > 10 ? 'up' : pct(currAvgLat, prevAvgLat) < -10 ? 'down' : 'stable',
+        uptime: pct(currUptime, prevUptime) > 1  ? 'up' : pct(currUptime, prevUptime) < -1 ? 'down' : 'stable',
+      },
+    };
   }, [domains]);
 
   // Filter Counts - optimized single-pass computation
