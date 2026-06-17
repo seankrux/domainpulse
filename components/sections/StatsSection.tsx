@@ -3,10 +3,10 @@ import { motion, useReducedMotion } from "motion/react";
 import { Activity, Shield, Bell, Clock } from "lucide-react";
 
 const stats = [
-  { label: "Domains monitored", value: "2,400+", icon: Activity },
-  { label: "SSL certs tracked", value: "1,800+", icon: Shield },
-  { label: "Alerts sent", value: "12,500+", icon: Bell },
-  { label: "Avg response", value: "<40ms", icon: Clock },
+  { label: "Add your first domain", value: "[metric]", icon: Activity },
+  { label: "SSL certs tracked", value: "[metric]", icon: Shield },
+  { label: "Alerts configured", value: "[metric]", icon: Bell },
+  { label: "Avg response", value: "[metric]", icon: Clock },
 ];
 
 export function StatsSection() {
@@ -41,7 +41,7 @@ export function StatsSection() {
                   <stat.icon size={18} className="text-emerald-400" />
                 </motion.div>
                 <motion.span
-                  className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold leading-none text-white tracking-tight mb-1"
+                  className="text-[clamp(1rem,1.5vw,1.25rem)] font-medium leading-none text-zinc-600 tracking-tight mb-1 font-mono"
                   initial={reduce ? false : { opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   transition={{ duration: 0.35, delay: 0.25 + i * 0.06 }}

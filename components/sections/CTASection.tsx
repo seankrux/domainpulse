@@ -55,14 +55,6 @@ export function CTASection() {
                   <ArrowRight size={17} />
                 </motion.span>
               </motion.a>
-              <motion.a
-                href="/about"
-                className="inline-flex items-center gap-2 px-6 py-3 border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white font-medium rounded-lg transition-colors duration-150"
-                whileHover={reduce ? {} : { scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                Learn more
-              </motion.a>
             </div>
           </div>
         </motion.div>

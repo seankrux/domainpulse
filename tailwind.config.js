@@ -8,9 +8,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Geist Variable"', '"Inter"', 'sans-serif'],
-        display: ['"Geist Variable"', '"Inter"', 'sans-serif'],
-        mono: ['"Geist Mono Variable"', '"JetBrains Mono"', 'monospace'],
+        sans: ['"Geist Variable"', 'sans-serif'],
+        display: ['"Geist Variable"', 'sans-serif'],
+        mono: ['"Geist Mono Variable"', 'monospace'],
       },
       colors: {
         zinc: {

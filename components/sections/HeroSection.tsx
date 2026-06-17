@@ -5,7 +5,7 @@ import { ArrowRight, Activity, Shield, Zap } from "lucide-react";
 const dashboardRows = [
   {
     name: "myapp.com",
-    meta: "42ms · 99.97% uptime",
+    meta: "[latency] · [uptime]",
     status: "healthy",
     statusColor: "text-emerald-400",
     dotColor: "bg-emerald-400",
@@ -13,7 +13,7 @@ const dashboardRows = [
   },
   {
     name: "api.io",
-    meta: "28ms · 99.99% uptime",
+    meta: "[latency] · [uptime]",
     status: "healthy",
     statusColor: "text-emerald-400",
     dotColor: "bg-emerald-400",
@@ -126,14 +126,7 @@ export function HeroSection() {
                   <ArrowRight size={16} />
                 </motion.span>
               </motion.a>
-              <motion.a
-                href="/about"
-                className="inline-flex items-center gap-2 px-5 py-2.5 border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white font-medium rounded-lg transition-colors duration-150"
-                whileHover={reduce ? {} : { scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                Learn more
-              </motion.a>
+
             </motion.div>
 
             {/* Trust strip */}
@@ -265,9 +258,9 @@ export function HeroSection() {
                     />
                   </div>
                   <div className="flex justify-between mt-1.5">
-                    <span className="text-zinc-600 text-[11px]">14 valid</span>
+                    <span className="text-zinc-600 text-[11px]">[n] valid</span>
                     <span className="text-zinc-600 text-[11px]">
-                      2 expiring
+                      [n] expiring
                     </span>
                   </div>
                 </motion.div>
@@ -288,9 +281,9 @@ export function HeroSection() {
             >
               <div className="flex items-center gap-2">
                 <Activity size={14} className="text-emerald-400" />
-                <span className="text-zinc-400 text-xs">All systems</span>
+                <span className="text-zinc-400 text-xs">Status</span>
                 <span className="text-emerald-400 text-xs font-mono font-bold">
-                  normal
+                  monitoring
                 </span>
               </div>
             </motion.div>
@@ -307,10 +300,10 @@ export function HeroSection() {
               }}
             >
               <div className="flex items-center gap-2">
-                <Zap size={14} className="text-amber-400" />
+                <Zap size={14} className="text-emerald-400" />
                 <span className="text-zinc-400 text-xs">Avg response</span>
                 <span className="text-white text-xs font-mono font-bold">
-                  36ms
+                  [metric]
                 </span>
               </div>
             </motion.div>

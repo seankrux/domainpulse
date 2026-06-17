@@ -14,43 +14,31 @@ const features = [
     icon: Activity,
     label: "Uptime monitoring",
     desc: "Real-time HTTP/S checks with configurable intervals and latency tracking across global regions.",
-    gradient: "from-emerald-500/20 via-emerald-500/5 to-transparent",
-    border: "border-emerald-500/20",
   },
   {
     icon: Shield,
     label: "SSL tracking",
     desc: "Auto-detect certificate expiry, issuer changes, and protocol downgrades before they become incidents.",
-    gradient: "from-indigo-500/20 via-indigo-500/5 to-transparent",
-    border: "border-indigo-500/20",
   },
   {
     icon: Bell,
     label: "Instant alerts",
     desc: "Push notifications, Slack messages, Discord webhooks — you decide how to get notified when something fails.",
-    gradient: "from-amber-500/20 via-amber-500/5 to-transparent",
-    border: "border-amber-500/20",
   },
   {
     icon: Upload,
     label: "Bulk import",
     desc: "Import dozens of domains at once via CSV. No manual entry for every single domain you manage.",
-    gradient: "from-rose-500/20 via-rose-500/5 to-transparent",
-    border: "border-rose-500/20",
   },
   {
     icon: BarChart3,
     label: "Response analytics",
     desc: "Historical response time charts, uptime percentage breakdowns, and trend visualization over time.",
-    gradient: "from-cyan-500/20 via-cyan-500/5 to-transparent",
-    border: "border-cyan-500/20",
   },
   {
     icon: Globe,
     label: "WHOIS expiry",
     desc: "Track domain registration renewal dates alongside your SSL certs — never lose a domain again.",
-    gradient: "from-violet-500/20 via-violet-500/5 to-transparent",
-    border: "border-violet-500/20",
   },
 ];
 
@@ -99,17 +87,15 @@ export function FeaturesSection() {
               }}
               whileHover={reduce ? {} : { scale: 1.02, transition: { duration: 0.15 } }}
             >
-              {/* Gradient overlay on hover */}
-              <div
-                className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`}
-              />
+              {/* Gradient overlay on hover — consistent emerald */}
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               <div className="relative z-10">
                 <motion.div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center border ${feature.border} bg-zinc-900/80 mb-4`}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center border border-emerald-500/20 bg-zinc-900/80 mb-4"
                   whileHover={reduce ? {} : { scale: 1.12 }}
                   transition={{ type: "spring", stiffness: 350, damping: 15 }}
                 >
-                  <feature.icon size={18} className="text-zinc-300" />
+                  <feature.icon size={18} className="text-emerald-400" />
                 </motion.div>
                 <h3 className="text-white font-semibold text-sm mb-1.5">
                   {feature.label}

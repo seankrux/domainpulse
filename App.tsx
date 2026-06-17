@@ -564,7 +564,7 @@ const App: React.FC = () => {
 
       <footer id="footer" className="text-center py-8 text-sm text-zinc-500" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4">
-          <p className="text-zinc-400">Made with 💛 by Sean G</p>
+          <p className="text-zinc-400">Built by Sean G</p>
           <div className="mt-2 text-xs text-zinc-600">
             <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘K</kbd> Focus search
             <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘Enter</kbd> Check all

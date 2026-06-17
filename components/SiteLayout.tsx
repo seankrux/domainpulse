@@ -194,8 +194,7 @@ export const SiteLayout: React.FC<SiteLayoutProps> = ({
                 DomainPulse
               </h3>
               <p className="text-zinc-400 text-sm leading-relaxed max-w-[260px]">
-                Professional domain monitoring and SSL tracking. Built with care
-                by Sean G.
+                Professional domain monitoring and SSL tracking.
               </p>
             </motion.div>
             <motion.div
