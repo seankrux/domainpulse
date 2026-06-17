@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, AlertTriangle, Shield, Calendar, CheckCircle2 } from 'lucide-react';
-import { Domain, SSLStatus } from '../types';
+import { Domain, DomainStats, SSLStatus } from '../types';
 import { DistributionChart } from './StatsOverview';
 
 interface BottomPanelProps {
   domains: Domain[];
   onViewDomain: (domainId: string) => void;
+  stats: DomainStats;
 }
 
-export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain }) => {
+export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain, stats }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const alerts = React.useMemo(() => {
@@ -40,20 +41,6 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({ domains, onViewDomain 
   }, [domains]);
 
   const alertCount = alerts.length;
-  const stats: import('../types').DomainStats = React.useMemo(() => {
-    const alive = domains.filter(d => d.status === 'ALIVE').length;
-    const down = domains.filter(d => d.status === 'DOWN').length;
-    const unknown = domains.filter(d => d.status === 'UNKNOWN' || d.status === 'CHECKING').length;
-    const responsiveDomains = domains.filter(d => d.latency !== undefined && d.latency > 0);
-    const avgLatency = responsiveDomains.length > 0
-      ? responsiveDomains.reduce((acc, curr) => acc + (curr.latency || 0), 0) / responsiveDomains.length
-      : 0;
-    const totalRecords = domains.reduce((acc, d) => acc + d.history.length, 0);
-    const aliveRecords = domains.reduce((acc, d) =>
-      acc + d.history.filter(h => h.status === 'ALIVE').length, 0);
-    const uptime = totalRecords > 0 ? (aliveRecords / totalRecords) * 100 : 100;
-    return { total: domains.length, alive, down, unknown, avgLatency, uptime };
-  }, [domains]);
 
   if (domains.length === 0) return null;
 

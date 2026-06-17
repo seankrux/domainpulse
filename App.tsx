@@ -560,7 +560,7 @@ const App: React.FC = () => {
       </main>
 
       {/* Bottom Panel - Alerts & Stats (Collapsible) */}
-      <BottomPanel domains={domains} onViewDomain={scrollToDomain} />
+      <BottomPanel domains={domains} stats={stats} onViewDomain={scrollToDomain} />
 
       <footer id="footer" className="text-center py-8 text-sm text-zinc-500" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4">

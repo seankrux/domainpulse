@@ -54,50 +54,41 @@ const StatCard: React.FC<StatCardProps> = ({
   </div>
 );
 
+interface KpiDef {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  iconColor: string;
+  glowColor?: string;
+  trend?: string;
+}
+
 export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
+  const kpis: KpiDef[] = [{ title: "Total Monitored", value: stats.total, icon: Globe, iconColor: "text-emerald-400" }];
+
+  if (stats.total > 0) {
+    kpis.push({ title: "Operational", value: stats.alive, icon: CheckCircle2, iconColor: "text-emerald-400", glowColor: "shadow-glow-emerald" });
+    if (stats.down > 0) {
+      kpis.push({ title: "Issues Detected", value: stats.down, icon: AlertCircle, iconColor: "text-red-400", glowColor: "shadow-glow-red" });
+    }
+    kpis.push({ title: "Avg. Latency", value: stats.avgLatency > 0 ? `${Math.round(stats.avgLatency)}ms` : "\u2014", icon: Activity, iconColor: "text-emerald-400" });
+    kpis.push({
+      title: "Uptime",
+      value: `${stats.uptime.toFixed(1)}%`,
+      icon: Clock,
+      iconColor: stats.uptime >= 99 ? "text-emerald-400" : stats.uptime >= 95 ? "text-amber-400" : "text-red-400",
+      trend: stats.uptime >= 99.9 ? "99.9% SLA met" : undefined,
+    });
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <StatCard
-        title="Total Monitored"
-        value={stats.total}
-        icon={Globe}
-        iconColor="text-blue-400"
-      />
-      <StatCard
-        title="Operational"
-        value={stats.alive}
-        icon={CheckCircle2}
-        iconColor="text-emerald-400"
-        glowColor="shadow-glow-emerald"
-      />
-      <StatCard
-        title="Issues Detected"
-        value={stats.down}
-        icon={AlertCircle}
-        iconColor="text-red-400"
-        glowColor={stats.down > 0 ? "shadow-glow-red" : ""}
-      />
-      <StatCard
-        title="Avg. Latency"
-        value={stats.avgLatency > 0 ? `${Math.round(stats.avgLatency)}ms` : "-"}
-        icon={Activity}
-        iconColor="text-violet-400"
-      />
-      {stats.total > 0 && (
-        <StatCard
-          title="Uptime"
-          value={`${stats.uptime.toFixed(1)}%`}
-          icon={Clock}
-          iconColor={
-            stats.uptime >= 99
-              ? "text-emerald-400"
-              : stats.uptime >= 95
-                ? "text-amber-400"
-                : "text-red-400"
-          }
-          trend={stats.uptime >= 99.9 ? "99.9% SLA met" : undefined}
-        />
-      )}
+    <div
+      className="grid gap-6 mb-8"
+      style={{ gridTemplateColumns: `repeat(${Math.min(kpis.length, 4)}, 1fr)` }}
+    >
+      {kpis.map((kpi) => (
+        <StatCard key={kpi.title} {...kpi} />
+      ))}
     </div>
   );
 };
@@ -131,7 +122,14 @@ const DistributionChartInner: React.FC<{ stats: DomainStats }> = ({
       <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-2 z-10">
         Health Distribution
       </h3>
-      <div className="flex-1 w-full min-h-[240px] z-10">
+      <div className="flex-1 w-full min-h-[240px] z-10 relative">
+        {/* Center total label */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+          <div className="text-center">
+            <span className="text-2xl font-display font-bold text-white">{stats.total}</span>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">total</p>
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height="100%" debounce={50}>
           <PieChart>
             <Pie
