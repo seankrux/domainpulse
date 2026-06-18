@@ -11,6 +11,7 @@
     { "source": "/api/ssl", "destination": "/api/ssl.ts" },
     { "source": "/api/whois", "destination": "/api/whois.ts" },
     { "source": "/api/dns", "destination": "/api/dns.ts" },
+    { "source": "/api/gmb", "destination": "/api/gmb.ts" },
     { "source": "/content/:path*", "destination": "/content/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
