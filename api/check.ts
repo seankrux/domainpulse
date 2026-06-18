@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyAuth, getCorsHeaders } from './_utils/auth';
-import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit';
-import { config } from '../lib/config';
+import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
+import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
+import { config } from '../lib/config.js';
 
 interface CheckResult {
   status: 'ALIVE' | 'DOWN' | 'ERROR';

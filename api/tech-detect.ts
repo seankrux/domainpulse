@@ -1,9 +1,9 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import * as https from 'https';
-import { verifyAuth, getCorsHeaders } from './_utils/auth';
-import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit';
-import { config } from '../lib/config';
-import { parseTechFromHTML } from '../services/techDetectionService';
+import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
+import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
+import { config } from '../lib/config.js';
+import { parseTechFromHTML } from '../services/techDetectionService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const setHeaders = (headers: Record<string, string>) => {

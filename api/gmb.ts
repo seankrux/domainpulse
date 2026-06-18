@@ -1,8 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyAuth, getCorsHeaders } from './_utils/auth';
-import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit';
-import { lookupGmb } from './_utils/gmbLookup';
-import { config } from '../lib/config';
+import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
+import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
+import { lookupGmb } from './_utils/gmbLookup.js';
+import { config } from '../lib/config.js';
 
 /**
  * Google Business Profile (GMB) lookup via the Google Places API.
