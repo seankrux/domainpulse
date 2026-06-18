@@ -1,9 +1,9 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import * as https from 'https';
 import * as tls from 'tls';
-import { getCorsHeaders, verifyAuth } from './_utils/auth';
-import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit';
-import { config } from '../lib/config';
+import { getCorsHeaders, verifyAuth } from './_utils/auth.js';
+import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
+import { config } from '../lib/config.js';
 
 interface SSLResult {
   valid: boolean;

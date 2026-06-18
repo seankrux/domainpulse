@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-import { getCorsHeaders, isAuthBootstrapAllowed, generateToken } from './_utils/auth';
+import { getCorsHeaders, isAuthBootstrapAllowed, generateToken } from './_utils/auth.js';
 
 let AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

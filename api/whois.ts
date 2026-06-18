@@ -1,8 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import * as https from 'https';
-import { verifyAuth, getCorsHeaders } from './_utils/auth';
-import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit';
-import { config } from '../lib/config';
+import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
+import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
+import { config } from '../lib/config.js';
 
 interface WhoisResult {
   expiryDate?: string;

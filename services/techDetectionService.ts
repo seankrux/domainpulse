@@ -1,5 +1,5 @@
-import { ServiceConfig } from '../types';
-import { logger } from '../utils/logger';
+import type { ServiceConfig } from '../types';
+import { logger } from '../utils/logger.js';
 
 export interface TechStack {
   cms?: string;
