@@ -108,6 +108,12 @@ app.get('/api/check', verifyToken, async (req, res) => {
   const startTime = Date.now();
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
+  const { validateOutboundUrl } = await import('../api/_utils/ssrfGuard');
+  const safe = validateOutboundUrl(targetUrl);
+  if (!safe.ok) {
+    return res.status(400).json({ error: 'Blocked', message: safe.reason });
+  }
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -158,6 +164,12 @@ app.get('/api/check', verifyToken, async (req, res) => {
 
 app.get('/api/ssl', verifyToken, async (req, res) => {
   const domain = req.query.domain as string;
+  {
+    const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
+    if (domain && isBlockedHost(domain.replace(/^https?:\/\//, '').split('/')[0])) {
+      return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
+    }
+  }
   if (!domain) return res.status(400).json({ error: 'Domain is required' });
 
   try {
@@ -204,6 +216,12 @@ app.get('/api/ssl', verifyToken, async (req, res) => {
 app.get('/api/dns', verifyToken, async (req, res) => {
   const domain = req.query.domain as string;
   if (!domain) return res.status(400).json({ error: 'Domain is required' });
+  {
+    const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
+    if (isBlockedHost(domain.replace(/^https?:\/\//, '').split('/')[0])) {
+      return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
+    }
+  }
 
   try {
     const resolver = new dns.promises.Resolver();
