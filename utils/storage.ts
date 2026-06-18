@@ -1,4 +1,4 @@
-import { Domain, DomainStatus, DomainGroup, WebhookConfig, SSLStatus } from '../types';
+import { Domain, DomainStatus, DomainGroup, WebhookConfig, SSLStatus, GmbInfo, GmbStatus } from '../types';
 import { SAMPLE_DOMAINS, SAMPLE_GROUPS } from '../data/seed';
 import { logger } from './logger';
 
@@ -19,6 +19,12 @@ interface StoredDomain {
   expiry?: StoredDomainExpiry;
   groupId?: string;
   tags: string[];
+  gmbPlaceId?: string;
+  gmb?: StoredGmbInfo;
+}
+
+interface StoredGmbInfo extends Omit<GmbInfo, 'lastChecked'> {
+  lastChecked?: string;
 }
 
 interface StoredStatusRecord {
@@ -75,6 +81,10 @@ const toStored = (domain: Domain): StoredDomain => ({
     createdDate: domain.expiry.createdDate ? (domain.expiry.createdDate instanceof Date ? domain.expiry.createdDate.toISOString() : domain.expiry.createdDate) : undefined,
     updatedDate: domain.expiry.updatedDate ? (domain.expiry.updatedDate instanceof Date ? domain.expiry.updatedDate.toISOString() : domain.expiry.updatedDate) : undefined
   } : undefined,
+  gmb: domain.gmb ? {
+    ...domain.gmb,
+    lastChecked: domain.gmb.lastChecked ? (domain.gmb.lastChecked instanceof Date ? domain.gmb.lastChecked.toISOString() : domain.gmb.lastChecked) : undefined
+  } : undefined,
   tags: domain.tags || []
 });
 
@@ -97,6 +107,11 @@ const fromStored = (stored: StoredDomain): Domain => ({
     expiryDate: stored.expiry.expiryDate ? new Date(stored.expiry.expiryDate) : undefined,
     createdDate: stored.expiry.createdDate ? new Date(stored.expiry.createdDate) : undefined,
     updatedDate: stored.expiry.updatedDate ? new Date(stored.expiry.updatedDate) : undefined
+  } : undefined,
+  gmb: stored.gmb ? {
+    ...stored.gmb,
+    status: stored.gmb.status as GmbStatus,
+    lastChecked: stored.gmb.lastChecked ? new Date(stored.gmb.lastChecked) : undefined
   } : undefined,
   tags: stored.tags || []
 });

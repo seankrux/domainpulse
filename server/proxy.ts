@@ -240,6 +240,16 @@ app.get('/api/whois', verifyToken, async (req, res) => {
   });
 });
 
+app.get('/api/gmb', verifyToken, async (req, res) => {
+  const placeId = req.query.placeId as string | undefined;
+  const query = req.query.query as string | undefined;
+  if (!placeId && !query) return res.status(400).json({ error: 'placeId or query is required' });
+
+  const { lookupGmb } = await import('../api/_utils/gmbLookup');
+  const result = await lookupGmb({ placeId, query });
+  res.json(result);
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8" /><title>Multi field</title></head>
+  <body>
+    <h1>Get a Quote</h1>
+    <form id="quote" action="#">
+      <input name="full_name" type="text" placeholder="Your full name" />
+      <input name="contact_email" type="text" placeholder="Email address" />
+      <input name="phone_number" type="text" placeholder="Phone" />
+      <input name="company" type="text" placeholder="Company" />
+      <textarea name="details" placeholder="Tell us about your project"></textarea>
+      <button type="submit">Request Quote</button>
+    </form>
+    <div id="result"></div>
+    <script>
+      document.getElementById('quote').addEventListener('submit', (e) => {
+        e.preventDefault();
+        document.body.innerHTML = '<h1>Submission received</h1><p>We will be in touch.</p>';
+      });
+    </script>
+  </body>
+</html>

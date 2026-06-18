@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8" /><title>Recaptcha form</title></head>
+  <body>
+    <h1>Contact</h1>
+    <form id="contact" action="#">
+      <input id="name" name="name" type="text" />
+      <input id="email" name="email" type="email" />
+      <textarea id="msg" name="message"></textarea>
+      <div class="g-recaptcha" data-sitekey="test-sitekey"></div>
+      <button type="submit">Send</button>
+    </form>
+    <div id="result"></div>
+    <script>
+      // Even though it shows "Thank you", a captcha is present so QA must NOT
+      // treat it as testable / a pass.
+      document.getElementById('contact').addEventListener('submit', (e) => {
+        e.preventDefault();
+        document.getElementById('result').innerHTML = '<p class="success">Thank you!</p>';
+      });
+    </script>
+  </body>
+</html>

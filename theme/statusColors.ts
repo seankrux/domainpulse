@@ -1,4 +1,4 @@
-import { SSLStatus, DomainStatus } from '../types';
+import { SSLStatus, DomainStatus, FormCheckStatus, CallCheckStatus, GmbStatus } from '../types';
 
 // ─── Status color maps ─────────────────────────────────────────
 // Single source of truth for all badge/indicator colors.
@@ -49,6 +49,82 @@ export function expiryLabel(status: string): string {
     default:         return 'Unknown';
   }
 }
+
+// ─── QA check colors (forms + call buttons) ───────────────────
+const QA_GOOD = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
+const QA_BAD = 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400';
+const QA_WARN = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
+const QA_NEUTRAL = 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-400';
+
+export function formCheckColor(status: FormCheckStatus): string {
+  switch (status) {
+    case FormCheckStatus.Pass:    return QA_GOOD;
+    case FormCheckStatus.Fail:    return QA_BAD;
+    case FormCheckStatus.Error:   return QA_WARN;
+    case FormCheckStatus.NoForms: return QA_NEUTRAL;
+    default:                      return QA_NEUTRAL;
+  }
+}
+
+export function formCheckLabel(status: FormCheckStatus): string {
+  switch (status) {
+    case FormCheckStatus.Pass:    return 'Pass';
+    case FormCheckStatus.Fail:    return 'Fail';
+    case FormCheckStatus.Error:   return 'Error';
+    case FormCheckStatus.NoForms: return 'No Forms';
+    default:                      return 'Unknown';
+  }
+}
+
+export function callCheckColor(status: CallCheckStatus): string {
+  switch (status) {
+    case CallCheckStatus.Pass:       return QA_GOOD;
+    case CallCheckStatus.Fail:       return QA_BAD;
+    case CallCheckStatus.NotSwapped: return QA_WARN;
+    case CallCheckStatus.Error:      return QA_WARN;
+    case CallCheckStatus.NoButtons:  return QA_NEUTRAL;
+    default:                         return QA_NEUTRAL;
+  }
+}
+
+export function callCheckLabel(status: CallCheckStatus): string {
+  switch (status) {
+    case CallCheckStatus.Pass:       return 'Pass';
+    case CallCheckStatus.Fail:       return 'Fail';
+    case CallCheckStatus.NotSwapped: return 'No Swap';
+    case CallCheckStatus.Error:      return 'Error';
+    case CallCheckStatus.NoButtons:  return 'No Buttons';
+    default:                         return 'Unknown';
+  }
+}
+
+// ─── GMB (Google Business Profile) colors ─────────────────────
+export function gmbColor(status: GmbStatus): string {
+  switch (status) {
+    case GmbStatus.Operational: return QA_GOOD;
+    case GmbStatus.Closed:      return QA_BAD;
+    case GmbStatus.NotFound:    return QA_NEUTRAL;
+    case GmbStatus.Error:       return QA_WARN;
+    default:                    return QA_NEUTRAL;
+  }
+}
+
+export function gmbLabel(status: GmbStatus): string {
+  switch (status) {
+    case GmbStatus.Operational: return 'Live';
+    case GmbStatus.Closed:      return 'Closed';
+    case GmbStatus.NotFound:    return 'Not Found';
+    case GmbStatus.Error:       return 'Error';
+    default:                    return 'Unknown';
+  }
+}
+
+/** Raw hex values for charts (recharts needs real colors, not tailwind classes). */
+export const CHART_COLORS: Record<string, string> = {
+  Alive: '#10b981',   // emerald-500
+  Down: '#ef4444',    // red-500
+  Unknown: '#52525b', // zinc-600
+};
 
 /** Uptime-pct → tailwind colour pair. */
 export function uptimeColor(pct: number): { text: string; bg: string } {

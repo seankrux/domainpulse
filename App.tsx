@@ -26,6 +26,7 @@ import { BottomPanel } from './components/BottomPanel';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useAnnounce } from './components/Accessibility';
 import { logger } from './utils/logger';
+import { loadQaResults, mergeQaResults } from './utils/qaResults';
 
 // Simple UUID generator
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -63,7 +64,8 @@ const App: React.FC = () => {
     checkProgress,
     checkBatch,
     checkAllDomains,
-    checkSingleDomain
+    checkSingleDomain,
+    checkSingleGmb
   } = useMonitoring({
     domains,
     setDomains,
@@ -98,6 +100,17 @@ const App: React.FC = () => {
   useEffect(() => {
     saveGroups(groups);
   }, [groups]);
+
+  // Load the latest QA snapshot (published by `npm run qa:crawl`) once on mount
+  // and merge form/call-button results into the matching domains by URL.
+  useEffect(() => {
+    let active = true;
+    loadQaResults().then((results) => {
+      if (!active || results.size === 0) return;
+      setDomains((prev) => mergeQaResults(prev, results));
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     saveSettings(settings);
@@ -608,9 +621,13 @@ const App: React.FC = () => {
       </footer>
 
       {viewingDetail && (
-        <DomainDetailModal 
+        <DomainDetailModal
           domain={viewingDetail}
           onClose={() => setViewingDetailId(null)}
+          onSetGmbPlaceId={(id, placeId) =>
+            setDomains(prev => prev.map(d => d.id === id ? { ...d, gmbPlaceId: placeId || undefined } : d))
+          }
+          onCheckGmb={(id, placeId) => checkSingleGmb(id, placeId)}
         />
       )}
 

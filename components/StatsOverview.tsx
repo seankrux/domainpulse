@@ -1,6 +1,7 @@
 import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { DomainStats } from "../types";
+import { CHART_COLORS } from "../theme/statusColors";
 import {
   Activity,
   AlertCircle,
@@ -102,7 +103,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
       icon: Activity, iconColor: "text-emerald-400", trendDir: t?.latency,
     });
     kpis.push({
-      title: "Uptime", value: `${stats.uptime.toFixed(1)}%",
+      title: "Uptime", value: `${stats.uptime.toFixed(1)}%`,
       icon: Clock,
       iconColor: stats.uptime >= 99 ? "text-emerald-400" : stats.uptime >= 95 ? "text-amber-400" : "text-red-400",
       trendDir: t?.uptime,
@@ -110,10 +111,13 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
     });
   }
 
+  const cols = Math.min(kpis.length, 4);
+  const gridCols = `repeat(${cols}, 1fr)`;
+
   return (
     <div
       className="grid gap-6 mb-8"
-      style={{ gridTemplateColumns: `repeat(${Math.min(kpis.length, 4)}, 1fr)` }}
+      style={{ gridTemplateColumns: gridCols }}
     >
       {kpis.map((kpi) => (
         <StatCard key={kpi.title} {...kpi} />
@@ -172,12 +176,9 @@ const DistributionChartInner: React.FC<{ stats: DomainStats }> = ({
               stroke="none"
               isAnimationActive={false}
             >
-              {data.map((entry, index) => {
-                let color = "#52525b"; // Unknown (zinc-600)
-                if (entry.name === "Alive") color = "#10b981";
-                if (entry.name === "Down") color = "#ef4444";
-                return <Cell key={`cell-${index}`} fill={color} />;
-              })}
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={CHART_COLORS[entry.name] ?? CHART_COLORS.Unknown} />
+              ))}
             </Pie>
             <Tooltip
               contentStyle={{

@@ -24,7 +24,8 @@
     "test:devtools": "playwright test tests/devtools-audit.spec.ts",
     "test:unit": "vitest tests/unit/",
     "test:watch": "vitest --watch",
-    "mcp:start": "node .mcp/auto-test/index.js"
+    "mcp:start": "node .mcp/auto-test/index.js",
+    "qa:crawl": "tsx scripts/qa-crawl.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -63,6 +64,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "jsdom": "^24.0.0",
+    "playwright": "^1.58.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "tsx": "^4.19.0",

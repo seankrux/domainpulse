@@ -23,6 +23,9 @@ import { StatusBadge } from "./StatusBadge";
 import { SSLBadge } from "./SSLBadge";
 import { GroupBadge } from "./GroupBadge";
 import { ExpiryBadge } from "./ExpiryBadge";
+import { FormCheckBadge } from "./FormCheckBadge";
+import { CallCheckBadge } from "./CallCheckBadge";
+import { GmbBadge } from "./GmbBadge";
 import { UptimeBadge } from "./UptimeBadge";
 import { HistorySparkline } from "./HistorySparkline";
 import { TechStackBadge } from "./TechStackBadge";
@@ -299,6 +302,15 @@ const DomainRow: React.FC<DomainRowProps> = ({
       {/* Expiry */}
       <td className="p-4 align-middle"><ExpiryBadge expiry={domain.expiry} onClick={() => onViewDetails?.(domain)} /></td>
 
+      {/* Forms QA */}
+      <td className="p-4 align-middle"><FormCheckBadge check={domain.formCheck} onClick={() => onViewDetails?.(domain)} /></td>
+
+      {/* Call buttons QA */}
+      <td className="p-4 align-middle"><CallCheckBadge check={domain.callCheck} onClick={() => onViewDetails?.(domain)} /></td>
+
+      {/* Google Business Profile */}
+      <td className="p-4 align-middle"><GmbBadge gmb={domain.gmb} configured={!!domain.gmbPlaceId} onClick={() => onViewDetails?.(domain)} /></td>
+
       {/* Nameservers */}
       <td className="p-4 align-middle hidden xl:table-cell">
         {isChecking ? (
@@ -412,7 +424,6 @@ export const DomainTable: React.FC<DomainTableProps> = ({
     if (!domain || !onEditTags) return;
     if (!domain.tags.includes(tag)) onEditTags(id, [...domain.tags, tag]);
   };
-  const [newTag, setNewTag] = useState("");
   const removeTag = (id: string, currentTags: string[], tag: string) => onEditTags?.(id, currentTags.filter((t) => t !== tag));
 
   const copyToClipboard = async (text: string, id: string) => {
@@ -451,6 +462,9 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               <th className="p-4" role="columnheader">Tech Stack</th>
               <th className="p-4" role="columnheader">SSL</th>
               <th className="p-4" role="columnheader">Expiry</th>
+              <th className="p-4" role="columnheader">Forms</th>
+              <th className="p-4" role="columnheader">Call</th>
+              <th className="p-4" role="columnheader">GMB</th>
               <th className="p-4 hidden xl:table-cell" role="columnheader">Nameservers</th>
               <th className="p-4" role="columnheader">Latency</th>
               <th className="p-4 hidden lg:table-cell" role="columnheader">Uptime</th>
