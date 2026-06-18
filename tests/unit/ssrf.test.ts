@@ -1,5 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { isBlockedHost, validateOutboundUrl } from '../../api/_utils/ssrfGuard';
+import { isBlockedHost, validateOutboundUrl, isBlockedIp, validateOutboundUrlResolved } from '../../api/_utils/ssrfGuard';
+
+describe('ssrfGuard.isBlockedIp', () => {
+  it('blocks private/reserved IPv4, IPv6, and IPv4-mapped IPv6', () => {
+    for (const ip of ['127.0.0.1', '10.1.2.3', '192.168.0.1', '169.254.169.254', '100.64.0.1', '::1', 'fc00::1', 'fe80::1', '::ffff:127.0.0.1']) {
+      expect(isBlockedIp(ip), ip).toBe(true);
+    }
+  });
+  it('allows public IPs', () => {
+    for (const ip of ['8.8.8.8', '1.1.1.1', '93.184.216.34', '2606:4700::1111']) {
+      expect(isBlockedIp(ip), ip).toBe(false);
+    }
+  });
+});
+
+describe('ssrfGuard.validateOutboundUrlResolved (DNS rebinding)', () => {
+  it('blocks a hostname that resolves to loopback', async () => {
+    // localhost resolves to 127.0.0.1 / ::1 → must be blocked after resolution
+    const r = await validateOutboundUrlResolved('http://localhost/');
+    expect(r.ok).toBe(false);
+  });
+  it('allows a real public host', async () => {
+    const r = await validateOutboundUrlResolved('https://github.com/');
+    expect(r.ok).toBe(true);
+  });
+});
 
 describe('ssrfGuard.isBlockedHost', () => {
   it('blocks loopback, private, link-local/metadata, and internal TLDs', () => {

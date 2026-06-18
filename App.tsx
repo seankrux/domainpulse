@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { X } from 'lucide-react';
 import { Domain, DomainStatus, DomainStats, SortField, SortOrder, DomainGroup, SSLStatus } from './types';
 import { parseCSV, exportToCSV } from './utils/csvHelper';
+import { config } from './lib/config';
 import { loadDomains, saveDomains, loadSettings, saveSettings, AppSettings, loadGroups, saveGroups, addGroup, removeGroup, updateGroup } from './utils/storage';
 import { useNotification } from './components/NotificationProvider';
 import { useAuth } from './components/AuthProvider';
@@ -134,6 +135,10 @@ const App: React.FC = () => {
       setInputError('This domain is already being monitored.');
       return;
     }
+    if (domains.length >= config.domain.maxDomains) {
+      setInputError(`Limit reached — you can monitor up to ${config.domain.maxDomains} domains.`);
+      return;
+    }
     const newDomain: Domain = {
       id: generateId(),
       url: normalized,
@@ -154,6 +159,8 @@ const App: React.FC = () => {
     const validNewDomains: Domain[] = [];
     let errorCount = 0;
     let duplicateCount = 0;
+    let skippedForLimit = 0;
+    const remainingSlots = Math.max(0, config.domain.maxDomains - domains.length);
 
     newUrls.forEach(urlInput => {
       const validation = validateAndNormalizeUrl(urlInput);
@@ -161,10 +168,15 @@ const App: React.FC = () => {
         errorCount++;
         return;
       }
-      
+
       const normalized = validation.url;
       if (existingUrls.has(normalized)) {
         duplicateCount++;
+        return;
+      }
+
+      if (validNewDomains.length >= remainingSlots) {
+        skippedForLimit++;
         return;
       }
 
@@ -184,6 +196,10 @@ const App: React.FC = () => {
       setDomains(prev => [...validNewDomains, ...prev]);
       showSuccess(`Successfully imported ${validNewDomains.length} domains`);
       void checkBatch(validNewDomains);
+    }
+
+    if (skippedForLimit > 0) {
+      showError(`${skippedForLimit} skipped — ${config.domain.maxDomains}-domain limit reached.`);
     }
 
     if (errorCount > 0 || duplicateCount > 0) {

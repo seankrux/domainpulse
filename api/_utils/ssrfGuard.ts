@@ -1,48 +1,64 @@
 /**
  * SSRF guard for endpoints that fetch/connect to a user-supplied target.
  *
- * Blocks loopback, private/reserved ranges, link-local + cloud-metadata
- * (169.254.0.0/16), and non-http(s) schemes. This stops the obvious attack
- * (e.g. ?url=http://localhost or http://169.254.169.254/) where the server
- * would otherwise report whether an internal service is alive.
+ * Defense in depth:
+ *  - scheme allow-list (http/https only)
+ *  - literal host block (loopback, RFC1918, CGNAT, link-local + cloud metadata,
+ *    IPv6 ULA/link-local, *.internal/.local)
+ *  - DNS resolution check (every resolved A/AAAA must be public) — stops DNS
+ *    rebinding where a public hostname points at a private IP
+ *  - safe redirect following (each hop re-validated; capped) — stops an open
+ *    redirect from bouncing the request to an internal target
  *
- * Pure + dependency-free so the Vercel functions, the dev proxy, and unit
- * tests can all share it.
+ * Node-only (uses node:dns + global fetch). Shared by the Vercel functions,
+ * the dev proxy, and unit tests.
  */
+import { promises as dns } from 'node:dns';
 
 const BLOCKED_HOSTNAMES = new Set(['localhost', 'metadata.google.internal', 'metadata']);
 
-function isPrivateIPv4(host: string): boolean {
-  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (!m) return false;
-  const a = Number(m[1]);
-  const b = Number(m[2]);
-  if ([a, b, Number(m[3]), Number(m[4])].some((n) => n > 255)) return true; // malformed → block
-  if (a === 0 || a === 10 || a === 127) return true;        // this-host, private, loopback
-  if (a === 169 && b === 254) return true;                  // link-local + cloud metadata
-  if (a === 172 && b >= 16 && b <= 31) return true;         // private
-  if (a === 192 && b === 168) return true;                  // private
-  if (a === 100 && b >= 64 && b <= 127) return true;        // CGNAT
-  if (a >= 224) return true;                                // multicast / reserved
+/** Core IP check covering IPv4, IPv6, and IPv4-mapped IPv6. */
+export function isBlockedIp(ip: string): boolean {
+  let h = ip.toLowerCase().trim();
+  if (h.startsWith('[') && h.endsWith(']')) h = h.slice(1, -1);
+
+  // IPv4-mapped IPv6 (::ffff:127.0.0.1) → test the embedded IPv4.
+  const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+  if (mapped) h = mapped[1]!;
+
+  const v4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4) {
+    const [a, b] = [Number(v4[1]), Number(v4[2])];
+    if ([a, b, Number(v4[3]), Number(v4[4])].some((n) => n > 255)) return true;
+    if (a === 0 || a === 10 || a === 127) return true;     // this-host / private / loopback
+    if (a === 169 && b === 254) return true;               // link-local + cloud metadata
+    if (a === 172 && b >= 16 && b <= 31) return true;       // private
+    if (a === 192 && b === 168) return true;                // private
+    if (a === 100 && b >= 64 && b <= 127) return true;      // CGNAT
+    if (a >= 224) return true;                              // multicast / reserved
+    return false;
+  }
+
+  // IPv6
+  if (h === '::' || h === '::1') return true;               // unspecified / loopback
+  if (h.startsWith('fc') || h.startsWith('fd')) return true; // unique-local fc00::/7
+  if (h.startsWith('fe8') || h.startsWith('fe9') || h.startsWith('fea') || h.startsWith('feb')) return true; // link-local fe80::/10
   return false;
 }
 
-/** True when a hostname must not be reached from a server-side fetch. */
+/** Sync literal-host block (no DNS). Fast first-pass reject. */
 export function isBlockedHost(hostname: string | undefined): boolean {
   if (!hostname) return true;
   let h = hostname.toLowerCase().replace(/\.$/, '');
-  if (h.startsWith('[') && h.endsWith(']')) h = h.slice(1, -1); // strip IPv6 brackets
+  if (h.startsWith('[') && h.endsWith(']')) h = h.slice(1, -1);
   if (!h) return true;
   if (BLOCKED_HOSTNAMES.has(h)) return true;
   if (h.endsWith('.localhost') || h.endsWith('.internal') || h.endsWith('.local')) return true;
-  if (h === '0.0.0.0' || h === '::' || h === '::1') return true;
-  // IPv6 unique-local (fc00::/7) and link-local (fe80::/10)
-  if (h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe8') || h.startsWith('fe9') || h.startsWith('fea') || h.startsWith('feb')) return true;
-  if (isPrivateIPv4(h)) return true;
+  if (isBlockedIp(h)) return true;
   return false;
 }
 
-/** Validate a full URL is safe to fetch. Returns a reason string when blocked. */
+/** Sync validation of a full URL (scheme + literal host). */
 export function validateOutboundUrl(raw: string): { ok: true } | { ok: false; reason: string } {
   let u: URL;
   try {
@@ -57,4 +73,82 @@ export function validateOutboundUrl(raw: string): { ok: true } | { ok: false; re
     return { ok: false, reason: 'Target host is not allowed (private/internal address)' };
   }
   return { ok: true };
+}
+
+/** Async: literal check + resolve every A/AAAA and ensure all are public. */
+export async function validateOutboundUrlResolved(raw: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const lit = validateOutboundUrl(raw);
+  if (!lit.ok) return lit;
+  const host = new URL(raw).hostname.replace(/^\[|\]$/g, '');
+  if (isBlockedIp(host)) return { ok: false, reason: 'Target host is not allowed (private/internal address)' };
+  // If it's already an IP literal, no DNS to do.
+  if (/^[0-9.]+$/.test(host) || host.includes(':')) return { ok: true };
+  try {
+    const records = await dns.lookup(host, { all: true });
+    if (records.length === 0) return { ok: false, reason: 'Host did not resolve' };
+    for (const r of records) {
+      if (isBlockedIp(r.address)) {
+        return { ok: false, reason: 'Host resolves to a private/internal address' };
+      }
+    }
+  } catch {
+    return { ok: false, reason: 'Host did not resolve' };
+  }
+  return { ok: true };
+}
+
+export interface SafeHeadResult {
+  blocked?: boolean;
+  reason?: string;
+  ok: boolean;
+  status: number;
+  latency: number;
+  error?: string;
+}
+
+/**
+ * HEAD-request a URL with SSRF protection: resolves + validates every hop,
+ * follows redirects manually (capped), and never reaches a private target.
+ */
+export async function safeHeadRequest(
+  rawUrl: string,
+  opts: { timeoutMs?: number; userAgent?: string; maxRedirects?: number } = {},
+): Promise<SafeHeadResult> {
+  const { timeoutMs = 10000, userAgent = 'DomainPulse/1.0 (Domain Monitor)', maxRedirects = 5 } = opts;
+  const start = Date.now();
+  let current = rawUrl;
+
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    const v = await validateOutboundUrlResolved(current);
+    if (!v.ok) return { blocked: true, reason: v.reason, ok: false, status: 0, latency: Date.now() - start };
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let resp: Response;
+    try {
+      resp = await fetch(current, {
+        method: 'HEAD',
+        redirect: 'manual',
+        signal: controller.signal,
+        headers: { 'User-Agent': userAgent },
+      });
+    } catch (error) {
+      clearTimeout(timer);
+      return { ok: false, status: 0, latency: Date.now() - start, error: error instanceof Error ? error.message : 'fetch failed' };
+    }
+    clearTimeout(timer);
+
+    if (resp.status >= 300 && resp.status < 400) {
+      const loc = resp.headers.get('location');
+      if (!loc) return { ok: true, status: resp.status, latency: Date.now() - start };
+      try {
+        current = new URL(loc, current).toString();
+      } catch {
+        return { ok: false, status: resp.status, latency: Date.now() - start, error: 'Invalid redirect location' };
+      }
+      continue;
+    }
+    return { ok: resp.ok, status: resp.status, latency: Date.now() - start };
+  }
+  return { ok: false, status: 0, latency: Date.now() - start, error: 'Too many redirects' };
 }
