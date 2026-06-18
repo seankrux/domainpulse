@@ -42,10 +42,10 @@ const StatCard: React.FC<StatCardProps> = ({
   trendLabel,
   trendDir,
 }) => (
-  <div className="glass-card rounded-2xl p-6 hover:border-zinc-700 transition-all duration-300 group">
+  <div className="glass-card rounded-2xl p-6 hover:border-zinc-600 hover:bg-zinc-850/90 hover:-translate-y-0.5 transition-all duration-300 group">
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-sm font-medium text-zinc-500 mb-1">{title}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">{title}</p>
         <h3 className="text-3xl font-display font-bold text-white tracking-tight">
           {value}
         </h3>
@@ -160,7 +160,7 @@ const DistributionChartInner: React.FC<{ stats: DomainStats }> = ({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           <div className="text-center">
             <span className="text-2xl font-display font-bold text-white">{stats.total}</span>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">total</p>
+            <p className="text-[10px] text-zinc-400 uppercase tracking-wider mt-0.5">total</p>
           </div>
         </div>
         <ResponsiveContainer width="100%" height="100%" debounce={50}>
