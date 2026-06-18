@@ -158,8 +158,17 @@ const GroupPicker: React.FC<{
 
 /* ─── DomainRow ─────────────────────────────────────── */
 
+interface ColVisibility {
+  tech: boolean;
+  forms: boolean;
+  call: boolean;
+  gmb: boolean;
+  ns: boolean;
+}
+
 interface DomainRowProps {
   domain: Domain;
+  show: ColVisibility;
   isSelected: boolean;
   isFiltered: boolean;
   groups: DomainGroup[];
@@ -187,7 +196,7 @@ interface DomainRowProps {
 }
 
 const DomainRow: React.FC<DomainRowProps> = ({
-  domain, isSelected, groups, onToggleSelect,
+  domain, show, isSelected, groups, onToggleSelect,
   onStartEdit, onSaveEdit, onCancelEdit,
   editingId, editValue, setEditValue,
   onViewDetails, onViewHistory, onCheck, onRemove, onCopy, copiedId,
@@ -294,7 +303,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
       <td className="p-4 align-middle"><StatusBadge status={domain.status} statusCode={domain.statusCode} /></td>
 
       {/* Tech Stack */}
-      <td className="p-4 align-middle"><TechStackBadge techStack={domain.techStack} domain={domain.url} onClick={() => onViewDetails?.(domain)} /></td>
+      {show.tech && <td className="p-4 align-middle"><TechStackBadge techStack={domain.techStack} domain={domain.url} onClick={() => onViewDetails?.(domain)} /></td>}
 
       {/* SSL */}
       <td className="p-4 align-middle"><SSLBadge ssl={domain.ssl} onClick={() => onViewDetails?.(domain)} /></td>
@@ -303,16 +312,16 @@ const DomainRow: React.FC<DomainRowProps> = ({
       <td className="p-4 align-middle"><ExpiryBadge expiry={domain.expiry} onClick={() => onViewDetails?.(domain)} /></td>
 
       {/* Forms QA */}
-      <td className="p-4 align-middle"><FormCheckBadge check={domain.formCheck} onClick={() => onViewDetails?.(domain)} /></td>
+      {show.forms && <td className="p-4 align-middle"><FormCheckBadge check={domain.formCheck} onClick={() => onViewDetails?.(domain)} /></td>}
 
       {/* Call buttons QA */}
-      <td className="p-4 align-middle"><CallCheckBadge check={domain.callCheck} onClick={() => onViewDetails?.(domain)} /></td>
+      {show.call && <td className="p-4 align-middle"><CallCheckBadge check={domain.callCheck} onClick={() => onViewDetails?.(domain)} /></td>}
 
       {/* Google Business Profile */}
-      <td className="p-4 align-middle"><GmbBadge gmb={domain.gmb} configured={!!domain.gmbPlaceId} onClick={() => onViewDetails?.(domain)} /></td>
+      {show.gmb && <td className="p-4 align-middle"><GmbBadge gmb={domain.gmb} configured={!!domain.gmbPlaceId} onClick={() => onViewDetails?.(domain)} /></td>}
 
       {/* Nameservers */}
-      <td className="p-4 align-middle hidden xl:table-cell">
+      {show.ns && <td className="p-4 align-middle hidden xl:table-cell">
         {isChecking ? (
           <Skeleton className="w-24 h-4" />
         ) : (
@@ -333,7 +342,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
             )}
           </div>
         )}
-      </td>
+      </td>}
 
       {/* Latency */}
       <td className="p-4 align-middle text-sm text-zinc-300 font-mono">
@@ -450,6 +459,16 @@ export const DomainTable: React.FC<DomainTableProps> = ({
     return isFiltered ? <FilteredEmptyState /> : <EmptyState />;
   }
 
+  // Only render optional columns when at least one domain actually has that data —
+  // avoids a wall of empty "-" cells for features not yet in use.
+  const show: ColVisibility = {
+    tech: domains.some((d) => !!d.techStack),
+    forms: domains.some((d) => !!d.formCheck),
+    call: domains.some((d) => !!d.callCheck),
+    gmb: domains.some((d) => !!d.gmb || !!d.gmbPlaceId),
+    ns: domains.some((d) => (d.expiry?.nameServers?.length ?? 0) > 0 || (d.dns?.ns?.length ?? 0) > 0),
+  };
+
   return (
     <div className="glass-card rounded-2xl overflow-hidden" role="region" aria-label="Domains table">
       <div className="overflow-x-auto">
@@ -459,13 +478,13 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               <th className="px-4 py-3.5 w-12 text-center" role="columnheader"><input ref={headerCheckboxRef} type="checkbox" className="rounded border-zinc-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer transition-all bg-zinc-800" checked={allSelected} onChange={onToggleAll} aria-label="Select all domains" /></th>
               <th className="px-4 py-3.5 pl-2 min-w-[240px]" role="columnheader">Domain</th>
               <th className="px-4 py-3.5 min-w-[110px]" role="columnheader">Status</th>
-              <th className="px-4 py-3.5 min-w-[120px]" role="columnheader">Tech Stack</th>
+              {show.tech && <th className="px-4 py-3.5 min-w-[120px]" role="columnheader">Tech Stack</th>}
               <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">SSL</th>
               <th className="px-4 py-3.5 min-w-[100px]" role="columnheader">Expiry</th>
-              <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Forms</th>
-              <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Call</th>
-              <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">GMB</th>
-              <th className="px-4 py-3.5 hidden xl:table-cell min-w-[160px]" role="columnheader">Nameservers</th>
+              {show.forms && <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Forms</th>}
+              {show.call && <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Call</th>}
+              {show.gmb && <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">GMB</th>}
+              {show.ns && <th className="px-4 py-3.5 hidden xl:table-cell min-w-[160px]" role="columnheader">Nameservers</th>}
               <th className="px-4 py-3.5 min-w-[80px]" role="columnheader">Latency</th>
               <th className="px-4 py-3.5 hidden lg:table-cell min-w-[90px]" role="columnheader">Uptime</th>
               <th className="px-4 py-3.5 hidden md:table-cell min-w-[110px]" role="columnheader">Last Checked</th>
@@ -478,6 +497,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               <DomainRow
                 key={domain.id}
                 domain={domain}
+                show={show}
                 isSelected={selectedIds.has(domain.id)}
                 isFiltered={isFiltered}
                 groups={groups}
