@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
+import { validateOutboundUrl } from './_utils/ssrfGuard.js';
 import { config } from '../lib/config.js';
 
 interface CheckResult {
@@ -64,6 +65,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const startTime = Date.now();
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+
+  // SSRF guard: never let a caller probe internal/private hosts.
+  const safe = validateOutboundUrl(targetUrl);
+  if (!safe.ok) {
+    setHeaders(corsHeaders);
+    return res.status(400).json({ error: 'Blocked', message: safe.reason });
+  }
 
   try {
     const controller = new AbortController();

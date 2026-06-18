@@ -3,6 +3,7 @@ import * as https from 'https';
 import * as tls from 'tls';
 import { getCorsHeaders, verifyAuth } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
+import { isBlockedHost } from './_utils/ssrfGuard.js';
 import { config } from '../lib/config.js';
 
 interface SSLResult {
@@ -61,6 +62,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!domain) {
     setHeaders(corsHeaders);
     return res.status(400).json({ error: 'Domain is required' });
+  }
+
+  if (isBlockedHost(domain.replace(/^https?:\/\//, '').split('/')[0])) {
+    setHeaders(corsHeaders);
+    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
   }
 
   try {
