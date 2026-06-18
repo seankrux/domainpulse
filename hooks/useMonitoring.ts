@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Domain, DomainStatus, StatusRecord, ServiceConfig } from '../types';
+import { Domain, DomainStatus, StatusRecord, ServiceConfig, GmbStatus } from '../types';
 import { checkDomainWithSSL } from '../services/domainService';
+import { checkGmb } from '../services/gmbService';
 import { logger } from '../utils/logger';
 
 interface MonitoringHookProps {
@@ -157,6 +158,21 @@ export const useMonitoring = ({
     await checkBatch(domainsToCheck);
   }, [isCheckingAll, checkBatch]);
 
+  const checkSingleGmb = useCallback(async (id: string, placeId?: string, query?: string) => {
+    if (!placeId && !query) return;
+    try {
+      const gmb = await checkGmb({ placeId, query }, { userAgent: customUserAgent, timeout: checkTimeout });
+      setDomains(prev => prev.map(d => (d.id === id ? { ...d, gmb } : d)));
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Unauthorized') {
+        dispatchAuthInvalid();
+        return;
+      }
+      logger.error(`Failed to check GMB for domain id: ${id}`, error);
+      setDomains(prev => prev.map(d => (d.id === id ? { ...d, gmb: { status: GmbStatus.Error, error: 'Check failed', lastChecked: new Date() } } : d)));
+    }
+  }, [setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid]);
+
   const checkSingleDomain = useCallback(async (id: string, url: string) => {
     setDomains(prev => prev.map(d => d.id === id ? { ...d, status: DomainStatus.Checking } : d));
 
@@ -179,6 +195,11 @@ export const useMonitoring = ({
         } : d
       ));
       addHistoryRecord(id, result);
+      // Refresh GMB snapshot too, when a Place ID is configured for this domain.
+      const target = domainsRef.current.find(d => d.id === id);
+      if (target?.gmbPlaceId) {
+        await checkSingleGmb(id, target.gmbPlaceId);
+      }
     } catch (error) {
       if (error instanceof Error && error.message === 'Unauthorized') {
         dispatchAuthInvalid();
@@ -190,7 +211,7 @@ export const useMonitoring = ({
         d.id === id ? { ...d, status: DomainStatus.Error, lastChecked: new Date() } : d
       ));
     }
-  }, [addHistoryRecord, setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid]);
+  }, [addHistoryRecord, setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid, checkSingleGmb]);
 
   // Initialize Worker - created once on mount
   useEffect(() => {
@@ -285,6 +306,7 @@ export const useMonitoring = ({
     checkProgress,
     checkBatch,
     checkAllDomains,
-    checkSingleDomain
+    checkSingleDomain,
+    checkSingleGmb
   };
 };

@@ -1,0 +1,46 @@
+name: Form & Call QA Crawl
+
+# Scheduled + on-demand QA: crawls sites, tests forms, checks CallRail Call Now buttons.
+on:
+  schedule:
+    - cron: '0 6 * * *' # daily 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Single site to check (overrides sites.json). e.g. https://example.com'
+        required: false
+        type: string
+
+jobs:
+  qa-crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run QA crawl
+        run: |
+          if [ -n "${{ github.event.inputs.url }}" ]; then
+            npm run qa:crawl -- --url "${{ github.event.inputs.url }}"
+          else
+            npm run qa:crawl -- --config sites.json
+          fi
+
+      - name: Upload QA results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-results
+          path: data/qa-results.json
+          if-no-files-found: warn

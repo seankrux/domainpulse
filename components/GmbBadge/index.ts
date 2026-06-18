@@ -1,0 +1,1 @@
+export { GmbBadge } from "./GmbBadge";

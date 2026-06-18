@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" /><title>CallRail swap</title>
+    <!-- Mock CallRail swap script. Matches /callrail\.com\/.+\/swap\.js/. -->
+    <script src="https://cdn.callrail.com/companies/123456/abcdef/12/swap.js"></script>
+  </head>
+  <body>
+    <h1>Call Us</h1>
+    <a id="cta" href="tel:+18005551234">Call Now</a>
+    <script>
+      // Simulate DNI swap rewriting the tracking number quickly.
+      window.CallTrk = { swap: true };
+      setTimeout(() => {
+        const a = document.getElementById('cta');
+        a.setAttribute('href', 'tel:+18889990000');
+        a.textContent = 'Call Now (888) 999-0000';
+      }, 300);
+    </script>
+  </body>
+</html>

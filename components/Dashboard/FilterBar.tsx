@@ -72,7 +72,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             placeholder="Filter domains... (⌘K)"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-zinc-900/80 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none text-sm shadow-sm transition-all text-zinc-200 placeholder:text-zinc-600"
+            className="w-full pl-10 pr-4 py-2 bg-zinc-900/80 border border-zinc-700/80 rounded-lg focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none text-sm shadow-sm transition-all text-zinc-200 placeholder:text-zinc-500"
           />
         </div>
 
@@ -151,9 +151,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       </div>
 
       {/* Status Filter & Sort */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-x-5 gap-y-3 flex-wrap pt-4 border-t border-zinc-800/70">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-zinc-500">Status:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Status</span>
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -162,7 +162,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 setStatusFilter(value);
               }
             }}
-            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
+            className="px-3 py-1.5 bg-zinc-900 border border-zinc-700/80 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
           >
             <option value="ALL">All ({domainCount})</option>
             <option value={DomainStatus.Alive}>Alive ({filterCounts.statusCounts[DomainStatus.Alive] || 0})</option>
@@ -172,7 +172,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-zinc-500">SSL:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">SSL</span>
           <select
             value={sslFilter}
             onChange={(e) => {
@@ -181,7 +181,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 setSslFilter(value);
               }
             }}
-            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
+            className="px-3 py-1.5 bg-zinc-900 border border-zinc-700/80 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
           >
             <option value="ALL">All ({domainCount})</option>
             <option value={SSLStatus.Valid}>Valid ({filterCounts.sslCounts[SSLStatus.Valid] || 0})</option>
@@ -191,11 +191,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-zinc-500">Group:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Group</span>
           <select
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value as string | 'ALL')}
-            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
+            className="px-3 py-1.5 bg-zinc-900 border border-zinc-700/80 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
           >
             <option value="ALL">All ({filterCounts.groupCounts.get('ALL') || 0})</option>
             {groups.map(group => (
@@ -211,7 +211,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-zinc-500">Sort:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Sort</span>
           {[
             { field: 'url', label: 'Name' },
             { field: 'status', label: 'Status' },

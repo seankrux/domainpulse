@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-06-18T21:10:03.009Z",
+  "reports": [
+    {
+      "url": "seomothra.com",
+      "formStatus": "PASS",
+      "callStatus": "NO_BUTTONS",
+      "forms": [
+        {
+          "pageUrl": "https://seomothra.com/blog",
+          "formId": "form-0",
+          "fieldsFilled": 1,
+          "submitted": true,
+          "onScreenSuccess": true,
+          "marker": "qa-test-seomothra-com-run-1781816993503-1781816993503",
+          "screenshot": "shots/seomothra-com-blog-form0.png",
+          "status": "PASS",
+          "delivery": {
+            "method": "screen-only",
+            "delivered": true,
+            "detail": "On-screen success detected (no destination verification)."
+          }
+        },
+        {
+          "pageUrl": "https://seomothra.com/contact",
+          "formId": "form-0",
+          "fieldsFilled": 3,
+          "submitted": true,
+          "onScreenSuccess": true,
+          "marker": "qa-test-seomothra-com-run-1781816993503-1781816993503",
+          "screenshot": "shots/seomothra-com-contact-form0.png",
+          "status": "PASS",
+          "delivery": {
+            "method": "screen-only",
+            "delivered": true,
+            "detail": "On-screen success detected (no destination verification)."
+          }
+        }
+      ],
+      "calls": [
+        {
+          "pageUrl": "https://seomothra.com/",
+          "selector": "*",
+          "swapScriptPresent": false,
+          "numberSwapped": false,
+          "status": "NO_BUTTONS",
+          "notes": "No tel: links or click-to-call buttons found."
+        }
+      ]
+    }
+  ]
+}

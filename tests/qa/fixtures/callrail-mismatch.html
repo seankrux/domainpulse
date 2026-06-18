@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" /><title>Mismatch</title>
+    <script src="https://cdn.callrail.com/companies/999/multi/12/swap.js"></script>
+  </head>
+  <body>
+    <h1>Call Us</h1>
+    <a id="cta1" href="tel:+18005551111">Header Call</a>
+    <a id="cta2" href="tel:+18005552222">Footer Call</a>
+    <script>
+      window.CallTrk = { swap: true };
+      setTimeout(() => {
+        // Only the first button gets swapped; the second stays static (a bug).
+        document.getElementById('cta1').setAttribute('href', 'tel:+18883334444');
+      }, 300);
+    </script>
+  </body>
+</html>

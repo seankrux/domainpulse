@@ -1,6 +1,7 @@
 import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { DomainStats } from "../types";
+import { CHART_COLORS } from "../theme/statusColors";
 import {
   Activity,
   AlertCircle,
@@ -41,10 +42,10 @@ const StatCard: React.FC<StatCardProps> = ({
   trendLabel,
   trendDir,
 }) => (
-  <div className="glass-card rounded-2xl p-6 hover:border-zinc-700 transition-all duration-300 group">
+  <div className="glass-card rounded-2xl p-6 hover:border-zinc-600 hover:bg-zinc-850/90 hover:-translate-y-0.5 transition-all duration-300 group">
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-sm font-medium text-zinc-500 mb-1">{title}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">{title}</p>
         <h3 className="text-3xl font-display font-bold text-white tracking-tight">
           {value}
         </h3>
@@ -102,7 +103,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
       icon: Activity, iconColor: "text-emerald-400", trendDir: t?.latency,
     });
     kpis.push({
-      title: "Uptime", value: `${stats.uptime.toFixed(1)}%",
+      title: "Uptime", value: `${stats.uptime.toFixed(1)}%`,
       icon: Clock,
       iconColor: stats.uptime >= 99 ? "text-emerald-400" : stats.uptime >= 95 ? "text-amber-400" : "text-red-400",
       trendDir: t?.uptime,
@@ -110,10 +111,13 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
     });
   }
 
+  const cols = Math.min(kpis.length, 4);
+  const gridCols = `repeat(${cols}, 1fr)`;
+
   return (
     <div
       className="grid gap-6 mb-8"
-      style={{ gridTemplateColumns: `repeat(${Math.min(kpis.length, 4)}, 1fr)` }}
+      style={{ gridTemplateColumns: gridCols }}
     >
       {kpis.map((kpi) => (
         <StatCard key={kpi.title} {...kpi} />
@@ -156,7 +160,7 @@ const DistributionChartInner: React.FC<{ stats: DomainStats }> = ({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           <div className="text-center">
             <span className="text-2xl font-display font-bold text-white">{stats.total}</span>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">total</p>
+            <p className="text-[10px] text-zinc-400 uppercase tracking-wider mt-0.5">total</p>
           </div>
         </div>
         <ResponsiveContainer width="100%" height="100%" debounce={50}>
@@ -172,12 +176,9 @@ const DistributionChartInner: React.FC<{ stats: DomainStats }> = ({
               stroke="none"
               isAnimationActive={false}
             >
-              {data.map((entry, index) => {
-                let color = "#52525b"; // Unknown (zinc-600)
-                if (entry.name === "Alive") color = "#10b981";
-                if (entry.name === "Down") color = "#ef4444";
-                return <Cell key={`cell-${index}`} fill={color} />;
-              })}
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={CHART_COLORS[entry.name] ?? CHART_COLORS.Unknown} />
+              ))}
             </Pie>
             <Tooltip
               contentStyle={{

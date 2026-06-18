@@ -1,16 +1,19 @@
-import React, { useEffect } from 'react';
-import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3 } from 'lucide-react';
-import { Domain, DomainStatus, SSLStatus } from '../../types';
-import { sslColor, sslLabel, expiryColor, expiryLabel } from '../../theme/statusColors';
+import React, { useEffect, useState } from 'react';
+import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3, MapPin, Star, Phone, RefreshCw } from 'lucide-react';
+import { Domain, DomainStatus, SSLStatus, GmbStatus } from '../../types';
+import { sslColor, sslLabel, expiryColor, expiryLabel, gmbColor, gmbLabel } from '../../theme/statusColors';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getTechStackColor } from '../../components/TechStackBadge';
 
 interface DomainDetailModalProps {
   domain: Domain;
   onClose: () => void;
+  onSetGmbPlaceId?: (id: string, placeId: string) => void;
+  onCheckGmb?: (id: string, placeId: string) => void;
 }
 
-export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, onClose }) => {
+export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, onClose, onSetGmbPlaceId, onCheckGmb }) => {
+  const [placeIdInput, setPlaceIdInput] = useState(domain.gmbPlaceId ?? '');
   // Trap focus within modal
   const modalContentRef = useFocusTrap({
     enabled: true,
@@ -415,6 +418,79 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                 <p className="text-sm text-zinc-500">DNS lookup hasn't been performed yet.</p>
               </div>
             )}
+          </section>
+
+          {/* Google Business Profile (GMB) */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <MapPin className="text-emerald-400" size={18} />
+              <h3 className="font-bold text-white">Google Business Profile</h3>
+              {domain.gmb && domain.gmb.status !== GmbStatus.Unknown && (
+                <span className={`text-[10px] font-bold uppercase tracking-tight px-2 py-0.5 rounded border ${gmbColor(domain.gmb.status)}`}>
+                  {gmbLabel(domain.gmb.status)}
+                </span>
+              )}
+            </div>
+
+            {domain.gmb && (domain.gmb.status === GmbStatus.Operational || domain.gmb.status === GmbStatus.Closed) ? (
+              <div className="space-y-3 mb-4">
+                <p className="text-sm font-semibold text-white">{domain.gmb.name || domain.url}</p>
+                <div className="flex flex-wrap gap-2">
+                  {typeof domain.gmb.rating === 'number' && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-zinc-800/60 border border-zinc-800 rounded-lg text-xs text-amber-300">
+                      <Star size={12} className="fill-current" /> {domain.gmb.rating.toFixed(1)}
+                      <span className="text-zinc-500">({domain.gmb.reviewCount ?? 0} reviews)</span>
+                    </span>
+                  )}
+                  {domain.gmb.openNow !== undefined && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-zinc-800/60 border border-zinc-800 rounded-lg text-xs text-zinc-300">
+                      <Clock size={12} /> {domain.gmb.openNow ? 'Open now' : 'Closed now'}
+                    </span>
+                  )}
+                  {domain.gmb.phone && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-zinc-800/60 border border-zinc-800 rounded-lg text-xs text-zinc-300">
+                      <Phone size={12} /> {domain.gmb.phone}
+                    </span>
+                  )}
+                </div>
+                {domain.gmb.address && <p className="text-xs text-zinc-400">{domain.gmb.address}</p>}
+                {domain.gmb.mapsUrl && (
+                  <a href={domain.gmb.mapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:underline">
+                    View on Google Maps <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            ) : domain.gmb?.error ? (
+              <p className="text-xs text-amber-400 mb-4">{domain.gmb.error}</p>
+            ) : (
+              <p className="text-sm text-zinc-500 mb-4">No GMB data yet. Set a Place ID and run a check.</p>
+            )}
+
+            <div className="bg-zinc-800/30 p-4 rounded-xl border border-dashed border-zinc-800">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 tracking-widest block">Google Place ID</label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={placeIdInput}
+                  onChange={(e) => setPlaceIdInput(e.target.value)}
+                  placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4"
+                  className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-zinc-200 focus:outline-none focus:border-emerald-500/50"
+                />
+                <button
+                  onClick={() => {
+                    const trimmed = placeIdInput.trim();
+                    onSetGmbPlaceId?.(domain.id, trimmed);
+                    if (trimmed) onCheckGmb?.(domain.id, trimmed);
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold uppercase tracking-tight hover:bg-emerald-500/20 transition-colors"
+                >
+                  <RefreshCw size={12} /> Save & Check
+                </button>
+              </div>
+              <p className="text-[10px] text-zinc-600 mt-2">
+                Find a Place ID at the Google Place ID Finder. Requires GOOGLE_PLACES_API_KEY on the server.
+              </p>
+            </div>
           </section>
         </div>
 

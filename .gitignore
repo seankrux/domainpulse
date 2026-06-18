@@ -54,3 +54,9 @@ venv/
 playwright-report/
 test-results/
 .autonomous/
+
+# QA crawl run artifact
+data/qa-results.json
+
+# QA reports (screenshots + html)
+reports/

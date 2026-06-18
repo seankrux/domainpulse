@@ -1,0 +1,20 @@
+[
+  {
+    "url": "example.com",
+    "qa": {
+      "crawl": { "maxPages": 15, "useSitemap": true },
+      "form": {
+        "enabled": true,
+        "testData": {
+          "name": "QA Test",
+          "email": "team@merlinomarketing.com",
+          "phone": "555-0100",
+          "message": "AUTOMATED QA TEST — please ignore."
+        },
+        "marker": "QA-TEST",
+        "delivery": { "type": "screen-only" }
+      },
+      "call": { "enabled": true }
+    }
+  }
+]

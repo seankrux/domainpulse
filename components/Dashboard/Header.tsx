@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
           </h1>
         </div>
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-2 text-sm text-zinc-500">
+          <div className="hidden md:flex items-center gap-2 text-sm text-zinc-400">
             {settings.autoRefresh && (
               <>
                 <Clock size={14} />
@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <button
             onClick={toggleDarkMode}
-            className="text-zinc-500 hover:text-zinc-200 transition-colors p-2 rounded-lg hover:bg-zinc-800/50"
+            className="text-zinc-400 hover:text-zinc-100 transition-colors p-2 rounded-lg hover:bg-zinc-800/50"
             title="Toggle dark mode"
           >
             {settings.darkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => setShowSettings(!showSettings)}
             data-testid="settings-button"
-            className={`p-2 rounded-lg transition-colors ${showSettings ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50'}`}
+            className={`p-2 rounded-lg transition-colors ${showSettings ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'}`}
             title="Settings"
           >
             <Settings size={20} />
@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
             href={typeof import.meta !== 'undefined' && import.meta.env?.VITE_SITE_URL ? import.meta.env.VITE_SITE_URL : 'http://localhost:3002'}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-sm font-medium p-2 rounded-lg hover:bg-zinc-800/50"
+            className="text-zinc-400 hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-sm font-medium p-2 rounded-lg hover:bg-zinc-800/50"
             title="View Website"
           >
             <span className="hidden lg:inline">Website</span>

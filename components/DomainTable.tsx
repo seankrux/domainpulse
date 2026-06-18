@@ -23,6 +23,9 @@ import { StatusBadge } from "./StatusBadge";
 import { SSLBadge } from "./SSLBadge";
 import { GroupBadge } from "./GroupBadge";
 import { ExpiryBadge } from "./ExpiryBadge";
+import { FormCheckBadge } from "./FormCheckBadge";
+import { CallCheckBadge } from "./CallCheckBadge";
+import { GmbBadge } from "./GmbBadge";
 import { UptimeBadge } from "./UptimeBadge";
 import { HistorySparkline } from "./HistorySparkline";
 import { TechStackBadge } from "./TechStackBadge";
@@ -299,6 +302,15 @@ const DomainRow: React.FC<DomainRowProps> = ({
       {/* Expiry */}
       <td className="p-4 align-middle"><ExpiryBadge expiry={domain.expiry} onClick={() => onViewDetails?.(domain)} /></td>
 
+      {/* Forms QA */}
+      <td className="p-4 align-middle"><FormCheckBadge check={domain.formCheck} onClick={() => onViewDetails?.(domain)} /></td>
+
+      {/* Call buttons QA */}
+      <td className="p-4 align-middle"><CallCheckBadge check={domain.callCheck} onClick={() => onViewDetails?.(domain)} /></td>
+
+      {/* Google Business Profile */}
+      <td className="p-4 align-middle"><GmbBadge gmb={domain.gmb} configured={!!domain.gmbPlaceId} onClick={() => onViewDetails?.(domain)} /></td>
+
       {/* Nameservers */}
       <td className="p-4 align-middle hidden xl:table-cell">
         {isChecking ? (
@@ -314,7 +326,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
                 <span key={i} className="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[9px] font-mono text-zinc-400 truncate max-w-[100px]">{ns}</span>
               ))
             ) : (
-              <span className="text-xs text-zinc-600 italic">-</span>
+              <span className="text-xs text-zinc-500 italic">-</span>
             )}
             {(domain.expiry?.nameServers?.length || domain.dns?.ns?.length || 0) > 2 && (
               <span className="px-2 py-0.5 text-[9px] text-slate-400">+{(domain.expiry?.nameServers?.length || 0) + (domain.dns?.ns?.length || 0) - 2}</span>
@@ -330,7 +342,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
         ) : domain.latency ? (
           <span className={domain.latency > 500 ? "text-amber-400" : "text-zinc-300"}>{domain.latency}ms</span>
         ) : (
-          <span className="text-zinc-700">-</span>
+          <span className="text-zinc-600">-</span>
         )}
       </td>
 
@@ -355,7 +367,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
             })()}
           </span>
         ) : (
-          <span className="text-zinc-700">Never</span>
+          <span className="text-zinc-600">Never</span>
         )}
       </td>
 
@@ -412,7 +424,6 @@ export const DomainTable: React.FC<DomainTableProps> = ({
     if (!domain || !onEditTags) return;
     if (!domain.tags.includes(tag)) onEditTags(id, [...domain.tags, tag]);
   };
-  const [newTag, setNewTag] = useState("");
   const removeTag = (id: string, currentTags: string[], tag: string) => onEditTags?.(id, currentTags.filter((t) => t !== tag));
 
   const copyToClipboard = async (text: string, id: string) => {
@@ -444,22 +455,25 @@ export const DomainTable: React.FC<DomainTableProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0" role="grid">
           <thead>
-            <tr className="bg-zinc-900/80 border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider font-semibold" role="row">
-              <th className="p-4 w-12 text-center" role="columnheader"><input ref={headerCheckboxRef} type="checkbox" className="rounded border-zinc-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer transition-all bg-zinc-800" checked={allSelected} onChange={onToggleAll} aria-label="Select all domains" /></th>
-              <th className="p-4 pl-2" role="columnheader">Domain</th>
-              <th className="p-4" role="columnheader">Status</th>
-              <th className="p-4" role="columnheader">Tech Stack</th>
-              <th className="p-4" role="columnheader">SSL</th>
-              <th className="p-4" role="columnheader">Expiry</th>
-              <th className="p-4 hidden xl:table-cell" role="columnheader">Nameservers</th>
-              <th className="p-4" role="columnheader">Latency</th>
-              <th className="p-4 hidden lg:table-cell" role="columnheader">Uptime</th>
-              <th className="p-4 hidden md:table-cell" role="columnheader">Last Checked</th>
-              <th className="p-4 hidden lg:table-cell" role="columnheader">History</th>
-              <th className="p-4 text-right" role="columnheader">Actions</th>
+            <tr className="bg-zinc-900/90 border-b border-zinc-700/60 text-zinc-400 text-[11px] uppercase tracking-wider font-semibold" role="row">
+              <th className="px-4 py-3.5 w-12 text-center" role="columnheader"><input ref={headerCheckboxRef} type="checkbox" className="rounded border-zinc-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer transition-all bg-zinc-800" checked={allSelected} onChange={onToggleAll} aria-label="Select all domains" /></th>
+              <th className="px-4 py-3.5 pl-2 min-w-[240px]" role="columnheader">Domain</th>
+              <th className="px-4 py-3.5 min-w-[110px]" role="columnheader">Status</th>
+              <th className="px-4 py-3.5 min-w-[120px]" role="columnheader">Tech Stack</th>
+              <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">SSL</th>
+              <th className="px-4 py-3.5 min-w-[100px]" role="columnheader">Expiry</th>
+              <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Forms</th>
+              <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Call</th>
+              <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">GMB</th>
+              <th className="px-4 py-3.5 hidden xl:table-cell min-w-[160px]" role="columnheader">Nameservers</th>
+              <th className="px-4 py-3.5 min-w-[80px]" role="columnheader">Latency</th>
+              <th className="px-4 py-3.5 hidden lg:table-cell min-w-[90px]" role="columnheader">Uptime</th>
+              <th className="px-4 py-3.5 hidden md:table-cell min-w-[110px]" role="columnheader">Last Checked</th>
+              <th className="px-4 py-3.5 hidden lg:table-cell min-w-[90px]" role="columnheader">History</th>
+              <th className="px-4 py-3.5 text-right min-w-[120px]" role="columnheader">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800/50">
+          <tbody className="divide-y divide-zinc-800/70">
             {domains.map((domain) => (
               <DomainRow
                 key={domain.id}
