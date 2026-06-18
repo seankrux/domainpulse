@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
-import { validateOutboundUrl } from './_utils/ssrfGuard.js';
+import { safeHeadRequest } from './_utils/ssrfGuard.js';
 import { config } from '../lib/config.js';
 
 interface CheckResult {
@@ -63,50 +63,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  const startTime = Date.now();
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
-  // SSRF guard: never let a caller probe internal/private hosts.
-  const safe = validateOutboundUrl(targetUrl);
-  if (!safe.ok) {
-    setHeaders(corsHeaders);
-    return res.status(400).json({ error: 'Blocked', message: safe.reason });
+  // SSRF guard: resolve + validate every hop, follow redirects safely.
+  const r = await safeHeadRequest(targetUrl, { timeoutMs, userAgent });
+  setHeaders(corsHeaders);
+  if (r.blocked) {
+    return res.status(400).json({ error: 'Blocked', message: r.reason });
   }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    const response = await fetch(targetUrl, {
-      method: 'HEAD',
-      signal: controller.signal,
-      redirect: 'follow',
-      headers: {
-        'User-Agent': userAgent
-      }
-    });
-
-    clearTimeout(timeoutId);
-    const latency = Date.now() - startTime;
-
-    const result: CheckResult = {
-      status: response.ok ? 'ALIVE' : 'DOWN',
-      statusCode: response.status,
-      latency
-    };
-
-    setHeaders(corsHeaders);
-    res.status(200).json(result);
-  } catch (error) {
-    const latency = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-    setHeaders(corsHeaders);
-    res.status(200).json({
-      status: 'DOWN' as const,
-      statusCode: 0,
-      latency,
-      message: errorMessage
-    });
-  }
+  const result: CheckResult = {
+    status: r.ok ? 'ALIVE' : 'DOWN',
+    statusCode: r.status,
+    latency: r.latency
+  };
+  if (r.error) (result as CheckResult & { message?: string }).message = r.error;
+  return res.status(200).json(result);
 }

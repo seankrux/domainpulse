@@ -34,6 +34,26 @@ const ALLOW_INITIAL_LOGIN = process.env.VITE_ALLOW_INITIAL_LOGIN === 'true';
 app.use(cors());
 app.use(express.json());
 
+// Simple in-memory rate limiter for /api/* (dev proxy parity with the
+// Vercel functions' rate limiting).
+const rlMap = new Map<string, { count: number; reset: number }>();
+const RL_MAX = 120;
+const RL_WINDOW_MS = 60_000;
+app.use('/api', (req, res, next) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const rec = rlMap.get(ip);
+  if (!rec || rec.reset < now) {
+    rlMap.set(ip, { count: 1, reset: now + RL_WINDOW_MS });
+    return next();
+  }
+  rec.count += 1;
+  if (rec.count > RL_MAX) {
+    return res.status(429).json({ error: 'Rate limit exceeded', message: 'Too many requests. Please wait a minute.' });
+  }
+  next();
+});
+
 // Middleware to verify auth token
 const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   // If no password is set, allow all (dev mode)
@@ -105,61 +125,20 @@ app.get('/api/check', verifyToken, async (req, res) => {
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  const startTime = Date.now();
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
-  const { validateOutboundUrl } = await import('../api/_utils/ssrfGuard');
-  const safe = validateOutboundUrl(targetUrl);
-  if (!safe.ok) {
-    return res.status(400).json({ error: 'Blocked', message: safe.reason });
+  const { safeHeadRequest } = await import('../api/_utils/ssrfGuard');
+  const r = await safeHeadRequest(targetUrl, { timeoutMs: 10000 });
+  if (r.blocked) {
+    return res.status(400).json({ error: 'Blocked', message: r.reason });
   }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    const response = await fetch(targetUrl, {
-      method: 'HEAD',
-      signal: controller.signal,
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'DomainPulse/1.0 (Domain Monitor)'
-      }
-    });
-
-    clearTimeout(timeoutId);
-    const latency = Date.now() - startTime;
-
-    const result: CheckResult = {
-      status: response.ok ? 'ALIVE' : 'DOWN',
-      statusCode: response.status,
-      latency
-    };
-
-    res.json(result);
-  } catch (error) {
-    const latency = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-    // Determine error type
-    let statusCode = 0;
-    if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timeout')) {
-      statusCode = 408;
-    } else if (errorMessage.includes('ENOTFOUND')) {
-      statusCode = 0; // DNS failure
-    } else if (errorMessage.includes('ECONNREFUSED')) {
-      statusCode = 0; // Connection refused
-    } else if (errorMessage.includes('abort')) {
-      statusCode = 408; // Request timeout
-    }
-
-    res.json({
-      status: 'DOWN' as const,
-      statusCode,
-      latency,
-      message: errorMessage
-    });
-  }
+  const result: CheckResult = {
+    status: r.ok ? 'ALIVE' : 'DOWN',
+    statusCode: r.status,
+    latency: r.latency
+  };
+  if (r.error) result.message = r.error;
+  res.json(result);
 });
 
 app.get('/api/ssl', verifyToken, async (req, res) => {
