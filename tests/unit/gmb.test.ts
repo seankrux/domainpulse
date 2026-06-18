@@ -5,7 +5,9 @@ import { Domain, DomainStatus, FormCheckStatus, CallCheckStatus } from '../../ty
 
 describe('lookupGmb', () => {
   it('degrades to UNKNOWN with a message when no API key is configured', async () => {
-    const res = await lookupGmb({ placeId: 'ChIJxyz' }, undefined);
+    // Pass '' explicitly: an explicit `undefined` would trigger the default
+    // param (process.env.GOOGLE_PLACES_API_KEY) and make this env-dependent.
+    const res = await lookupGmb({ placeId: 'ChIJxyz' }, '');
     expect(res.status).toBe('UNKNOWN');
     expect(res.error).toMatch(/GOOGLE_PLACES_API_KEY/);
   });
