@@ -64,8 +64,9 @@ const verifyToken = (req: express.Request, res: express.Response, next: express.
   }
 
   const token = authHeader.split(' ')[1];
-  // Simple token verification: in this app, the token IS the hash for simplicity
-  if (token === AUTH_PASSWORD_HASH.split(':')[0]) {
+  const expectedToken = AUTH_PASSWORD_HASH.split(':')[0];
+  // Guard against empty hash (unconfigured) allowing blank-token bypass
+  if (token && expectedToken && token === expectedToken) {
     next();
   } else {
     res.status(401).json({ error: 'Invalid token' });
@@ -179,7 +180,7 @@ app.get('/api/tech-detect', verifyToken, async (req, res) => {
     const { detectTechStack } = await import('../api/_utils/techLookup');
     res.json(await detectTechStack(url));
   } catch (e) {
-    res.status(200).json({ error: e instanceof Error ? e.message : 'Unknown error' });
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown error' });
   }
 });
 
