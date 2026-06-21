@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { isBlockedHost, validateOutboundUrl, isBlockedIp, validateOutboundUrlResolved } from '../../api/_utils/ssrfGuard';
+import { isBlockedHost, validateOutboundUrl, isBlockedIp, validateOutboundUrlResolved, isReachableStatus } from '../../api/_utils/ssrfGuard';
+
+describe('ssrfGuard.isReachableStatus (liveness contract)', () => {
+  it('treats any answered status < 500 as up (server reachable)', () => {
+    // 2xx/3xx are obviously up; 401/403/405/429 still prove the host responded.
+    for (const code of [200, 204, 301, 302, 401, 403, 404, 405, 429, 451]) {
+      expect(isReachableStatus(code), String(code)).toBe(true);
+    }
+  });
+
+  it('treats 5xx and no-response as down', () => {
+    for (const code of [0, 500, 502, 503, 504]) {
+      expect(isReachableStatus(code), String(code)).toBe(false);
+    }
+  });
+});
 
 describe('ssrfGuard.isBlockedIp', () => {
   it('blocks private/reserved IPv4, IPv6, and IPv4-mapped IPv6', () => {

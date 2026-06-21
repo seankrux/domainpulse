@@ -15,9 +15,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, statusCode }) 
       ? "Checking..."
       : status.charAt(0) + status.slice(1).toLowerCase();
 
-  if (statusCode && status !== DomainStatus.Checking && status !== DomainStatus.Unknown) {
-    displayText = `${statusCode}`;
-    if (statusCode === 200) displayText = "200 OK";
+  // Only surface the HTTP code for live/down domains. Showing it for Error or
+  // Unknown would render a stale code (e.g. "200 OK") under an Error colour.
+  if (statusCode && (status === DomainStatus.Alive || status === DomainStatus.Down)) {
+    displayText = statusCode === 200 ? "200 OK" : `${statusCode}`;
   }
 
   return (
