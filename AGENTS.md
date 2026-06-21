@@ -71,6 +71,60 @@ Status colours live in `theme/statusColors.ts` (`STATUS_COLORS`) and are the
   maps start at `0` (e.g. `Valid: 0`, `active: 0`); `0 || fallback` wrongly
   yields the fallback. Use `sslOrder[x] ?? 4` and `expiryOrder[x] ?? 3`.
 
+## 5. Auth token — one storage, one reader
+
+**The session token is written by `AuthProvider` to `sessionStorage` (key
+`domainpulse_auth_session`). The ONLY client-side reader is
+`getSessionToken()` in `utils/authSession.ts`. Every service/hook that attaches
+a `Bearer` token MUST go through it.**
+
+Why this rule exists: services each kept a private `getStoredToken()` that read
+`localStorage`, but the token lives in `sessionStorage`. The read returned
+`null`, so no `Authorization` header was sent, `/api/check` answered `401`, and
+the client threw `Unauthorized` → an otherwise **ALIVE** domain showed as
+**Error**. Bulk import worked (it read `sessionStorage`), single add/re-check
+did not — the "alive shows Error / inconsistent" report.
+
+Contract:
+- Read the token ONLY via `getSessionToken()`. **Never** call
+  `localStorage.getItem('domainpulse_auth_session')` or hand-roll a
+  `sessionStorage` parse in a service.
+- `checkSingleDomain` and `checkBatch` must BOTH pass `authToken` in
+  `ServiceConfig` (the Web Worker has no `sessionStorage`, so the token has to
+  be read on the main thread and handed in).
+- Locked in by `tests/unit/authSession.test.ts` and
+  `tests/unit/checkDomainWithSSL.test.ts`.
+
+## 7. Auth is opt-in — public when no password is configured
+
+**The front end runs login-less (`AuthGuard` is a "skip authentication" stub),
+so it sends NO token. The API must therefore allow unauthenticated requests
+UNLESS a password is configured.**
+
+- `verifyAuth` (`api/_utils/auth.ts`) returns `true` when `VITE_PASSWORD_HASH`
+  is unset (public/demo mode), and only requires a valid Bearer token when it
+  IS set. This mirrors the dev proxy (`server/proxy.ts`, `verifyToken` calls
+  `next()` when no hash) — prod and dev must agree.
+- `JWT_SECRET` is required **only when auth is enabled** (`VITE_PASSWORD_HASH`
+  set) in production. Don't reinstate an unconditional "deny all / throw in
+  production when unconfigured" — combined with the AuthGuard stub it returned
+  `401` for every domain → ALIVE domains showed Error (the exact bug report).
+- To run locked-down: set `VITE_PASSWORD_HASH` (+ `JWT_SECRET`) AND restore a
+  real `AuthGuard`/login so the front end actually obtains a token. The token
+  must flow through `getSessionToken()` (see §5).
+- Locked in by `tests/unit/auth.test.ts`.
+
+## 6. Timeout guards liveness only — never enrichment
+
+In `checkDomainWithSSL` the hard timeout (`serviceConfig.timeout`) wraps ONLY
+the uptime probe (`resolveLiveness`). Once liveness is known, enrichment runs
+under `Promise.allSettled` **and** a soft timeout (`raceToDefault`) that
+**resolves to safe defaults** instead of rejecting. A slow OR failing
+enrichment can therefore never flip an ALIVE domain to Error — `Error` is
+reachable only when the probe itself fails (auth/network/timeout). Do **not**
+re-wrap the whole check (liveness + enrichment) in one rejecting timeout race;
+that was the loophole that let slow SSL/WHOIS calls produce false Error.
+
 ---
 
 ## Known gaps (intentionally not fixed yet — don't "fix" silently)
@@ -91,6 +145,39 @@ Status colours live in `theme/statusColors.ts` (`STATUS_COLORS`) and are the
    domains with unknown SSL can't be isolated via that filter.
 
 ---
+
+## Fix log (2026-06-22) — login-less demo returned 401 → Error
+
+- **Primary symptom ("added domain shows Error even though alive"):** the
+  front end's `AuthGuard` is a "skip authentication" stub, so it never logs in
+  and sends no token — but `verifyAuth` denied unauthenticated requests
+  (`401`), so every freshly-checked domain showed Error. Reproduced live:
+  fresh `cloudflare.com` → amber Error + two `401`s in the console.
+- Fix: auth is now opt-in. `verifyAuth` allows requests when no
+  `VITE_PASSWORD_HASH` is configured (matches the dev proxy); `JWT_SECRET` is
+  required only when auth is enabled. After the fix the same flow shows
+  `cloudflare.com` → 200 OK / Operational. See §7.
+- Tests: `tests/unit/auth.test.ts`.
+
+## Fix log (2026-06-22) — token storage + timeout
+
+- **Root cause of "alive domain shows Error when added":** `AuthProvider` writes
+  the session to `sessionStorage`, but `domainService`/`sslService`/`dnsService`/
+  `gmbService`/`expiryService` each read it from `localStorage` (only
+  `techDetectionService` read the right store). The token came back `null` →
+  `401` → `Unauthorized` thrown → `Error`. `checkSingleDomain` also passed no
+  token at all, so single add/re-check failed while bulk import (which read
+  `sessionStorage`) succeeded — the "inconsistent" symptom.
+- Fix: new `utils/authSession.ts` `getSessionToken()` is the single client-side
+  token reader (reads `sessionStorage`). All six services + `useMonitoring` now
+  use it; the six duplicated `getStoredToken()` copies are deleted.
+  `checkSingleDomain` now passes `authToken` like `checkBatch`.
+- Fix: `checkDomainWithSSL` restructured — hard timeout guards only the liveness
+  probe; enrichment uses `allSettled` + a soft `raceToDefault` timeout so a slow
+  enrichment can't time-out the whole check into Error (see §6). Timers are now
+  cleared (no dangling `setTimeout`).
+- Tests: `tests/unit/authSession.test.ts` (token source of truth) +
+  `tests/unit/checkDomainWithSSL.test.ts` (liveness invariant incl. hang).
 
 ## Fix log (2026-06-21/22)
 

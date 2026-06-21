@@ -5,22 +5,9 @@ import { checkDNS } from './dnsService';
 import { detectTechStack } from './techDetectionService';
 import { logger } from '../utils/logger';
 import { config } from '../lib/config';
+import { getSessionToken } from '../utils/authSession';
 
 const DEFAULT_PROXY_URL = config.proxy.defaultUrl;
-const AUTH_SESSION_KEY = 'domainpulse_auth_session';
-const getStoredToken = (): string | null => {
-  try {
-    const storedSession = localStorage.getItem(AUTH_SESSION_KEY);
-    if (!storedSession) return null;
-    const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
-    if (!parsed?.token || !parsed.expiresAt || parsed.expiresAt <= Date.now()) {
-      return null;
-    }
-    return parsed.token;
-  } catch {
-    return null;
-  }
-};
 
 export interface DomainCheckResult {
   status: DomainStatus;
@@ -91,45 +78,81 @@ export const normalizeUrl = (input: string): string => {
 };
 
 /**
- * Check domain with SSL, expiry, and DNS information.
- * Includes timeout to prevent hanging.
+ * Reject `p` after `ms` with `message`. Clears its own timer so a settled
+ * promise never leaves a dangling timeout (which would keep Node/tests alive).
  */
-export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
-  // Create a timeout promise using centralized config
-  const timeoutMs = serviceConfig?.timeout || config.timeouts.domainCheck;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Domain check timeout')), timeoutMs);
+const withTimeout = <T>(p: Promise<T>, ms: number, message: string): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); }
+    );
   });
 
-  // Race between the actual check and timeout
-  const checkInternal = async (): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
-    const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+/**
+ * Resolve to `fallback` after `ms` instead of rejecting. Used for enrichment:
+ * a slow OR failing enrichment must degrade to safe defaults, never throw.
+ */
+const raceToDefault = <T>(p: Promise<T>, ms: number, fallback: T): Promise<T> =>
+  new Promise<T>((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      () => { clearTimeout(timer); resolve(fallback); }
+    );
+  });
 
-    // Determine proxy URL and token
-    const proxyUrl = serviceConfig?.proxyUrl || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_URL) || DEFAULT_PROXY_URL;
-    let token = serviceConfig?.authToken;
-    const userAgent = serviceConfig?.userAgent || 'DomainPulse/1.0 (Domain Monitor)';
-    const timeout = serviceConfig?.timeout || config.timeouts.domainCheck;
-    
-    // In main thread (where localStorage is available), we can get the token if not provided
-    if (!token && typeof localStorage !== 'undefined') {
-      token = getStoredToken() || undefined;
-    }
+type EnrichmentSettled = [
+  PromiseSettledResult<SSLInfo>,
+  PromiseSettledResult<DomainExpiry>,
+  PromiseSettledResult<DNSInfo>,
+  PromiseSettledResult<TechStackInfo>
+];
 
-    // Try Vercel API first (for production), then fall back to local proxy
-    const apiEndpoints = [
-      '/api/check', // Vercel serverless function (port 3000)
-      `${proxyUrl}/api/check` // Local proxy server (port 3001)
-    ];
+/**
+ * Check domain liveness, then enrich with SSL/expiry/DNS/Tech.
+ *
+ * INVARIANT (AGENTS.md §1): liveness is the single source of truth. The hard
+ * timeout guards ONLY the uptime probe. Enrichment runs afterwards under
+ * `allSettled` + a soft timeout that resolves to defaults — so a slow or failing
+ * sub-check can never turn an ALIVE domain into Error. `Error` is reachable only
+ * when the uptime probe itself fails (auth, network, or timeout).
+ */
+export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
+  const timeoutMs = serviceConfig?.timeout || config.timeouts.domainCheck;
+  const deadline = Date.now() + timeoutMs;
 
-    logger.debug(`Checking domain: ${url}`, { targetUrl, endpoints: apiEndpoints });
+  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
-  let domainResult: DomainCheckResult | null = null;
+  // Determine proxy URL and token
+  const proxyUrl = serviceConfig?.proxyUrl || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_URL) || DEFAULT_PROXY_URL;
+  let token = serviceConfig?.authToken;
+  const userAgent = serviceConfig?.userAgent || 'DomainPulse/1.0 (Domain Monitor)';
+
+  // In the main thread the session lives in sessionStorage; pull it if the
+  // caller (e.g. a single-domain check) didn't pass one explicitly. In a Web
+  // Worker getSessionToken() returns null, so the token must come from config.
+  if (!token) {
+    token = getSessionToken() || undefined;
+  }
+
+  // Try Vercel API first (for production), then fall back to local proxy.
+  const apiEndpoints = [
+    '/api/check', // Vercel serverless function (port 3000)
+    `${proxyUrl}/api/check` // Local proxy server (port 3001)
+  ];
+
+  logger.debug(`Checking domain: ${url}`, { targetUrl, endpoints: apiEndpoints });
+
+  // --- Phase 1: liveness (the ONLY thing the hard timeout guards) ---
+  const resolveLiveness = async (): Promise<DomainCheckResult> => {
+    let domainResult: DomainCheckResult | null = null;
     let authFailure: Error | null = null;
 
     for (const endpoint of apiEndpoints) {
       try {
-        const response = await fetch(`${endpoint}?url=${encodeURIComponent(targetUrl)}&ua=${encodeURIComponent(userAgent)}&timeout=${timeout}`, {
+        const response = await fetch(`${endpoint}?url=${encodeURIComponent(targetUrl)}&ua=${encodeURIComponent(userAgent)}&timeout=${timeoutMs}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -174,29 +197,37 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
       throw new Error(`All endpoints unavailable for ${url}`);
     }
 
-    // Enrichment (SSL/expiry/DNS/Tech) is secondary to liveness: a failing
-    // sub-check must never downgrade an ALIVE domain to Error. Use allSettled
-    // so one rejected call can't sink the whole result.
-    const [sslSettled, expirySettled, dnsSettled, techSettled] = await Promise.allSettled([
+    return domainResult;
+  };
+
+  const domainResult = await withTimeout(resolveLiveness(), timeoutMs, 'Domain check timeout');
+
+  // --- Phase 2: enrichment — secondary to liveness, never throws ---
+  // Bound enrichment to whatever budget remains so the overall call stays
+  // within timeoutMs. If liveness used the whole budget, enrichment degrades to
+  // defaults immediately — the domain still reports its true ALIVE/DOWN status.
+  const remaining = Math.max(0, deadline - Date.now());
+  const settled = await raceToDefault<EnrichmentSettled | null>(
+    Promise.allSettled([
       checkSSL(url, serviceConfig),
       checkDomainExpiry(url, serviceConfig),
       checkDNS(url, serviceConfig),
       detectTechStack(url, serviceConfig)
-    ]);
+    ]) as Promise<EnrichmentSettled>,
+    remaining,
+    null
+  );
 
-    const sslResult: SSLInfo = sslSettled.status === 'fulfilled' ? sslSettled.value : { status: SSLStatus.Unknown };
-    const expiryResult = expirySettled.status === 'fulfilled' ? expirySettled.value : { status: 'unknown' as const };
-    const dnsResult = dnsSettled.status === 'fulfilled' ? dnsSettled.value : undefined;
-    const techResult = techSettled.status === 'fulfilled' ? techSettled.value : { confidence: 'low' as const };
+  const sslResult: SSLInfo = settled && settled[0].status === 'fulfilled' ? settled[0].value : { status: SSLStatus.Unknown };
+  const expiryResult = settled && settled[1].status === 'fulfilled' ? settled[1].value : { status: 'unknown' as const };
+  const dnsResult = settled && settled[2].status === 'fulfilled' ? settled[2].value : undefined;
+  const techResult = settled && settled[3].status === 'fulfilled' ? settled[3].value : { confidence: 'low' as const };
 
-    return {
-      ...domainResult,
-      ssl: sslResult,
-      expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined,
-      dns: dnsResult && !dnsResult.error ? dnsResult : undefined,
-      techStack: techResult.confidence !== 'low' ? techResult : undefined
-    };
+  return {
+    ...domainResult,
+    ssl: sslResult,
+    expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined,
+    dns: dnsResult && !dnsResult.error ? dnsResult : undefined,
+    techStack: techResult.confidence !== 'low' ? techResult : undefined
   };
-
-  return Promise.race([checkInternal(), timeoutPromise]);
 };

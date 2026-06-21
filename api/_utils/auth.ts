@@ -4,12 +4,22 @@ import jwt from 'jsonwebtoken';
 
 const AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
 
-// JWT_SECRET is required in production - no fallback allowed
+// Auth is OPT-IN. It is enforced only when a password hash is configured
+// (VITE_PASSWORD_HASH). With no hash the app runs as a public demo — matching
+// the dev proxy (`server/proxy.ts`, which allows all when no hash is set) and
+// the AuthGuard "skip authentication" stub. Without this, the stub front-end
+// sends no token while the API demanded one → every domain returned 401 and
+// showed Error even when ALIVE. See AGENTS.md §7.
+const AUTH_ENABLED = Boolean(AUTH_PASSWORD_HASH);
+
+// JWT_SECRET is only used to sign/verify session tokens, which only happens when
+// auth is enabled. Requiring it in public mode would crash every request for a
+// feature that isn't in use.
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Validate JWT_SECRET is present in production
-if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required in production. Generate a secure random string (e.g., openssl rand -hex 32) and set it in your environment.');
+// Validate JWT_SECRET is present in production *when auth is actually enabled*.
+if (AUTH_ENABLED && process.env.NODE_ENV === 'production' && !JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required when VITE_PASSWORD_HASH is set in production. Generate a secure random string (e.g., openssl rand -hex 32) and set it in your environment.');
 }
 
 // Fallback for development only. Generated randomly per process so there is no
@@ -47,10 +57,11 @@ export const generateToken = (): { token: string; expiresAt: number } => {
  * Verify JWT token from request.
  */
 export const verifyAuth = (req: VercelRequest): boolean => {
-  // If no password is set, deny all requests in production
-  if (!AUTH_PASSWORD_HASH) {
-    // Only allow in explicit dev mode
-    return process.env.NODE_ENV !== 'production' && process.env.VITE_ALLOW_INITIAL_LOGIN === 'true';
+  // Public mode: no password configured → allow (portfolio demo / dev-proxy
+  // parity). Setting VITE_PASSWORD_HASH switches the whole API to require a
+  // valid Bearer token.
+  if (!AUTH_ENABLED) {
+    return true;
   }
 
   const authHeader = req.headers.authorization;
