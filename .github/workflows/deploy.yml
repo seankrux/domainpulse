@@ -1,11 +1,11 @@
 name: 🚀 Deploy to Vercel
 
+# Vercel's native Git integration already creates preview deploys for PRs, so
+# this workflow only runs on push to main/master to publish production. Running
+# it on pull_request too caused redundant deploys (doubling toward the Vercel
+# free-tier rate limit) and a failing PR check.
 on:
   push:
-    branches:
-      - main
-      - master
-  pull_request:
     branches:
       - main
       - master
@@ -49,7 +49,10 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./
-          vercel-args: '--prod'
+          # Production deploy only on push to main/master; PRs get a preview
+          # deploy. Avoids a prod deploy on every PR push (wasteful + hits the
+          # Vercel free-tier rate limit).
+          vercel-args: ${{ github.event_name == 'push' && '--prod' || '' }}
 
       - name: Deployment Summary
         run: |
