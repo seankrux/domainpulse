@@ -49,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const url = req.query.url as string;
   const userAgent = (req.query.ua as string) || 'DomainPulse/1.0 (Domain Monitor)';
-  const timeoutMs = parseInt(req.query.timeout as string) || 10000;
+  const timeoutMs = Math.min(parseInt(req.query.timeout as string) || 10000, 30000);
 
   if (!url) {
     setHeaders(corsHeaders);

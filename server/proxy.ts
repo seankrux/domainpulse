@@ -101,7 +101,9 @@ app.post('/api/login', async (req, res) => {
 
   const checkHash = crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
 
-  if (checkHash === hash) {
+  const hashesMatch = checkHash.length === hash.length &&
+    crypto.timingSafeEqual(Buffer.from(checkHash, 'hex'), Buffer.from(hash, 'hex'));
+  if (hashesMatch) {
     const expiresAt = Date.now() + Math.max(SESSION_TTL_MINUTES, 1) * 60 * 1000;
     res.json({ token: hash, expiresAt });
   } else {
