@@ -1,4 +1,5 @@
 import { VercelRequest } from '@vercel/node';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
 const AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
@@ -11,8 +12,12 @@ if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required in production. Generate a secure random string (e.g., openssl rand -hex 32) and set it in your environment.');
 }
 
-// Fallback for development only
-const devJWTSecret = process.env.NODE_ENV === 'production' ? '' : 'dev-secret-do-not-use-in-production';
+// Fallback for development only. Generated randomly per process so there is no
+// hard-coded secret in the source (tokens simply don't survive a dev restart,
+// which is fine for local use). Production always requires JWT_SECRET above.
+const devJWTSecret = process.env.NODE_ENV === 'production'
+  ? ''
+  : crypto.randomBytes(32).toString('hex');
 const effectiveJWTSecret = JWT_SECRET || devJWTSecret;
 
 const SESSION_TTL_SECONDS = Number(process.env.VITE_AUTH_SESSION_TTL_MINUTES || 720) * 60;
