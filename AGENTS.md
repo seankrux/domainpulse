@@ -104,3 +104,16 @@ Status colours live in `theme/statusColors.ts` (`STATUS_COLORS`) and are the
 - Refactor: extracted `CheckResult` + `toCheckResult()` into `ssrfGuard.ts`,
   removing the duplicated probe→response mapping from `api/check.ts` and
   `server/proxy.ts` (prevents prod/dev drift). Behavior-preserving; covered by tests.
+- Cleanup: extracted `sslLookup.ts` / `dnsLookup.ts` / `whoisLookup.ts` into
+  `api/_utils`. `api/ssl|dns|whois.ts` and the dev proxy now share ONE
+  implementation each. The dev proxy's fake "Local Simulation Registrar" WHOIS
+  is gone — local now matches production. Removed stale review/handoff docs
+  (superseded by this file) and a tracked vitest temp artifact.
+
+## Enrichment endpoints — one implementation each
+
+`ssl`, `dns`, `whois`, `gmb` each have a Vercel function (`api/*.ts`) AND a dev
+proxy route (`server/proxy.ts`). The actual lookup logic lives ONCE in
+`api/_utils/{sslLookup,dnsLookup,whoisLookup,gmbLookup}.ts`. Both sides import
+it. **Never** reimplement a lookup inline in an endpoint or the proxy — extend
+the shared util so prod and dev can't diverge.
