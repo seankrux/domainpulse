@@ -116,6 +116,35 @@ export interface SafeHeadResult {
   error?: string;
 }
 
+/** Wire shape returned by the `/api/check` endpoint (Vercel fn + dev proxy). */
+export interface CheckResult {
+  status: 'ALIVE' | 'DOWN' | 'ERROR';
+  statusCode: number;
+  latency: number;
+  message?: string;
+}
+
+/**
+ * Map a {@link SafeHeadResult} to the public `/api/check` response shape.
+ *
+ * SINGLE SOURCE OF TRUTH for how a probe result becomes ALIVE/DOWN. Both the
+ * Vercel function (`api/check.ts`) and the dev proxy (`server/proxy.ts`) MUST
+ * use this so the two environments can never disagree. Liveness is `r.ok`,
+ * which is driven by {@link isReachableStatus} — see AGENTS.md §1–2.
+ *
+ * Note: `blocked` results (SSRF reject) are handled by the caller as HTTP 400,
+ * not here — this only maps a probe that actually ran.
+ */
+export function toCheckResult(r: SafeHeadResult): CheckResult {
+  const result: CheckResult = {
+    status: r.ok ? 'ALIVE' : 'DOWN',
+    statusCode: r.status,
+    latency: r.latency,
+  };
+  if (r.error) result.message = r.error;
+  return result;
+}
+
 /**
  * HEAD-request a URL with SSRF protection: resolves + validates every hop,
  * follows redirects manually (capped), and never reaches a private target.

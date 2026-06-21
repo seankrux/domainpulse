@@ -75,13 +75,6 @@ const verifyToken = (req: express.Request, res: express.Response, next: express.
   }
 };
 
-interface CheckResult {
-  status: 'ALIVE' | 'DOWN' | 'ERROR';
-  statusCode: number;
-  latency: number;
-  message?: string;
-}
-
 // Auth Endpoint
 app.post('/api/login', async (req, res) => {
   const { password } = req.body;
@@ -127,18 +120,12 @@ app.get('/api/check', verifyToken, async (req, res) => {
 
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
-  const { safeHeadRequest } = await import('../api/_utils/ssrfGuard');
+  const { safeHeadRequest, toCheckResult } = await import('../api/_utils/ssrfGuard');
   const r = await safeHeadRequest(targetUrl, { timeoutMs: 10000 });
   if (r.blocked) {
     return res.status(400).json({ error: 'Blocked', message: r.reason });
   }
-  const result: CheckResult = {
-    status: r.ok ? 'ALIVE' : 'DOWN',
-    statusCode: r.status,
-    latency: r.latency
-  };
-  if (r.error) result.message = r.error;
-  res.json(result);
+  res.json(toCheckResult(r));
 });
 
 app.get('/api/ssl', verifyToken, async (req, res) => {

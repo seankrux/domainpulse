@@ -1,5 +1,25 @@
 import { describe, it, expect } from 'vitest';
-import { isBlockedHost, validateOutboundUrl, isBlockedIp, validateOutboundUrlResolved, isReachableStatus } from '../../api/_utils/ssrfGuard';
+import { isBlockedHost, validateOutboundUrl, isBlockedIp, validateOutboundUrlResolved, isReachableStatus, toCheckResult } from '../../api/_utils/ssrfGuard';
+
+describe('ssrfGuard.toCheckResult (shared liveness mapping)', () => {
+  it('maps a reachable probe to ALIVE with its status/latency', () => {
+    expect(toCheckResult({ ok: true, status: 200, latency: 42 })).toEqual({
+      status: 'ALIVE', statusCode: 200, latency: 42,
+    });
+  });
+
+  it('maps an unreachable probe to DOWN', () => {
+    expect(toCheckResult({ ok: false, status: 503, latency: 10 })).toEqual({
+      status: 'DOWN', statusCode: 503, latency: 10,
+    });
+  });
+
+  it('forwards a transport error message when present', () => {
+    expect(toCheckResult({ ok: false, status: 0, latency: 5, error: 'timeout' })).toEqual({
+      status: 'DOWN', statusCode: 0, latency: 5, message: 'timeout',
+    });
+  });
+});
 
 describe('ssrfGuard.isReachableStatus (liveness contract)', () => {
   it('treats any answered status < 500 as up (server reachable)', () => {

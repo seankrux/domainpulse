@@ -43,7 +43,14 @@ flagged those domains offline.
 Also in `safeHeadRequest`: when `HEAD` returns **405 or 501**, we retry **once
 with `GET`** to recover the true status. Keep this fallback.
 
-Locked in by `tests/unit/ssrf.test.ts → "isReachableStatus (liveness contract)"`.
+The probe→response mapping lives in **`toCheckResult(r)`** in `ssrfGuard.ts` —
+the **single source of truth** shared by the Vercel function (`api/check.ts`)
+and the dev proxy (`server/proxy.ts`). **Do not** hand-roll the
+`{ status, statusCode, latency }` mapping in either endpoint; call
+`toCheckResult` so the two environments can never disagree.
+
+Locked in by `tests/unit/ssrf.test.ts` ("isReachableStatus (liveness
+contract)" + "toCheckResult (shared liveness mapping)").
 
 ## 3. Status badge text vs colour
 
@@ -94,3 +101,6 @@ Status colours live in `theme/statusColors.ts` (`STATUS_COLORS`) and are the
 - `StatusBadge.tsx`: HTTP code shown only for Alive/Down (kills amber "200 OK").
 - `App.tsx`: sort order lookups use `??` instead of `||` (zero-index bug).
 - `tests/unit/ssrf.test.ts`: liveness contract tests added.
+- Refactor: extracted `CheckResult` + `toCheckResult()` into `ssrfGuard.ts`,
+  removing the duplicated probe→response mapping from `api/check.ts` and
+  `server/proxy.ts` (prevents prod/dev drift). Behavior-preserving; covered by tests.
