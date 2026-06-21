@@ -32,8 +32,10 @@ describe('verifyAuth (opt-in auth)', () => {
     vi.stubEnv('JWT_SECRET', 'test-secret-please-ignore-1234567890');
     vi.stubEnv('NODE_ENV', 'test');
     const { verifyAuth } = await import('../../api/_utils/auth');
+    // Intentionally malformed — must be rejected, not a real credential.
+    const malformedAuthHeader = 'Bearer ' + 'not-a-jwt';
     expect(verifyAuth(makeReq())).toBe(false);
-    expect(verifyAuth(makeReq('Bearer not-a-jwt'))).toBe(false);
+    expect(verifyAuth(makeReq(malformedAuthHeader))).toBe(false);
   });
 
   it('accepts a valid signed token when auth is enabled', async () => {
