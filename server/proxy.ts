@@ -3,9 +3,6 @@ import cors from 'cors';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import * as https from 'https';
-import * as tls from 'tls';
-import * as dns from 'dns';
 
 // Manual env loading for local dev stability
 try {
@@ -75,13 +72,6 @@ const verifyToken = (req: express.Request, res: express.Response, next: express.
   }
 };
 
-interface CheckResult {
-  status: 'ALIVE' | 'DOWN' | 'ERROR';
-  statusCode: number;
-  latency: number;
-  message?: string;
-}
-
 // Auth Endpoint
 app.post('/api/login', async (req, res) => {
   const { password } = req.body;
@@ -127,100 +117,37 @@ app.get('/api/check', verifyToken, async (req, res) => {
 
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
-  const { safeHeadRequest } = await import('../api/_utils/ssrfGuard');
+  const { safeHeadRequest, toCheckResult } = await import('../api/_utils/ssrfGuard');
   const r = await safeHeadRequest(targetUrl, { timeoutMs: 10000 });
   if (r.blocked) {
     return res.status(400).json({ error: 'Blocked', message: r.reason });
   }
-  const result: CheckResult = {
-    status: r.ok ? 'ALIVE' : 'DOWN',
-    statusCode: r.status,
-    latency: r.latency
-  };
-  if (r.error) result.message = r.error;
-  res.json(result);
+  res.json(toCheckResult(r));
 });
 
 app.get('/api/ssl', verifyToken, async (req, res) => {
   const domain = req.query.domain as string;
-  {
-    const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
-    if (domain && isBlockedHost(domain.replace(/^https?:\/\//, '').split('/')[0])) {
-      return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
-    }
+  const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
+  if (domain && isBlockedHost(domain.replace(/^https?:\/\//, '').split('/')[0])) {
+    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
   }
   if (!domain) return res.status(400).json({ error: 'Domain is required' });
 
-  try {
-    const options = {
-      hostname: domain,
-      port: 443,
-      path: '/',
-      method: 'HEAD',
-      timeout: 10000,
-      agent: new https.Agent({ rejectUnauthorized: false })
-    };
-
-    const sslReq = https.request(options, (sslRes) => {
-      const socket = sslRes.socket as tls.TLSSocket;
-      const cert = socket.getPeerCertificate(true);
-
-      if (!cert || Object.keys(cert).length === 0) {
-        return res.json({ valid: false, error: 'No certificate found' });
-      }
-
-      const validFrom = new Date(cert.valid_from);
-      const validTo = new Date(cert.valid_to);
-      const now = new Date();
-      const daysUntilExpiry = Math.ceil((validTo.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      const issuer = cert.issuer?.CN || cert.issuer?.O || 'Unknown';
-
-      res.json({
-        valid: daysUntilExpiry > 0,
-        issuer,
-        validFrom: validFrom.toISOString(),
-        validTo: validTo.toISOString(),
-        daysUntilExpiry
-      });
-    });
-
-    sslReq.on('error', (e) => res.json({ valid: false, error: e.message }));
-    sslReq.on('timeout', () => { sslReq.destroy(); res.json({ valid: false, error: 'Timeout' }); });
-    sslReq.end();
-  } catch (e) {
-    res.json({ valid: false, error: e instanceof Error ? e.message : 'Unknown' });
-  }
+  const { getSSLCertificate } = await import('../api/_utils/sslLookup');
+  res.json(await getSSLCertificate(domain));
 });
 
 app.get('/api/dns', verifyToken, async (req, res) => {
   const domain = req.query.domain as string;
   if (!domain) return res.status(400).json({ error: 'Domain is required' });
-  {
-    const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
-    if (isBlockedHost(domain.replace(/^https?:\/\//, '').split('/')[0])) {
-      return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
-    }
+  const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
+  if (isBlockedHost(domain.replace(/^https?:\/\//, '').split('/')[0])) {
+    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
   }
 
   try {
-    const resolver = new dns.promises.Resolver();
-    resolver.setServers(['8.8.8.8', '1.1.1.1']);
-
-    const [a, mx, ns, txt, cname] = await Promise.allSettled([
-      resolver.resolve4(domain),
-      resolver.resolveMx(domain),
-      resolver.resolveNs(domain),
-      resolver.resolveTxt(domain),
-      resolver.resolveCname(domain).catch(() => [])
-    ]);
-
-    res.json({
-      a: a.status === 'fulfilled' ? a.value : [],
-      mx: mx.status === 'fulfilled' ? mx.value : [],
-      ns: ns.status === 'fulfilled' ? ns.value : [],
-      txt: txt.status === 'fulfilled' ? txt.value : [],
-      cname: cname.status === 'fulfilled' ? cname.value : []
-    });
+    const { getDNSInfo } = await import('../api/_utils/dnsLookup');
+    res.json(await getDNSInfo(domain));
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'DNS lookup failed' });
   }
@@ -230,11 +157,8 @@ app.get('/api/whois', verifyToken, async (req, res) => {
   const domain = req.query.domain as string;
   if (!domain) return res.status(400).json({ error: 'Domain is required' });
 
-  // Simple simulated WHOIS for local proxy
-  res.json({
-    expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    registrar: 'Local Simulation Registrar'
-  });
+  const { getWhoisInfo } = await import('../api/_utils/whoisLookup');
+  res.json(await getWhoisInfo(domain));
 });
 
 app.get('/api/gmb', verifyToken, async (req, res) => {
@@ -245,6 +169,18 @@ app.get('/api/gmb', verifyToken, async (req, res) => {
   const { lookupGmb } = await import('../api/_utils/gmbLookup');
   const result = await lookupGmb({ placeId, query });
   res.json(result);
+});
+
+app.get('/api/tech-detect', verifyToken, async (req, res) => {
+  const url = req.query.url as string;
+  if (!url) return res.status(400).json({ error: 'URL is required' });
+
+  try {
+    const { detectTechStack } = await import('../api/_utils/techLookup');
+    res.json(await detectTechStack(url));
+  } catch (e) {
+    res.status(200).json({ error: e instanceof Error ? e.message : 'Unknown error' });
+  }
 });
 
 app.get('/health', (req, res) => {

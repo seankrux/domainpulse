@@ -1,4 +1,4 @@
-import { DomainStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo } from '../types';
+import { DomainStatus, SSLStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo } from '../types';
 import { checkSSL } from './sslService';
 import { checkDomainExpiry } from './expiryService';
 import { checkDNS } from './dnsService';
@@ -174,13 +174,20 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
       throw new Error(`All endpoints unavailable for ${url}`);
     }
 
-    // Use the serviceConfig parameter for SSL/expiry/DNS/Tech calls
-    const [sslResult, expiryResult, dnsResult, techResult] = await Promise.all([
+    // Enrichment (SSL/expiry/DNS/Tech) is secondary to liveness: a failing
+    // sub-check must never downgrade an ALIVE domain to Error. Use allSettled
+    // so one rejected call can't sink the whole result.
+    const [sslSettled, expirySettled, dnsSettled, techSettled] = await Promise.allSettled([
       checkSSL(url, serviceConfig),
       checkDomainExpiry(url, serviceConfig),
       checkDNS(url, serviceConfig),
       detectTechStack(url, serviceConfig)
     ]);
+
+    const sslResult: SSLInfo = sslSettled.status === 'fulfilled' ? sslSettled.value : { status: SSLStatus.Unknown };
+    const expiryResult = expirySettled.status === 'fulfilled' ? expirySettled.value : { status: 'unknown' as const };
+    const dnsResult = dnsSettled.status === 'fulfilled' ? dnsSettled.value : undefined;
+    const techResult = techSettled.status === 'fulfilled' ? techSettled.value : { confidence: 'low' as const };
 
     return {
       ...domainResult,

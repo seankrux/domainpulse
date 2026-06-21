@@ -1,9 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import * as https from 'https';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
+import { detectTechStack } from './_utils/techLookup.js';
 import { config } from '../lib/config.js';
-import { parseTechFromHTML } from '../services/techDetectionService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const setHeaders = (headers: Record<string, string>) => {
@@ -65,36 +64,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       error: errorMessage
     });
   }
-}
-
-/**
- * Fetch website content and detect technology stack.
- */
-async function detectTechStack(url: string) {
-  return new Promise((resolve, reject) => {
-    https.get(url, { timeout: 10000 }, (res) => {
-      let data = '';
-
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      res.on('end', () => {
-        try {
-          // Get headers
-          const headers: Record<string, string> = {};
-          if (res.headers['x-powered-by']) headers['x-powered-by'] = res.headers['x-powered-by'] as string;
-          if (res.headers['server']) headers['server'] = res.headers['server'] as string;
-
-          // Parse HTML for tech detection
-          const techStack = parseTechFromHTML(data, headers);
-          resolve(techStack);
-        } catch (error) {
-          reject(error);
-        }
-      });
-    }).on('error', (error) => {
-      reject(error);
-    });
-  });
 }

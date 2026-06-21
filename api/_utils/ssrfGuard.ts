@@ -97,6 +97,16 @@ export async function validateOutboundUrlResolved(raw: string): Promise<{ ok: tr
   return { ok: true };
 }
 
+/**
+ * A domain is "up" if the server answered with any non-server-error status.
+ * A 401/403/405/429 etc. still proves the host is reachable and serving — only
+ * a 5xx (or no response at all) should read as DOWN. This avoids false
+ * "offline" results for sites that reject HEAD or block our user-agent.
+ */
+export function isReachableStatus(status: number): boolean {
+  return status > 0 && status < 500;
+}
+
 export interface SafeHeadResult {
   blocked?: boolean;
   reason?: string;
@@ -104,6 +114,35 @@ export interface SafeHeadResult {
   status: number;
   latency: number;
   error?: string;
+}
+
+/** Wire shape returned by the `/api/check` endpoint (Vercel fn + dev proxy). */
+export interface CheckResult {
+  status: 'ALIVE' | 'DOWN' | 'ERROR';
+  statusCode: number;
+  latency: number;
+  message?: string;
+}
+
+/**
+ * Map a {@link SafeHeadResult} to the public `/api/check` response shape.
+ *
+ * SINGLE SOURCE OF TRUTH for how a probe result becomes ALIVE/DOWN. Both the
+ * Vercel function (`api/check.ts`) and the dev proxy (`server/proxy.ts`) MUST
+ * use this so the two environments can never disagree. Liveness is `r.ok`,
+ * which is driven by {@link isReachableStatus} — see AGENTS.md §1–2.
+ *
+ * Note: `blocked` results (SSRF reject) are handled by the caller as HTTP 400,
+ * not here — this only maps a probe that actually ran.
+ */
+export function toCheckResult(r: SafeHeadResult): CheckResult {
+  const result: CheckResult = {
+    status: r.ok ? 'ALIVE' : 'DOWN',
+    statusCode: r.status,
+    latency: r.latency,
+  };
+  if (r.error) result.message = r.error;
+  return result;
 }
 
 /**
@@ -122,21 +161,36 @@ export async function safeHeadRequest(
     const v = await validateOutboundUrlResolved(current);
     if (!v.ok) return { blocked: true, reason: v.reason, ok: false, status: 0, latency: Date.now() - start };
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const doFetch = async (method: 'HEAD' | 'GET'): Promise<Response> => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(current, {
+          method,
+          redirect: 'manual',
+          signal: controller.signal,
+          headers: { 'User-Agent': userAgent },
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
     let resp: Response;
     try {
-      resp = await fetch(current, {
-        method: 'HEAD',
-        redirect: 'manual',
-        signal: controller.signal,
-        headers: { 'User-Agent': userAgent },
-      });
+      resp = await doFetch('HEAD');
+      // Some servers reject HEAD outright (405/501) — retry once with GET so a
+      // perfectly healthy site isn't reported as DOWN.
+      if (resp.status === 405 || resp.status === 501) {
+        try {
+          resp = await doFetch('GET');
+        } catch {
+          // keep the HEAD response if the GET retry fails
+        }
+      }
     } catch (error) {
-      clearTimeout(timer);
       return { ok: false, status: 0, latency: Date.now() - start, error: error instanceof Error ? error.message : 'fetch failed' };
     }
-    clearTimeout(timer);
 
     if (resp.status >= 300 && resp.status < 400) {
       const loc = resp.headers.get('location');
@@ -148,7 +202,7 @@ export async function safeHeadRequest(
       }
       continue;
     }
-    return { ok: resp.ok, status: resp.status, latency: Date.now() - start };
+    return { ok: isReachableStatus(resp.status), status: resp.status, latency: Date.now() - start };
   }
   return { ok: false, status: 0, latency: Date.now() - start, error: 'Too many redirects' };
 }

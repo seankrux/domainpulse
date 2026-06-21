@@ -1,15 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
-import { safeHeadRequest } from './_utils/ssrfGuard.js';
+import { safeHeadRequest, toCheckResult } from './_utils/ssrfGuard.js';
 import { config } from '../lib/config.js';
-
-interface CheckResult {
-  status: 'ALIVE' | 'DOWN' | 'ERROR';
-  statusCode: number;
-  latency: number;
-  message?: string;
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const setHeaders = (headers: Record<string, string>) => {
@@ -71,11 +64,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (r.blocked) {
     return res.status(400).json({ error: 'Blocked', message: r.reason });
   }
-  const result: CheckResult = {
-    status: r.ok ? 'ALIVE' : 'DOWN',
-    statusCode: r.status,
-    latency: r.latency
-  };
-  if (r.error) (result as CheckResult & { message?: string }).message = r.error;
-  return res.status(200).json(result);
+  return res.status(200).json(toCheckResult(r));
 }

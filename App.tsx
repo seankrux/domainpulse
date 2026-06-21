@@ -441,12 +441,12 @@ const App: React.FC = () => {
         case 'lastChecked': comparison = (a.lastChecked?.getTime() || 0) - (b.lastChecked?.getTime() || 0); break;
         case 'ssl': {
           const sslOrder = { [SSLStatus.Valid]: 0, [SSLStatus.Expiring]: 1, [SSLStatus.Expired]: 2, [SSLStatus.Invalid]: 3, [SSLStatus.Unknown]: 4 };
-          comparison = (sslOrder[a.ssl?.status || SSLStatus.Unknown] || 4) - (sslOrder[b.ssl?.status || SSLStatus.Unknown] || 4);
+          comparison = (sslOrder[a.ssl?.status || SSLStatus.Unknown] ?? 4) - (sslOrder[b.ssl?.status || SSLStatus.Unknown] ?? 4);
           break;
         }
         case 'expiry': {
           const expiryOrder = { active: 0, expiring: 1, expired: 2, unknown: 3 };
-          comparison = (expiryOrder[a.expiry?.status || 'unknown'] || 3) - (expiryOrder[b.expiry?.status || 'unknown'] || 3);
+          comparison = (expiryOrder[a.expiry?.status || 'unknown'] ?? 3) - (expiryOrder[b.expiry?.status || 'unknown'] ?? 3);
           break;
         }
       }

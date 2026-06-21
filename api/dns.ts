@@ -1,8 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import * as dns from 'dns';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
 import { isBlockedHost } from './_utils/ssrfGuard.js';
+import { getDNSInfo } from './_utils/dnsLookup.js';
 import { config } from '../lib/config.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -69,30 +69,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({
       error: errorMessage
     });
-  }
-}
-
-async function getDNSInfo(domain: string) {
-  const resolver = new dns.promises.Resolver();
-  resolver.setServers(['8.8.8.8', '1.1.1.1']); // Use public DNS for reliability
-
-  try {
-    const [a, mx, ns, txt, cname] = await Promise.allSettled([
-      resolver.resolve4(domain),
-      resolver.resolveMx(domain),
-      resolver.resolveNs(domain),
-      resolver.resolveTxt(domain),
-      resolver.resolveCname(domain).catch(() => []) // CNAME might not exist
-    ]);
-
-    return {
-      a: a.status === 'fulfilled' ? a.value : [],
-      mx: mx.status === 'fulfilled' ? mx.value : [],
-      ns: ns.status === 'fulfilled' ? ns.value : [],
-      txt: txt.status === 'fulfilled' ? txt.value : [],
-      cname: cname.status === 'fulfilled' ? cname.value : []
-    };
-  } catch {
-    throw new Error(`DNS resolution failed for ${domain}`);
   }
 }
