@@ -135,7 +135,9 @@ export const detectTechStack = async (url: string, config?: ServiceConfig): Prom
         }
 
         if (response.ok) {
-          return await response.json();
+          const data = await response.json();
+          if (data?.error) continue;
+          return data;
         }
       } catch (e) {
         if (e instanceof Error && e.message === 'Unauthorized') {
