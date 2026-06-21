@@ -41,9 +41,9 @@ export default defineConfig({
     outDir: 'dist-site',
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          icons: ['lucide-react']
+        manualChunks: (id) => {
+          if (id.includes('react') && !id.includes('recharts')) return 'vendor';
+          if (id.includes('lucide-react')) return 'icons';
         }
       }
     },
