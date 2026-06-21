@@ -112,8 +112,13 @@ Status colours live in `theme/statusColors.ts` (`STATUS_COLORS`) and are the
 
 ## Enrichment endpoints — one implementation each
 
-`ssl`, `dns`, `whois`, `gmb` each have a Vercel function (`api/*.ts`) AND a dev
-proxy route (`server/proxy.ts`). The actual lookup logic lives ONCE in
-`api/_utils/{sslLookup,dnsLookup,whoisLookup,gmbLookup}.ts`. Both sides import
-it. **Never** reimplement a lookup inline in an endpoint or the proxy — extend
-the shared util so prod and dev can't diverge.
+`ssl`, `dns`, `whois`, `gmb`, `tech-detect` each have a Vercel function
+(`api/*.ts`) AND a dev proxy route (`server/proxy.ts`). The actual lookup logic
+lives ONCE in `api/_utils/{sslLookup,dnsLookup,whoisLookup,gmbLookup,techLookup}.ts`.
+Both sides import it. **Never** reimplement a lookup inline in an endpoint or
+the proxy — extend the shared util so prod and dev can't diverge. The proxy
+must serve every `/api/*` route the frontend services call
+(`check, ssl, dns, whois, gmb, tech-detect`) or that feature breaks in dev.
+
+All outbound-fetching utils (`check`, `tech-detect`) go through the SSRF guard
+(`validateOutboundUrlResolved` / `safeHeadRequest`). Keep it that way.

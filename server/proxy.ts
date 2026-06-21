@@ -171,6 +171,18 @@ app.get('/api/gmb', verifyToken, async (req, res) => {
   res.json(result);
 });
 
+app.get('/api/tech-detect', verifyToken, async (req, res) => {
+  const url = req.query.url as string;
+  if (!url) return res.status(400).json({ error: 'URL is required' });
+
+  try {
+    const { detectTechStack } = await import('../api/_utils/techLookup');
+    res.json(await detectTechStack(url));
+  } catch (e) {
+    res.status(200).json({ error: e instanceof Error ? e.message : 'Unknown error' });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
