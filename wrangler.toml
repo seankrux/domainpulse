@@ -1,4 +1,5 @@
 name = "domainpulse"
+main = "cf-worker.ts"
 compatibility_date = "2025-01-01"
 
 [build]
@@ -6,4 +7,4 @@ command = "npm ci --legacy-peer-deps && npm run build:app"
 
 [assets]
 directory = "./dist"
-not_found_handling = "single-page-application"
+binding = "ASSETS"
