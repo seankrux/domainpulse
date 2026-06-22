@@ -176,8 +176,9 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const addButton = page.locator('button[aria-label="Add webhook"]');
       await addButton.click();
       
-      // Find the webhook and toggle it
+      // Find the webhook and toggle it — buttons are opacity-0 until hover
       const webhookRow = page.locator('text=Toggle Test').locator('..').locator('..');
+      await webhookRow.hover();
       const toggleButton = webhookRow.locator('button').first();
       await toggleButton.click();
     });
@@ -195,8 +196,9 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const addButton = page.locator('button[aria-label="Add webhook"]');
       await addButton.click();
       
-      // Remove the webhook
+      // Remove the webhook — buttons are opacity-0 until hover
       const webhookRow = page.locator('text=Remove Test').locator('..').locator('..');
+      await webhookRow.hover();
       const deleteButton = webhookRow.locator('button').nth(1);
       await deleteButton.click();
       
