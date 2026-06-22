@@ -26,7 +26,7 @@ export default defineConfig({
     // Local: use dev server for live reload.
     command: process.env.CI ? 'npm run preview:all' : 'npm run dev:all',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 120 * 1000,
     stdout: 'pipe',
     stderr: 'pipe',
