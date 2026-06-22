@@ -68,30 +68,34 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     else if (cleanStatus === 'Checking...') filterOption = 'Unknown'; // Or handle Checking differently if needed
     else filterOption = 'Unknown';
 
+    // Status option values: ALL, UP, DOWN, UNKNOWN, CHECKING
+    const statusValueMap: Record<string, string> = { 'Alive': 'UP', 'Down': 'DOWN', 'Unknown': 'UNKNOWN' };
+
     if (cleanStatus !== 'Checking...') {
-        await page.selectOption('[data-testid="status-filter"]', { label: filterOption });
+        await page.selectOption('[data-testid="status-filter"]', { value: statusValueMap[filterOption] ?? 'UNKNOWN' });
         await expect(domainRow).toBeVisible();
-        
+
         // 4. Filter by a DIFFERENT status
         const otherOption = filterOption === 'Alive' ? 'Down' : 'Alive';
-        await page.selectOption('[data-testid="status-filter"]', { label: otherOption });
+        await page.selectOption('[data-testid="status-filter"]', { value: statusValueMap[otherOption] ?? 'UNKNOWN' });
         await expect(domainRow).not.toBeVisible();
     }
-    
+
     // Reset to All
-    await page.selectOption('[data-testid="status-filter"]', { label: 'All' });
+    await page.selectOption('[data-testid="status-filter"]', { value: 'ALL' });
 
     // Group Filter
     // First, let's assign a group to our domain
-    await domainRow.locator('button:has-text("Group")').click();
+    await domainRow.locator('button[title="Change Group"]').click();
     await page.locator('button:has-text("Personal")').click();
-    
-    await page.selectOption('[data-testid="group-filter"]', { label: 'Personal' });
+
+    // Group option labels include counts "Personal (N)" — use regex match
+    await page.selectOption('[data-testid="group-filter"]', { label: /^Personal/ });
     await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).toBeVisible();
-    
-    await page.selectOption('[data-testid="group-filter"]', { label: 'Production' });
+
+    await page.selectOption('[data-testid="group-filter"]', { label: /^Production/ });
     await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).not.toBeVisible();
-    await page.selectOption('[data-testid="group-filter"]', { label: 'All' });
+    await page.selectOption('[data-testid="group-filter"]', { value: 'ALL' });
   });
 
   test('group management should work', async ({ page }) => {

@@ -876,15 +876,16 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     });
 
     test('buttons should have accessible names', async ({ page }) => {
-      // All icon buttons should have aria-labels or titles
-      const iconButtons = page.locator('button svg').all();
-      
-      for (const button of await iconButtons) {
-        const parentButton = button.locator('..');
-        const hasAriaLabel = await parentButton.getAttribute('aria-label');
-        const hasTitle = await parentButton.getAttribute('title');
-        
-        // Each button should have either aria-label or title
+      // Icon-only buttons must have aria-label or title.
+      // Text buttons (visible text alongside icon) already have an accessible name — skip them.
+      for (const svgEl of await page.locator('button svg').all()) {
+        const btn = svgEl.locator('xpath=ancestor::button[1]');
+        // innerText excludes SVG content — non-empty means the button has a visible text label
+        const innerText = (await btn.innerText()).trim();
+        if (innerText.length > 0) continue;
+
+        const hasAriaLabel = await btn.getAttribute('aria-label');
+        const hasTitle = await btn.getAttribute('title');
         expect(hasAriaLabel || hasTitle).toBeTruthy();
       }
     });
