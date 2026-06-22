@@ -177,9 +177,10 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await addButton.click();
       
       // Find the webhook and toggle it — buttons are opacity-0 until hover
-      const webhookRow = page.locator('text=Toggle Test').locator('..').locator('..');
+      // Go up 3 levels: p → div.overflow-hidden → div.flex.items-center → div.group (has the buttons)
+      const webhookRow = page.locator('text=Toggle Test').locator('..').locator('..').locator('..');
       await webhookRow.hover();
-      const toggleButton = webhookRow.locator('button').first();
+      const toggleButton = webhookRow.locator('button[title="Enable"], button[title="Disable"]');
       await toggleButton.click();
     });
 
@@ -197,9 +198,10 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await addButton.click();
       
       // Remove the webhook — buttons are opacity-0 until hover
-      const webhookRow = page.locator('text=Remove Test').locator('..').locator('..');
+      // Go up 3 levels: p → div.overflow-hidden → div.flex.items-center → div.group (has the buttons)
+      const webhookRow = page.locator('text=Remove Test').locator('..').locator('..').locator('..');
       await webhookRow.hover();
-      const deleteButton = webhookRow.locator('button').nth(1);
+      const deleteButton = webhookRow.locator('button[title="Remove"]');
       await deleteButton.click();
       
       // Verify removal
@@ -271,12 +273,12 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const editButton = page.locator(`tr:has-text("${editDomain}") button[title="Edit domain"]`);
       await editButton.click();
       
-      // Change URL
-      const editInput = page.locator(`tr:has-text("${editDomain}") input[type="text"]`);
+      // Change URL — in edit mode the tr no longer contains the domain text (it's in an input value)
+      const editInput = page.locator('tbody input[type="text"]');
       await editInput.fill('newdomain.com');
-      
+
       // Save
-      const saveButton = page.locator(`tr:has-text("${editDomain}") button[title="Save"]`);
+      const saveButton = page.locator('tbody button[title="Save"]');
       await saveButton.click();
     });
 
@@ -293,8 +295,8 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const checkButton = page.locator(`tr:has-text("${checkDomain}") button[title="Check status"]`);
       await checkButton.click();
       
-      // Should show "Checking..." status
-      await expect(page.locator(`tr:has-text("${checkDomain}") text=Checking...`)).toBeVisible({ timeout: 5000 });
+      // Verify check was triggered: status leaves Unknown state
+      await expect(page.locator('tr').filter({ hasText: checkDomain })).not.toContainText('Unknown', { timeout: 15000 });
     });
 
     test('should remove domain', async ({ page }) => {
@@ -420,7 +422,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await input.fill(`all2-${Math.random().toString(36).slice(2, 6)}.com`);
       await page.locator('button:has-text("Track")').click();
       
-      await expect(page.locator('text=all1')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('tr').filter({ hasText: 'all1' })).toBeVisible({ timeout: 15000 });
       
       // Click select all checkbox in header
       const headerCheckbox = page.locator('thead input[type="checkbox"]');
@@ -447,8 +449,8 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const checkButton = page.locator('button[title="Check Selected"]');
       await checkButton.click();
       
-      // Should show checking status
-      await expect(page.locator(`tr:has-text("${checkDomain}") text=Checking...`)).toBeVisible({ timeout: 5000 });
+      // Verify check was triggered: status leaves Unknown state
+      await expect(page.locator('tr').filter({ hasText: checkDomain })).not.toContainText('Unknown', { timeout: 15000 });
     });
 
     test('should remove selected domains', async ({ page }) => {
@@ -486,15 +488,15 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const checkbox = page.locator(`tr:has-text("${groupDomain}") input[type="checkbox"]`);
       await checkbox.click();
       
-      // Click assign group dropdown
+      // Hover assign group button to open the CSS hover-only dropdown
       const assignButton = page.locator('button[title="Assign Group"]');
-      await assignButton.click();
-      
-      // Select a group
+      await assignButton.hover();
+
+      // Select a group (dropdown becomes visible on hover)
       await page.locator('button:has-text("Personal")').click();
-      
+
       // Verify group badge appears
-      await expect(page.locator(`tr:has-text("${groupDomain}") text=Personal`)).toBeVisible();
+      await expect(page.locator('tr').filter({ hasText: groupDomain }).filter({ hasText: 'Personal' })).toBeVisible();
     });
   });
 
@@ -533,22 +535,22 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       // Wait for status to update from "Checking..."
       await page.waitForSelector(`tr:has-text("${statusDomain}")`, { timeout: 20000 });
       
-      // Filter by status
+      // Filter by status — option labels include counts like "All (1)", use value instead
       const statusSelect = page.locator('[data-testid="status-filter"]');
-      await statusSelect.selectOption({ label: 'All' });
+      await statusSelect.selectOption({ value: 'ALL' });
     });
 
     test('should filter by SSL status', async ({ page }) => {
       const sslSelect = page.locator('[data-testid="ssl-filter"]');
-      await sslSelect.selectOption({ label: 'All' });
-      
+      await sslSelect.selectOption({ value: 'ALL' });
+
       const selectedValue = await sslSelect.inputValue();
       expect(selectedValue).toBe('ALL');
     });
 
     test('should filter by group', async ({ page }) => {
       const groupSelect = page.locator('[data-testid="group-filter"]');
-      await groupSelect.selectOption({ label: 'All' });
+      await groupSelect.selectOption({ value: 'ALL' });
     });
 
     test('should sort by different fields', async ({ page }) => {
@@ -615,8 +617,8 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const nameInput = modal.locator('input[placeholder*="Production, Personal"]');
       await nameInput.fill(groupName);
       
-      // Select color
-      const colorButton = modal.locator('[role="button"]').first();
+      // Select color — color swatch buttons have title="<hex>" e.g. "#ef4444"
+      const colorButton = modal.locator('button[title^="#"]').first();
       await colorButton.click();
       
       // Save
@@ -644,17 +646,18 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await nameInput.fill(editGroup);
       await modal.locator('button:has-text("Save Group")').click();
       
-      // Edit the group
+      // Edit the group — Edit name button is opacity-0 until hover
       const groupRow = modal.locator(`text=${editGroup}`).locator('..');
+      await groupRow.hover();
       const editButton = groupRow.locator('button[title="Edit name"]');
       await editButton.click();
-      
-      // Change name
-      const editInput = groupRow.locator('input[type="text"]');
+
+      // Change name — after clicking Edit, the span is replaced by an input in the modal
+      const editInput = modal.locator('input[type="text"]');
       await editInput.fill(`${editGroup}-Updated`);
-      
+
       // Save
-      const saveButton = groupRow.locator('button[title="Save"]');
+      const saveButton = modal.locator('button[title="Save"]');
       await saveButton.click();
       
       // Verify update
@@ -700,15 +703,15 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await page.locator('button:has-text("Track")').click();
       await expect(page.locator(`tr:has-text("${domain}")`)).toBeVisible({ timeout: 15000 });
       
-      // Click group button on domain row
-      const groupButton = page.locator(`tr:has-text("${domain}") button:has-text("Group")`);
+      // Click group button on domain row (title="Change Group")
+      const groupButton = page.locator(`tr:has-text("${domain}") button[title="Change Group"]`);
       await groupButton.click();
-      
-      // Select a group
+
+      // Select a group from the GroupPicker popover
       await page.locator('button:has-text("Personal")').click();
-      
-      // Verify group badge appears
-      await expect(page.locator(`tr:has-text("${domain}") text=Personal`)).toBeVisible();
+
+      // Verify group badge appears — use filter chaining to avoid CSS compound selector issues
+      await expect(page.locator('tr').filter({ hasText: domain }).filter({ hasText: 'Personal' })).toBeVisible();
     });
   });
 
@@ -752,7 +755,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await input.fill(`checkall2-${Math.random().toString(36).slice(2, 6)}.com`);
       await page.locator('button:has-text("Track")').click();
       
-      await expect(page.locator('text=checkall1')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('tr').filter({ hasText: 'checkall1' })).toBeVisible({ timeout: 15000 });
       
       // Click Check All
       const checkAllButton = page.locator('button:has-text("Check All")');
@@ -770,7 +773,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const input = page.locator('input[placeholder*="Enter domain to monitor"]');
       await input.fill(`progress-${Math.random().toString(36).slice(2, 6)}.com`);
       await page.locator('button:has-text("Track")').click();
-      await expect(page.locator('tbody tr')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15000 });
 
       const checkAllButton = page.locator('button:has-text("Check All")');
       await checkAllButton.click();
@@ -812,8 +815,8 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
 
   test.describe('Keyboard Shortcuts', () => {
     test('should focus search with Cmd+K', async ({ page }) => {
-      // Press Cmd+K
-      await page.keyboard.press('Meta+K');
+      // Press Cmd+K (lowercase k — Playwright sends key='K' for Meta+K but 'k' for Meta+k)
+      await page.keyboard.press('Meta+k');
       
       // Search input should be focused
       const searchInput = page.locator('input[placeholder*="Filter domains"]');
@@ -825,7 +828,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const input = page.locator('input[placeholder*="Enter domain to monitor"]');
       await input.fill(`shortcut-${Math.random().toString(36).slice(2, 6)}.com`);
       await page.locator('button:has-text("Track")').click();
-      await expect(page.locator('tbody tr')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15000 });
 
       // Cmd+Enter calls checkAllDomains() — shows spinner / "Checking domains..."
       await page.keyboard.press('Meta+Enter');

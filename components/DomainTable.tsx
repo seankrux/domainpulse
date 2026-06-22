@@ -237,7 +237,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
                 if (e.key === "Escape") onCancelEdit();
               }}
             />
-            <button onClick={() => onSaveEdit(domain.id)} className="p-1.5 rounded-md bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50"><Check size={14} /></button>
+            <button onClick={() => onSaveEdit(domain.id)} title="Save" className="p-1.5 rounded-md bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50"><Check size={14} /></button>
             <button onClick={onCancelEdit} className="p-1.5 rounded-md bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50"><X size={14} /></button>
           </div>
         ) : (

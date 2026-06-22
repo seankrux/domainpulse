@@ -652,7 +652,7 @@ const App: React.FC = () => {
           <div className="bg-zinc-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-zinc-800" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-zinc-100">History - {viewingHistory.url}</h2>
-              <button onClick={() => setViewingHistoryId(null)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-200 transition-colors"><X size={20} /></button>
+              <button onClick={() => setViewingHistoryId(null)} aria-label="Close" className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-200 transition-colors"><X size={20} /></button>
             </div>
             <div className="p-6">
               <HistoryChart domain={viewingHistory} />
