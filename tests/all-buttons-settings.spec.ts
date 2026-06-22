@@ -50,7 +50,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       
       // Verify settings sections
       await expect(page.locator('text=General')).toBeVisible();
-      await expect(page.locator('text=Webhooks')).toBeVisible();
+      await expect(page.locator('h4:has-text("Webhooks")')).toBeVisible();
       await expect(page.locator('text=Advanced Monitoring')).toBeVisible();
       
       // Close settings using X button
@@ -146,7 +146,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await page.getByTestId('settings-button').click();
       
       // Fill webhook form
-      const webhookName = page.locator('input[placeholder="Name (e.g. Alerts"]');
+      const webhookName = page.locator('input[placeholder="Name (e.g. Alerts)"]');
       await webhookName.fill('Test Webhook');
       
       const webhookType = page.locator('select').nth(2);
@@ -167,7 +167,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await page.getByTestId('settings-button').click();
       
       // Add a webhook first
-      const webhookName = page.locator('input[placeholder="Name (e.g. Alerts"]');
+      const webhookName = page.locator('input[placeholder="Name (e.g. Alerts)"]');
       await webhookName.fill('Toggle Test');
       
       const webhookUrl = page.locator('input[placeholder="Webhook URL"]');
@@ -186,7 +186,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await page.getByTestId('settings-button').click();
       
       // Add a webhook
-      const webhookName = page.locator('input[placeholder="Name (e.g. Alerts"]');
+      const webhookName = page.locator('input[placeholder="Name (e.g. Alerts)"]');
       await webhookName.fill('Remove Test');
       
       const webhookUrl = page.locator('input[placeholder="Webhook URL"]');
@@ -533,7 +533,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await page.waitForSelector(`tr:has-text("${statusDomain}")`, { timeout: 20000 });
       
       // Filter by status
-      const statusSelect = page.locator('select:near(span:text("Status:"))');
+      const statusSelect = page.locator('select:near(span:text("Status"))');
       await statusSelect.selectOption({ label: 'All' });
     });
 
@@ -546,7 +546,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     });
 
     test('should filter by group', async ({ page }) => {
-      const groupSelect = page.locator('select:near(span:text("Group:"))');
+      const groupSelect = page.locator('select:near(span:text("Group"))');
       await groupSelect.selectOption({ label: 'All' });
     });
 

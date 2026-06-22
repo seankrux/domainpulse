@@ -69,29 +69,29 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     else filterOption = 'Unknown';
 
     if (cleanStatus !== 'Checking...') {
-        await page.selectOption('select:near(span:text("Status:"))', { label: filterOption });
+        await page.selectOption('select:near(span:text("Status"))', { label: filterOption });
         await expect(domainRow).toBeVisible();
         
         // 4. Filter by a DIFFERENT status
         const otherOption = filterOption === 'Alive' ? 'Down' : 'Alive';
-        await page.selectOption('select:near(span:text("Status:"))', { label: otherOption });
+        await page.selectOption('select:near(span:text("Status"))', { label: otherOption });
         await expect(domainRow).not.toBeVisible();
     }
     
     // Reset to All
-    await page.selectOption('select:near(span:text("Status:"))', { label: 'All' });
+    await page.selectOption('select:near(span:text("Status"))', { label: 'All' });
 
     // Group Filter
     // First, let's assign a group to our domain
     await domainRow.locator('button:has-text("Group")').click();
     await page.locator('button:has-text("Personal")').click();
     
-    await page.selectOption('select:near(span:text("Group:"))', { label: 'Personal' });
+    await page.selectOption('select:near(span:text("Group"))', { label: 'Personal' });
     await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).toBeVisible();
     
-    await page.selectOption('select:near(span:text("Group:"))', { label: 'Production' });
+    await page.selectOption('select:near(span:text("Group"))', { label: 'Production' });
     await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).not.toBeVisible();
-    await page.selectOption('select:near(span:text("Group:"))', { label: 'All' });
+    await page.selectOption('select:near(span:text("Group"))', { label: 'All' });
   });
 
   test('group management should work', async ({ page }) => {
