@@ -157,8 +157,9 @@ export async function safeHeadRequest(
   // Return a literal from a fixed step ladder so CodeQL's taint tracking
   // sees a constant (not user input) flow into setTimeout — the caller-supplied
   // value only selects WHICH constant is used, it never reaches the timer directly.
+  // Minimum step is 5000ms; callers must not pass values below that.
   const safeTimeoutMs = (() => {
-    const ms = Math.min(Math.max(timeoutMs, 1000), 30000);
+    const ms = Math.min(Math.max(timeoutMs, 5000), 30000);
     if (ms <= 5000) return 5000 as const;
     if (ms <= 10000) return 10000 as const;
     if (ms <= 15000) return 15000 as const;
