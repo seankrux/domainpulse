@@ -130,17 +130,9 @@ test.describe('Chrome DevTools Audit', () => {
       bestPracticeIssues.push('Not using HTTPS');
     }
 
-    // Check for deprecated APIs
-    const deprecatedAPIs = await page.evaluate(() => {
-      const deprecated = [];
-      if ('webkitRequestFileSystem' in window) deprecated.push('webkitRequestFileSystem');
-      if ('mozRequestFileSystem' in window) deprecated.push('mozRequestFileSystem');
-      return deprecated;
-    });
-
-    if (deprecatedAPIs.length > 0) {
-      bestPracticeIssues.push(`Using deprecated APIs: ${deprecatedAPIs.join(', ')}`);
-    }
+    // Deprecated-API presence is a browser capability check, not an app usage check.
+    // Chromium exposes webkitRequestFileSystem at the platform level regardless of app code,
+    // so we skip this check to avoid environment-dependent false positives.
 
     auditResults.push({
       name: 'Best Practices',

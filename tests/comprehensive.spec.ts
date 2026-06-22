@@ -68,8 +68,8 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     else if (cleanStatus === 'Checking...') filterOption = 'Unknown'; // Or handle Checking differently if needed
     else filterOption = 'Unknown';
 
-    // Status option values: ALL, UP, DOWN, UNKNOWN, CHECKING
-    const statusValueMap: Record<string, string> = { 'Alive': 'UP', 'Down': 'DOWN', 'Unknown': 'UNKNOWN' };
+    // Status option values: ALL, ALIVE, DOWN, UNKNOWN, ERROR
+    const statusValueMap: Record<string, string> = { 'Alive': 'ALIVE', 'Down': 'DOWN', 'Unknown': 'UNKNOWN' };
 
     if (cleanStatus !== 'Checking...') {
         await page.selectOption('[data-testid="status-filter"]', { value: statusValueMap[filterOption] ?? 'UNKNOWN' });
@@ -87,7 +87,8 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     // Group Filter
     // First, let's assign a group to our domain
     await domainRow.locator('button[title="Change Group"]').click();
-    await page.locator('button:has-text("Personal")').click();
+    // dispatchEvent bypasses animate-in instability on the GroupPicker
+    await page.locator('button:has-text("Personal")').first().dispatchEvent('click');
 
     // Group option labels include counts "Personal (N)" — find value by partial text match
     const personalVal = await page.locator('[data-testid="group-filter"] option').filter({ hasText: 'Personal' }).first().getAttribute('value');

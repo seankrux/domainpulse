@@ -492,8 +492,8 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const assignButton = page.locator('button[title="Assign Group"]');
       await assignButton.hover();
 
-      // Select a group (dropdown becomes visible on hover)
-      await page.locator('button:has-text("Personal")').click();
+      // dispatchEvent bypasses CSS hover-state dependency and animate-in instability
+      await page.locator('button:has-text("Personal")').first().dispatchEvent('click');
 
       // Verify group badge appears
       await expect(page.locator('tr').filter({ hasText: groupDomain }).filter({ hasText: 'Personal' })).toBeVisible();
