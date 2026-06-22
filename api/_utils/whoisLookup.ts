@@ -24,10 +24,14 @@ export interface WhoisResult {
 export function getWhoisInfo(domain: string): Promise<WhoisResult> {
   return new Promise((resolve) => {
     // Try multiple WHOIS APIs in order of reliability
+    // Encode the user-supplied domain so it can only ever be a path/query
+    // value on these fixed third-party hosts — never break out of the path or
+    // alter the request target.
+    const d = encodeURIComponent(domain);
     const apiUrls = [
-      `https://whoisapi.domainsdb.eu/whois/${domain}`,
-      `https://whois.domaintools.com/whois/${domain}`,
-      `https://api.whoapi.com/?domain=${domain}&r=whois`,
+      `https://whoisapi.domainsdb.eu/whois/${d}`,
+      `https://whois.domaintools.com/whois/${d}`,
+      `https://api.whoapi.com/?domain=${d}&r=whois`,
     ];
 
     let lastError: Error | null = null;

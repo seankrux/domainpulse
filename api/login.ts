@@ -68,7 +68,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const checkHash = crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
 
-  if (checkHash === hash) {
+  const hashesMatch = checkHash.length === hash.length &&
+    crypto.timingSafeEqual(Buffer.from(checkHash, 'hex'), Buffer.from(hash, 'hex'));
+  if (hashesMatch) {
     const { token, expiresAt } = generateToken();
     setHeaders(corsHeaders);
     res.json({ token, expiresAt });

@@ -51,47 +51,57 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     await searchInput.clear();
 
     // Status Filter (Robust)
-    // 1. Wait for domain to be visible in the list
+    // 1. Wait for domain row and for it to leave Checking state (max 15s)
     const domainRow = page.locator(`tr:has-text("${uniqueDomain}")`);
     await expect(domainRow).toBeVisible();
+    await expect(domainRow.locator('td').nth(2)).not.toContainText('Checking...', { timeout: 15000 }).catch(() => {});
 
-    // 2. Get the actual status text from the row
-    // The status is in the 3rd column (index 2)
+    // 2. Read the stable status text from the 3rd column (index 2)
     const statusText = await domainRow.locator('td').nth(2).textContent();
-    const cleanStatus = statusText?.trim() || 'Unknown';
-    
-    // 3. Filter by the ACTUAL status
-    // Note: If the status is "200 OK" or similar, we map it to "Alive" for the dropdown
-    let filterOption = cleanStatus;
-    if (cleanStatus.includes('200') || cleanStatus === 'Alive') filterOption = 'Alive';
-    else if (cleanStatus === 'Down' || cleanStatus.includes('500') || cleanStatus.includes('404')) filterOption = 'Down';
-    else if (cleanStatus === 'Checking...') filterOption = 'Unknown'; // Or handle Checking differently if needed
-    else filterOption = 'Unknown';
+    const cleanStatus = statusText?.trim() || '';
 
-    if (cleanStatus !== 'Checking...') {
-        await page.selectOption('select:near(span:text("Status:"))', { label: filterOption });
-        await expect(domainRow).toBeVisible();
-        
-        // 4. Filter by a DIFFERENT status
-        const otherOption = filterOption === 'Alive' ? 'Down' : 'Alive';
-        await page.selectOption('select:near(span:text("Status:"))', { label: otherOption });
+    // 3. Map display text → filter dropdown value (covers all DomainStatus enum values)
+    const statusValueMap: Record<string, string> = {
+      'Alive': 'ALIVE', '200 OK': 'ALIVE',
+      'Down': 'DOWN',
+      'Unknown': 'UNKNOWN',
+      'Error': 'ERROR',
+    };
+    // HTTP numeric codes (e.g. "301", "500") → Alive or Down based on range
+    let filterValue: string | null = statusValueMap[cleanStatus] ?? null;
+    if (!filterValue) {
+      const code = parseInt(cleanStatus, 10);
+      if (!isNaN(code)) filterValue = code < 400 ? 'ALIVE' : 'DOWN';
+    }
+
+    if (filterValue && cleanStatus !== 'Checking...') {
+        await page.selectOption('[data-testid="status-filter"]', { value: filterValue });
+        await expect(domainRow).toBeVisible({ timeout: 5000 });
+
+        // 4. Filter by a DIFFERENT status that definitely excludes this domain
+        const otherValue = filterValue === 'ALIVE' ? 'DOWN' : 'ALIVE';
+        await page.selectOption('[data-testid="status-filter"]', { value: otherValue });
         await expect(domainRow).not.toBeVisible();
     }
-    
+
     // Reset to All
-    await page.selectOption('select:near(span:text("Status:"))', { label: 'All' });
+    await page.selectOption('[data-testid="status-filter"]', { value: 'ALL' });
 
     // Group Filter
     // First, let's assign a group to our domain
-    await domainRow.locator('button:has-text("Group")').click();
-    await page.locator('button:has-text("Personal")').click();
-    
-    await page.selectOption('select:near(span:text("Group:"))', { label: 'Personal' });
+    await domainRow.locator('button[title="Change Group"]').click();
+    // dispatchEvent bypasses animate-in instability on the GroupPicker
+    await page.locator('button:has-text("Personal")').first().dispatchEvent('click');
+
+    // Group option labels include counts "Personal (N)" — find value by partial text match
+    const personalVal = await page.locator('[data-testid="group-filter"] option').filter({ hasText: 'Personal' }).first().getAttribute('value');
+    await page.selectOption('[data-testid="group-filter"]', personalVal!);
     await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).toBeVisible();
-    
-    await page.selectOption('select:near(span:text("Group:"))', { label: 'Production' });
+
+    const productionVal = await page.locator('[data-testid="group-filter"] option').filter({ hasText: 'Production' }).first().getAttribute('value');
+    await page.selectOption('[data-testid="group-filter"]', productionVal!);
     await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).not.toBeVisible();
-    await page.selectOption('select:near(span:text("Group:"))', { label: 'All' });
+    await page.selectOption('[data-testid="group-filter"]', { value: 'ALL' });
   });
 
   test('group management should work', async ({ page }) => {

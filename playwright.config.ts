@@ -2,15 +2,17 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: ['**/unit/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    permissions: ['clipboard-read', 'clipboard-write'],
   },
   projects: [
     {
@@ -20,9 +22,11 @@ export default defineConfig({
   ],
   // Start the server before running tests
   webServer: {
-    command: 'npm run dev:all',
+    // CI: serve pre-built static output (faster, no HMR memory pressure).
+    // Local: use dev server for live reload.
+    command: process.env.CI ? 'npm run preview:all' : 'npm run dev:all',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 120 * 1000,
     stdout: 'pipe',
     stderr: 'pipe',

@@ -150,10 +150,16 @@ export const saveDomains = (domains: Domain[]): void => {
     localStorage.setItem(STORAGE_KEY, serialized);
   } catch (error) {
     if (error instanceof Error && error.name === 'QuotaExceededError') {
-      logger.error('LocalStorage quota exceeded! Clearing old history...');
-      const domains = loadDomains();
-      const trimmed = domains.map(d => ({ ...d, history: d.history.slice(-5) }));
-      saveDomains(trimmed);
+      logger.error('LocalStorage quota exceeded! Clearing all history as last resort...');
+      try {
+        // Non-recursive fallback: strip all history and write directly
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const existing: StoredDomain[] = raw ? JSON.parse(raw) : [];
+        const stripped = existing.map(d => ({ ...d, history: [] }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped));
+      } catch {
+        logger.error('Failed to recover from QuotaExceededError — localStorage may be full.');
+      }
     } else {
       logger.error('Failed to save domains to localStorage:', error);
     }

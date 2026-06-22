@@ -102,7 +102,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <Settings size={20} className="text-emerald-400" />
           Settings
         </h3>
-        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors">
+        <button onClick={onClose} aria-label="Close" className="text-zinc-500 hover:text-zinc-200 transition-colors">
           <X size={20} />
         </button>
       </div>
@@ -316,6 +316,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
                 <button
                   onClick={addWebhook}
+                  aria-label="Add webhook"
                   disabled={!newWebhook.name || !newWebhook.url}
                   className="bg-emerald-500 hover:bg-emerald-400 text-white p-2 rounded-lg disabled:opacity-50 transition-colors"
                 >

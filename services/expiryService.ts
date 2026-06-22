@@ -1,5 +1,6 @@
 import { DomainExpiry, ServiceConfig } from '../types';
 import { logger } from '../utils/logger';
+import { getSessionToken } from '../utils/authSession';
 
 interface WhoisApiResponse {
   expiryDate?: string;
@@ -15,19 +16,6 @@ interface WhoisApiResponse {
 }
 
 const DEFAULT_PROXY_URL = 'http://localhost:3001';
-const AUTH_SESSION_KEY = 'domainpulse_auth_session';
-
-const getStoredToken = (): string | null => {
-  try {
-    const storedSession = localStorage.getItem(AUTH_SESSION_KEY);
-    if (!storedSession) return null;
-    const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
-    if (!parsed?.token || !parsed.expiresAt || parsed.expiresAt <= Date.now()) return null;
-    return parsed.token;
-  } catch {
-    return null;
-  }
-};
 
 /**
  * Check domain expiry information using WHOIS API.
@@ -38,9 +26,9 @@ export const checkDomainExpiry = async (domain: string, config?: ServiceConfig):
   // Determine proxy URL and token
   const proxyUrl = config?.proxyUrl || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_URL) || DEFAULT_PROXY_URL;
   let token = config?.authToken;
-  
-  if (!token && typeof localStorage !== 'undefined') {
-    token = getStoredToken() || undefined;
+
+  if (!token) {
+    token = getSessionToken() || undefined;
   }
 
   try {

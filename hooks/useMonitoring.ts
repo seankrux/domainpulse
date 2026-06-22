@@ -3,6 +3,7 @@ import { Domain, DomainStatus, StatusRecord, ServiceConfig, GmbStatus } from '..
 import { checkDomainWithSSL } from '../services/domainService';
 import { checkGmb } from '../services/gmbService';
 import { logger } from '../utils/logger';
+import { getSessionToken } from '../utils/authSession';
 
 interface MonitoringHookProps {
   domains: Domain[];
@@ -65,19 +66,9 @@ export const useMonitoring = ({
       idsToCheck.has(d.id) ? { ...d, status: DomainStatus.Checking } : d
     ));
 
-    // Get auth token and proxy URL
-    let authToken = '';
-    const storedSession = sessionStorage.getItem('domainpulse_auth_session');
-    if (storedSession) {
-      try {
-        const session = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
-        if (session?.token && session.expiresAt && session.expiresAt > Date.now()) {
-          authToken = session.token;
-        }
-      } catch {
-        localStorage.removeItem('domainpulse_auth_session');
-      }
-    }
+    // Get auth token (must be read on the main thread — the worker has no
+    // sessionStorage) and proxy URL.
+    const authToken = getSessionToken() || '';
     const proxyUrl = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001';
 
     const serviceConfig = {
@@ -177,9 +168,13 @@ export const useMonitoring = ({
     setDomains(prev => prev.map(d => d.id === id ? { ...d, status: DomainStatus.Checking } : d));
 
     try {
+      // Pass the auth token explicitly (same as checkBatch) so a single add /
+      // re-check is authenticated. Without this, an ALIVE domain returned 401
+      // and surfaced as Error. See AGENTS.md §5.
       const serviceConfig: ServiceConfig = {
         userAgent: customUserAgent,
-        timeout: checkTimeout
+        timeout: checkTimeout,
+        authToken: getSessionToken() || undefined
       };
       const result = await checkDomainWithSSL(url, serviceConfig);
       setDomains(prev => prev.map(d =>
@@ -277,18 +272,7 @@ export const useMonitoring = ({
   useEffect(() => {
     if (!workerRef.current) return;
 
-    const storedSession = sessionStorage.getItem('domainpulse_auth_session');
-    let authToken = '';
-    if (storedSession) {
-      try {
-        const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
-        if (parsed?.token && parsed.expiresAt && parsed.expiresAt > Date.now()) {
-          authToken = parsed.token;
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
+    const authToken = getSessionToken() || '';
 
     workerRef.current.postMessage({
       type: 'CONFIG',

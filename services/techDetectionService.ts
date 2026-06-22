@@ -1,5 +1,6 @@
 import type { ServiceConfig } from '../types';
 import { logger } from '../utils/logger.js';
+import { getSessionToken } from '../utils/authSession.js';
 
 export interface TechStack {
   cms?: string;
@@ -100,18 +101,8 @@ export const detectTechStack = async (url: string, config?: ServiceConfig): Prom
   const proxyUrl = config?.proxyUrl || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_URL) || 'http://localhost:3001';
   let token = config?.authToken;
 
-  if (!token && typeof localStorage !== 'undefined') {
-    const storedSession = sessionStorage.getItem('domainpulse_auth_session');
-    if (storedSession) {
-      try {
-        const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
-        if (parsed?.token && parsed.expiresAt && parsed.expiresAt > Date.now()) {
-          token = parsed.token;
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
+  if (!token) {
+    token = getSessionToken() || undefined;
   }
 
   try {
@@ -135,7 +126,9 @@ export const detectTechStack = async (url: string, config?: ServiceConfig): Prom
         }
 
         if (response.ok) {
-          return await response.json();
+          const data = await response.json();
+          if (data?.error) continue;
+          return data;
         }
       } catch (e) {
         if (e instanceof Error && e.message === 'Unauthorized') {

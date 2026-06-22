@@ -78,6 +78,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
           >
             <X size={20} className="text-zinc-400" />
@@ -173,6 +174,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                         />
                         <button
                           onClick={() => setEditingId(null)}
+                          title="Save"
                           className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"
                         >
                           <Check size={16} />

@@ -67,7 +67,7 @@ const NotificationItem: React.FC<{ notification: Notification; onClose: () => vo
     <div className={`${config.bg} border ${config.border} rounded-lg p-4 shadow-lg flex items-start gap-3 animate-in slide-in-from-right duration-300`}>
       <Icon className={`${config.iconColor} flex-shrink-0 mt-0.5`} size={20} />
       <p className="text-sm text-zinc-200 flex-1">{notification.message}</p>
-      <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 flex-shrink-0">
+      <button onClick={onClose} aria-label="Dismiss notification" className="text-zinc-500 hover:text-zinc-300 flex-shrink-0">
         <X size={16} />
       </button>
     </div>

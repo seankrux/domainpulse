@@ -39,9 +39,9 @@ export default defineConfig(({ mode }) => {
       build: {
         rollupOptions: {
           output: {
-            manualChunks: {
-              charts: ['recharts'],
-              icons: ['lucide-react']
+            manualChunks: (id) => {
+              if (id.includes('recharts')) return 'charts';
+              if (id.includes('lucide-react')) return 'icons';
             }
           }
         },

@@ -1,21 +1,9 @@
 import { ServiceConfig, GmbInfo, GmbStatus } from '../types';
 import { logger } from '../utils/logger';
 import { config as appConfig } from '../lib/config';
+import { getSessionToken } from '../utils/authSession';
 
 const DEFAULT_PROXY_URL = appConfig.proxy.defaultUrl;
-const AUTH_SESSION_KEY = 'domainpulse_auth_session';
-
-const getStoredToken = (): string | null => {
-  try {
-    const storedSession = localStorage.getItem(AUTH_SESSION_KEY);
-    if (!storedSession) return null;
-    const parsed = JSON.parse(storedSession) as { token?: string; expiresAt?: number };
-    if (!parsed?.token || !parsed.expiresAt || parsed.expiresAt <= Date.now()) return null;
-    return parsed.token;
-  } catch {
-    return null;
-  }
-};
 
 interface RawGmbResult {
   status: string;
@@ -55,8 +43,8 @@ export const checkGmb = async (
     DEFAULT_PROXY_URL;
 
   let token = serviceConfig?.authToken;
-  if (!token && typeof localStorage !== 'undefined') {
-    token = getStoredToken() || undefined;
+  if (!token) {
+    token = getSessionToken() || undefined;
   }
 
   const qs = placeId ? `placeId=${encodeURIComponent(placeId)}` : `query=${encodeURIComponent(query!)}`;

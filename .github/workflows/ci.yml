@@ -22,7 +22,7 @@ jobs:
         run: |
           set -e
           node -v || true
-          npm ci || npm install
+          npm ci --legacy-peer-deps || npm install --legacy-peer-deps
           if npm run | grep -q "test"; then npm test || true; fi
 
       - name: Run Python CI

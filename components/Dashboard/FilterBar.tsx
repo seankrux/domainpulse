@@ -142,6 +142,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <button
             onClick={onCheckAll}
             disabled={isCheckingAll || domainCount === 0}
+            title="Check All"
             className={`flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-all active:scale-95 shadow-emerald-500/20 ${isCheckingAll ? 'opacity-80' : ''}`}
           >
             {isCheckingAll ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Play size={16} fill="currentColor" />}
@@ -155,6 +156,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Status</span>
           <select
+            data-testid="status-filter"
             value={statusFilter}
             onChange={(e) => {
               const value = e.target.value;
@@ -174,6 +176,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">SSL</span>
           <select
+            data-testid="ssl-filter"
             value={sslFilter}
             onChange={(e) => {
               const value = e.target.value;
@@ -193,6 +196,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Group</span>
           <select
+            data-testid="group-filter"
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value as string | 'ALL')}
             className="px-3 py-1.5 bg-zinc-900 border border-zinc-700/80 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"
