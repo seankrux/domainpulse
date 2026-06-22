@@ -89,11 +89,13 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     await domainRow.locator('button[title="Change Group"]').click();
     await page.locator('button:has-text("Personal")').click();
 
-    // Group option labels include counts "Personal (N)" — use regex match
-    await page.selectOption('[data-testid="group-filter"]', { label: /^Personal/ });
+    // Group option labels include counts "Personal (N)" — find value by partial text match
+    const personalVal = await page.locator('[data-testid="group-filter"] option').filter({ hasText: 'Personal' }).first().getAttribute('value');
+    await page.selectOption('[data-testid="group-filter"]', personalVal!);
     await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).toBeVisible();
 
-    await page.selectOption('[data-testid="group-filter"]', { label: /^Production/ });
+    const productionVal = await page.locator('[data-testid="group-filter"] option').filter({ hasText: 'Production' }).first().getAttribute('value');
+    await page.selectOption('[data-testid="group-filter"]', productionVal!);
     await expect(page.locator(`tr:has-text("${uniqueDomain}")`)).not.toBeVisible();
     await page.selectOption('[data-testid="group-filter"]', { value: 'ALL' });
   });
