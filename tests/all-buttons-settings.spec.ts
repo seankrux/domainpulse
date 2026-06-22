@@ -156,7 +156,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await webhookUrl.fill('https://hooks.slack.com/services/TEST/WEBHOOK');
       
       // Click add button
-      const addButton = page.locator('button:has-text("+")');
+      const addButton = page.locator('button[aria-label="Add webhook"]');
       await addButton.click();
       
       // Verify webhook was added
@@ -173,7 +173,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const webhookUrl = page.locator('input[placeholder="Webhook URL"]');
       await webhookUrl.fill('https://hooks.slack.com/services/TEST');
       
-      const addButton = page.locator('button:has-text("+")');
+      const addButton = page.locator('button[aria-label="Add webhook"]');
       await addButton.click();
       
       // Find the webhook and toggle it
@@ -192,7 +192,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const webhookUrl = page.locator('input[placeholder="Webhook URL"]');
       await webhookUrl.fill('https://hooks.slack.com/services/TEST');
       
-      const addButton = page.locator('button:has-text("+")');
+      const addButton = page.locator('button[aria-label="Add webhook"]');
       await addButton.click();
       
       // Remove the webhook
@@ -226,14 +226,14 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const trackButton = page.locator('button:has-text("Track")');
       await trackButton.click();
       
-      // Should show error message
-      await expect(page.locator('text=Invalid')).toBeVisible();
+      // Should show error message (red error div, not the hidden SSL filter option)
+      await expect(page.locator('.text-red-400')).toBeVisible();
     });
 
     test('should open bulk import modal', async ({ page }) => {
-      const bulkButton = page.locator('button:has-text("Bulk Import")');
+      const bulkButton = page.locator('button[title="Bulk Import"]');
       await bulkButton.click();
-      
+
       const modal = page.locator('h2:has-text("Bulk Import")');
       await expect(modal).toBeVisible();
       
@@ -243,7 +243,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     });
 
     test('should import domains via bulk import', async ({ page }) => {
-      const bulkButton = page.locator('button:has-text("Bulk Import")');
+      const bulkButton = page.locator('button[title="Bulk Import"]');
       await bulkButton.click();
       
       const textarea = page.locator('textarea');
@@ -266,7 +266,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await expect(page.locator(`tr:has-text("${editDomain}")`)).toBeVisible({ timeout: 15000 });
       
       // Click edit button
-      const editButton = page.locator(`tr:has-text("${editDomain}") button[title="Edit"]`);
+      const editButton = page.locator(`tr:has-text("${editDomain}") button[title="Edit domain"]`);
       await editButton.click();
       
       // Change URL
@@ -288,7 +288,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await expect(page.locator(`tr:has-text("${checkDomain}")`)).toBeVisible({ timeout: 15000 });
       
       // Click check button
-      const checkButton = page.locator(`tr:has-text("${checkDomain}") button[title="Check"]`);
+      const checkButton = page.locator(`tr:has-text("${checkDomain}") button[title="Check status"]`);
       await checkButton.click();
       
       // Should show "Checking..." status
@@ -305,7 +305,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await expect(page.locator(`tr:has-text("${removeDomain}")`)).toBeVisible({ timeout: 15000 });
       
       // Click delete button
-      const deleteButton = page.locator(`tr:has-text("${removeDomain}") button[title="Delete"]`);
+      const deleteButton = page.locator(`tr:has-text("${removeDomain}") button[title="Remove"]`);
       await deleteButton.click();
       
       // Verify removal
@@ -322,7 +322,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await expect(page.locator(`tr:has-text("${historyDomain}")`)).toBeVisible({ timeout: 15000 });
       
       // Click history button
-      const historyButton = page.locator(`tr:has-text("${historyDomain}") button[title="View History"]`);
+      const historyButton = page.locator(`tr:has-text("${historyDomain}") button[title="View history"]`);
       await historyButton.click();
       
       // Verify history modal/chart is visible
@@ -533,12 +533,12 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await page.waitForSelector(`tr:has-text("${statusDomain}")`, { timeout: 20000 });
       
       // Filter by status
-      const statusSelect = page.locator('select:near(span:text("Status"))');
+      const statusSelect = page.locator('[data-testid="status-filter"]');
       await statusSelect.selectOption({ label: 'All' });
     });
 
     test('should filter by SSL status', async ({ page }) => {
-      const sslSelect = page.locator('select:near(span:text("SSL:"))');
+      const sslSelect = page.locator('[data-testid="ssl-filter"]');
       await sslSelect.selectOption({ label: 'All' });
       
       const selectedValue = await sslSelect.inputValue();
@@ -546,7 +546,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     });
 
     test('should filter by group', async ({ page }) => {
-      const groupSelect = page.locator('select:near(span:text("Group"))');
+      const groupSelect = page.locator('[data-testid="group-filter"]');
       await groupSelect.selectOption({ label: 'All' });
     });
 
@@ -677,13 +677,11 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await nameInput.fill(deleteGroup);
       await modal.locator('button:has-text("Save Group")').click();
       
-      // Delete the group
+      // Delete the group — GroupManager uses window.confirm() (native dialog)
       const groupRow = modal.locator(`text=${deleteGroup}`).locator('..');
       const deleteButton = groupRow.locator('button[title="Delete group"]');
+      page.once('dialog', dialog => dialog.accept());
       await deleteButton.click();
-      
-      // Confirm deletion
-      await page.locator('button:has-text("OK")').click();
       
       // Verify deletion
       await expect(modal).not.toContainText(deleteGroup);
@@ -767,12 +765,17 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     });
 
     test('should show check all progress', async ({ page }) => {
+      // Add a domain so there's something to check
+      const input = page.locator('input[placeholder*="Enter domain to monitor"]');
+      await input.fill(`progress-${Math.random().toString(36).slice(2, 6)}.com`);
+      await page.locator('button:has-text("Track")').click();
+      await expect(page.locator('tbody tr')).toBeVisible({ timeout: 15000 });
+
       const checkAllButton = page.locator('button:has-text("Check All")');
       await checkAllButton.click();
-      
-      // Progress bar should appear
-      const progressBar = page.locator('div.bg-indigo-600');
-      await expect(progressBar).toBeVisible({ timeout: 5000 });
+
+      // "Checking domains..." text appears when progress.total > 0
+      await expect(page.locator('text=Checking domains...')).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -817,11 +820,15 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     });
 
     test('should trigger check all with Cmd+Enter', async ({ page }) => {
-      // Press Cmd+Enter
+      // Add a domain so checkAllDomains() has something to run
+      const input = page.locator('input[placeholder*="Enter domain to monitor"]');
+      await input.fill(`shortcut-${Math.random().toString(36).slice(2, 6)}.com`);
+      await page.locator('button:has-text("Track")').click();
+      await expect(page.locator('tbody tr')).toBeVisible({ timeout: 15000 });
+
+      // Cmd+Enter calls checkAllDomains() — shows spinner / "Checking domains..."
       await page.keyboard.press('Meta+Enter');
-      
-      // Should trigger check all
-      await expect(page.locator('button:has-text("Check All")')).toBeFocused();
+      await expect(page.locator('text=Checking domains...')).toBeVisible({ timeout: 5000 });
     });
   });
 
@@ -853,15 +860,15 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
 
   test.describe('Accessibility', () => {
     test('should have proper ARIA labels', async ({ page }) => {
-      // Check for main landmarks
-      await expect(page.locator('[role="main"]')).toBeVisible();
-      await expect(page.locator('[role="banner"]')).toBeVisible();
+      // <main>, <header>, <footer role="contentinfo"> use native/implicit landmark roles
+      await expect(page.getByRole('main')).toBeVisible();
+      await expect(page.getByRole('banner')).toBeVisible();
       await expect(page.locator('[role="contentinfo"]')).toBeVisible();
     });
 
     test('should have skip links', async ({ page }) => {
-      // Skip links should be present
-      await expect(page.locator('a[href="#main-content"]')).toBeVisible();
+      // Skip links are sr-only (hidden visually, present in DOM for screen readers)
+      await expect(page.locator('a[href="#main-content"]')).toBeAttached();
     });
 
     test('buttons should have accessible names', async ({ page }) => {

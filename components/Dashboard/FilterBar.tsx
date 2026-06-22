@@ -155,6 +155,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Status</span>
           <select
+            data-testid="status-filter"
             value={statusFilter}
             onChange={(e) => {
               const value = e.target.value;
@@ -174,6 +175,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">SSL</span>
           <select
+            data-testid="ssl-filter"
             value={sslFilter}
             onChange={(e) => {
               const value = e.target.value;
@@ -193,6 +195,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Group</span>
           <select
+            data-testid="group-filter"
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value as string | 'ALL')}
             className="px-3 py-1.5 bg-zinc-900 border border-zinc-700/80 rounded-lg text-sm text-zinc-300 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none"

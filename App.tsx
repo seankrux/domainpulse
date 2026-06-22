@@ -315,7 +315,7 @@ const App: React.FC = () => {
       // Cmd+K: Focus search input
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+        const searchInput = document.querySelector('input[placeholder*="Filter domains"]') as HTMLInputElement;
         if (searchInput) {
           searchInput.focus();
           searchInput.select();
