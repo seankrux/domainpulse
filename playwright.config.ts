@@ -21,7 +21,9 @@ export default defineConfig({
   ],
   // Start the server before running tests
   webServer: {
-    command: 'npm run dev:all',
+    // CI: serve pre-built static output (faster, no HMR memory pressure).
+    // Local: use dev server for live reload.
+    command: process.env.CI ? 'npm run preview:all' : 'npm run dev:all',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
