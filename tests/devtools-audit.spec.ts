@@ -51,8 +51,11 @@ test.describe('Chrome DevTools Audit', () => {
     // 2. Performance Audit - Measure load time
     const performanceMetrics: { [key: string]: number } = {};
     
-    // Wait for page to be fully loaded
-    await page.waitForLoadState('networkidle');
+    // Wait for page to be fully loaded.
+    // networkidle never fires with the Vite dev server (HMR WebSocket keeps
+    // the network active), so use domcontentloaded + header visibility instead.
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForSelector('[data-testid="header-title"]', { timeout: 30000 });
     
     const metrics = await page.evaluate(() => {
       const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
