@@ -186,7 +186,9 @@ test.describe('Chrome DevTools Audit', () => {
 
     // Assert no critical errors
     expect(consoleErrors.filter(e => !e.includes('favicon')).length).toBeLessThan(5);
-    expect(auditResults.filter(a => a.passed).length).toBe(auditResults.length);
+    for (const audit of auditResults) {
+      expect(audit.passed, `Audit "${audit.name}" failed: ${JSON.stringify(audit.errors)}`).toBe(true);
+    }
   });
 });
 

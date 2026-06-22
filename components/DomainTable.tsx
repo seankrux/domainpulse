@@ -117,7 +117,7 @@ const TagEditor: React.FC<{
           if (e.key === "Escape") onClose();
         }}
       />
-      <button onClick={() => { if (value.trim()) { onAdd(domainId, value.trim()); onClose(); } }} className="text-emerald-400">
+      <button onClick={() => { if (value.trim()) { onAdd(domainId, value.trim()); onClose(); } }} aria-label="Save tag" className="text-emerald-400">
         <Check size={14} />
       </button>
     </div>
@@ -135,7 +135,7 @@ const GroupPicker: React.FC<{
   <div className="absolute top-full left-0 mt-1 z-40 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl p-2 min-w-[160px] animate-in fade-in zoom-in-95 origin-top-left">
     <div className="flex items-center justify-between mb-2 px-2">
       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Group</span>
-      <button onClick={onClose}><X size={12} className="text-zinc-500 hover:text-zinc-300" /></button>
+      <button onClick={onClose} aria-label="Close"><X size={12} className="text-zinc-500 hover:text-zinc-300" /></button>
     </div>
     <button
       onClick={() => { onSelect(domainId, undefined); onClose(); }}
@@ -238,7 +238,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
               }}
             />
             <button onClick={() => onSaveEdit(domain.id)} title="Save" className="p-1.5 rounded-md bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50"><Check size={14} /></button>
-            <button onClick={onCancelEdit} className="p-1.5 rounded-md bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50"><X size={14} /></button>
+            <button onClick={onCancelEdit} aria-label="Cancel edit" className="p-1.5 rounded-md bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50"><X size={14} /></button>
           </div>
         ) : (
           <div className="flex items-center gap-3">
