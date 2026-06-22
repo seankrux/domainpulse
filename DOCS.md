@@ -762,10 +762,10 @@ No env vars needed. `verifyAuth` always returns true. No login UI shown.
 
 | Event | Action |
 |-------|--------|
-| Login | `POST /api/login` → JWT stored in `sessionStorage` via `setSessionToken()` |
-| Request | All service calls attach `Authorization: Bearer <token>` |
+| Login | `POST /api/login` → JWT written to `sessionStorage` by `AuthProvider` |
+| Request | All service calls read the token via `getSessionToken()` and attach `Authorization: Bearer <token>` |
 | Expiry | Token TTL = `VITE_AUTH_SESSION_TTL_MINUTES` (default 720 min) |
-| Logout | `clearSessionToken()` clears `sessionStorage` |
+| Logout | `AuthProvider` removes the `sessionStorage` entry directly |
 
 ---
 
