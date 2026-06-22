@@ -154,6 +154,8 @@ export async function safeHeadRequest(
   opts: { timeoutMs?: number; userAgent?: string; maxRedirects?: number } = {},
 ): Promise<SafeHeadResult> {
   const { timeoutMs = 10000, userAgent = 'DomainPulse/1.0 (Domain Monitor)', maxRedirects = 5 } = opts;
+  // Cap timeout to prevent resource exhaustion from caller-supplied values.
+  const safeTimeoutMs = Math.min(Math.max(timeoutMs, 1000), 30000);
   const start = Date.now();
   let current = rawUrl;
 
@@ -163,7 +165,7 @@ export async function safeHeadRequest(
 
     const doFetch = async (method: 'HEAD' | 'GET'): Promise<Response> => {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const timer = setTimeout(() => controller.abort(), safeTimeoutMs);
       try {
         return await fetch(current, {
           method,
