@@ -580,11 +580,9 @@ React hook wiring the Web Worker to domain state. Exposes:
 **Single source of truth for the client-side auth token.**
 
 ```ts
-import { getSessionToken, setSessionToken, clearSessionToken } from './utils/authSession';
+import { getSessionToken } from './utils/authSession';
 
 getSessionToken()      // reads from sessionStorage — only call this function
-setSessionToken(jwt)   // called by AuthProvider on login
-clearSessionToken()    // called on logout
 ```
 
 Do not call `sessionStorage.getItem('domainpulse_auth_session')` anywhere else. See [Invariant §5](#6-invariants--guardrails).

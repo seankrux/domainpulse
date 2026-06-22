@@ -53,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // literals so CodeQL's taint never reaches setTimeout. Runtime cap in
   // ssrfGuard.ts is a second line of defence.
   const _rawTimeout = parseInt(req.query.timeout as string, 10);
-  const timeoutMs = (_rawTimeout >= 5000 && _rawTimeout <= 30000) ? _rawTimeout : 10000;
+  const timeoutMs = isNaN(_rawTimeout) ? 10000 : Math.min(Math.max(_rawTimeout, 5000), 30000);
 
   if (!url) {
     setHeaders(corsHeaders);
