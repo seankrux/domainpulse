@@ -294,9 +294,9 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       // Click check button
       const checkButton = page.locator(`tr:has-text("${checkDomain}") button[title="Check status"]`);
       await checkButton.click();
-      
-      // Verify check was triggered: status leaves Unknown state
-      await expect(page.locator('tr').filter({ hasText: checkDomain })).not.toContainText('Unknown', { timeout: 15000 });
+
+      // Verify check was triggered: row enters Checking... state
+      await expect(page.locator('tr').filter({ hasText: checkDomain })).toContainText('Checking...', { timeout: 5000 });
     });
 
     test('should remove domain', async ({ page }) => {
@@ -448,9 +448,9 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       // Click check selected button
       const checkButton = page.locator('button[title="Check Selected"]');
       await checkButton.click();
-      
-      // Verify check was triggered: status leaves Unknown state
-      await expect(page.locator('tr').filter({ hasText: checkDomain })).not.toContainText('Unknown', { timeout: 15000 });
+
+      // Verify check was triggered: row enters Checking... state
+      await expect(page.locator('tr').filter({ hasText: checkDomain })).toContainText('Checking...', { timeout: 5000 });
     });
 
     test('should remove selected domains', async ({ page }) => {
