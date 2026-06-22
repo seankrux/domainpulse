@@ -3,7 +3,7 @@ main = "cf-worker.ts"
 compatibility_date = "2025-01-01"
 
 [build]
-command = "npm ci --legacy-peer-deps && npm run build:app"
+command = "bash scripts/cf-build.sh"
 
 [assets]
 directory = "./dist"
