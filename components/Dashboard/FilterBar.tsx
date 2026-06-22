@@ -142,6 +142,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <button
             onClick={onCheckAll}
             disabled={isCheckingAll || domainCount === 0}
+            title="Check All"
             className={`flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-all active:scale-95 shadow-emerald-500/20 ${isCheckingAll ? 'opacity-80' : ''}`}
           >
             {isCheckingAll ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Play size={16} fill="currentColor" />}
