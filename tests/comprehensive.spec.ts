@@ -51,33 +51,36 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     await searchInput.clear();
 
     // Status Filter (Robust)
-    // 1. Wait for domain to be visible in the list
+    // 1. Wait for domain row and for it to leave Checking state (max 15s)
     const domainRow = page.locator(`tr:has-text("${uniqueDomain}")`);
     await expect(domainRow).toBeVisible();
+    await expect(domainRow.locator('td').nth(2)).not.toContainText('Checking...', { timeout: 15000 }).catch(() => {});
 
-    // 2. Get the actual status text from the row
-    // The status is in the 3rd column (index 2)
+    // 2. Read the stable status text from the 3rd column (index 2)
     const statusText = await domainRow.locator('td').nth(2).textContent();
-    const cleanStatus = statusText?.trim() || 'Unknown';
-    
-    // 3. Filter by the ACTUAL status
-    // Note: If the status is "200 OK" or similar, we map it to "Alive" for the dropdown
-    let filterOption = cleanStatus;
-    if (cleanStatus.includes('200') || cleanStatus === 'Alive') filterOption = 'Alive';
-    else if (cleanStatus === 'Down' || cleanStatus.includes('500') || cleanStatus.includes('404')) filterOption = 'Down';
-    else if (cleanStatus === 'Checking...') filterOption = 'Unknown'; // Or handle Checking differently if needed
-    else filterOption = 'Unknown';
+    const cleanStatus = statusText?.trim() || '';
 
-    // Status option values: ALL, ALIVE, DOWN, UNKNOWN, ERROR
-    const statusValueMap: Record<string, string> = { 'Alive': 'ALIVE', 'Down': 'DOWN', 'Unknown': 'UNKNOWN' };
+    // 3. Map display text → filter dropdown value (covers all DomainStatus enum values)
+    const statusValueMap: Record<string, string> = {
+      'Alive': 'ALIVE', '200 OK': 'ALIVE',
+      'Down': 'DOWN',
+      'Unknown': 'UNKNOWN',
+      'Error': 'ERROR',
+    };
+    // HTTP numeric codes (e.g. "301", "500") → Alive or Down based on range
+    let filterValue: string | null = statusValueMap[cleanStatus] ?? null;
+    if (!filterValue) {
+      const code = parseInt(cleanStatus, 10);
+      if (!isNaN(code)) filterValue = code < 400 ? 'ALIVE' : 'DOWN';
+    }
 
-    if (cleanStatus !== 'Checking...') {
-        await page.selectOption('[data-testid="status-filter"]', { value: statusValueMap[filterOption] ?? 'UNKNOWN' });
-        await expect(domainRow).toBeVisible();
+    if (filterValue && cleanStatus !== 'Checking...') {
+        await page.selectOption('[data-testid="status-filter"]', { value: filterValue });
+        await expect(domainRow).toBeVisible({ timeout: 5000 });
 
-        // 4. Filter by a DIFFERENT status
-        const otherOption = filterOption === 'Alive' ? 'Down' : 'Alive';
-        await page.selectOption('[data-testid="status-filter"]', { value: statusValueMap[otherOption] ?? 'UNKNOWN' });
+        // 4. Filter by a DIFFERENT status that definitely excludes this domain
+        const otherValue = filterValue === 'ALIVE' ? 'DOWN' : 'ALIVE';
+        await page.selectOption('[data-testid="status-filter"]', { value: otherValue });
         await expect(domainRow).not.toBeVisible();
     }
 
