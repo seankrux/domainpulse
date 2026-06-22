@@ -154,19 +154,8 @@ export async function safeHeadRequest(
   opts: { timeoutMs?: number; userAgent?: string; maxRedirects?: number } = {},
 ): Promise<SafeHeadResult> {
   const { timeoutMs = 10000, userAgent = 'DomainPulse/1.0 (Domain Monitor)', maxRedirects = 5 } = opts;
-  // Return a literal from a fixed step ladder so CodeQL's taint tracking
-  // sees a constant (not user input) flow into setTimeout — the caller-supplied
-  // value only selects WHICH constant is used, it never reaches the timer directly.
-  // Minimum step is 5000ms; callers must not pass values below that.
-  const safeTimeoutMs = (() => {
-    const ms = Math.min(Math.max(timeoutMs, 5000), 30000);
-    if (ms <= 5000) return 5000 as const;
-    if (ms <= 10000) return 10000 as const;
-    if (ms <= 15000) return 15000 as const;
-    if (ms <= 20000) return 20000 as const;
-    if (ms <= 25000) return 25000 as const;
-    return 30000 as const;
-  })();
+  // Cap timeout to prevent resource exhaustion from caller-supplied values.
+  const safeTimeoutMs = Math.min(Math.max(timeoutMs, 1000), 30000);
   const start = Date.now();
   let current = rawUrl;
 
@@ -176,7 +165,7 @@ export async function safeHeadRequest(
 
     const doFetch = async (method: 'HEAD' | 'GET'): Promise<Response> => {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), safeTimeoutMs);
+      const timer = setTimeout(() => controller.abort(), safeTimeoutMs); // lgtm[js/resource-exhaustion] -- safeTimeoutMs is clamped to [1000,30000] above; user input never reaches here uncapped
       try {
         return await fetch(current, {
           method,
