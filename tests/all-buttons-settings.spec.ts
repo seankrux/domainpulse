@@ -378,9 +378,8 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const copyButton = domainRow.locator('button[aria-label*="Copy"]');
       await copyButton.click();
       
-      // Verify clipboard (Playwright can't directly access clipboard, but we can check the UI feedback)
-      // The copy icon should change to checkmark
-      await expect(domainRow.locator('svg[data-testid="CheckCheckIcon"]')).toBeVisible({ timeout: 2000 });
+      // Verify clipboard feedback: CheckCheck icon gets class text-emerald-500 when copied
+      await expect(domainRow.locator('button[aria-label*="Copy"] svg.text-emerald-500')).toBeVisible({ timeout: 2000 });
     });
   });
 
