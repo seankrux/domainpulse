@@ -165,7 +165,7 @@ export async function safeHeadRequest(
 
     const doFetch = async (method: 'HEAD' | 'GET'): Promise<Response> => {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), safeTimeoutMs); // lgtm[js/resource-exhaustion] -- safeTimeoutMs is clamped to [1000,30000] above; user input never reaches here uncapped
+      const timer = setTimeout(() => controller.abort(), safeTimeoutMs); // codeql[js/resource-exhaustion] -- safeTimeoutMs is clamped to [1000,30000] above; user input never reaches here uncapped
       try {
         return await fetch(current, {
           method,
