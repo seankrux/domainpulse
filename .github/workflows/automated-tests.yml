@@ -53,8 +53,8 @@ jobs:
     
     - name: DevTools Audit
       run: |
-        npm run dev:all &
-        npx wait-on http://localhost:3000 --timeout 30000
+        pkill -f "vite" || true
+        sleep 2
         npm run test:devtools -- --reporter=list
       env:
         CI: true
