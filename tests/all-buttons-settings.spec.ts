@@ -423,14 +423,14 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await page.locator('button:has-text("Track")').click();
       
       await expect(page.locator('tr').filter({ hasText: 'all1' })).toBeVisible({ timeout: 15000 });
-      
+      await expect(page.locator('tr').filter({ hasText: 'all2' })).toBeVisible({ timeout: 15000 });
+
       // Click select all checkbox in header
       const headerCheckbox = page.locator('thead input[type="checkbox"]');
       await headerCheckbox.click();
       
-      // All domains should be selected
-      const selectedCount = await page.locator('text=Selected').count();
-      expect(selectedCount).toBeGreaterThan(0);
+      // All domains should be selected — wait for the badge to appear
+      await expect(page.locator('text=Selected')).toBeVisible({ timeout: 5000 });
     });
 
     test('should check selected domains', async ({ page }) => {
