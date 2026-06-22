@@ -1,5 +1,5 @@
 export interface Env {
-  ASSETS: Fetcher;
+  ASSETS: { fetch(request: Request): Promise<Response> };
 }
 
 // Serve the Vite-built SPA. Fall back to index.html for client-side routes.
