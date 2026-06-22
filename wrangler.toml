@@ -1,10 +1,9 @@
 name = "domainpulse"
-main = "cf-worker.ts"
 compatibility_date = "2025-01-01"
 
 [build]
-command = "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && nvm install 22 --no-progress && nvm use 22 && npm ci --legacy-peer-deps && npm run build:app"
+command = "npm ci --legacy-peer-deps && npm run build:app"
 
 [assets]
 directory = "./dist"
-binding = "ASSETS"
+not_found_handling = "single-page-application"
