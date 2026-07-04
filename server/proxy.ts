@@ -28,7 +28,25 @@ let AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
 const SESSION_TTL_MINUTES = Number(process.env.VITE_AUTH_SESSION_TTL_MINUTES || 720); // 12h
 const ALLOW_INITIAL_LOGIN = process.env.VITE_ALLOW_INITIAL_LOGIN === 'true';
 
-app.use(cors());
+// CORS allowlist: the proxy makes outbound requests on the caller's behalf,
+// so an open policy would let any web page a developer visits use it as an
+// SSRF springboard. Only the local dev/preview origins (plus ALLOWED_ORIGINS
+// for custom setups) may call it from a browser.
+const allowedOrigins = new Set([
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  ...(process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) || [])
+]);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    callback(null, !origin || allowedOrigins.has(origin));
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Simple in-memory rate limiter for /api/* (dev proxy parity with the
