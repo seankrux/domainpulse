@@ -47,11 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Query params may arrive as string[] when repeated (?url=a&url=b); take the
-  // first so `url.startsWith` can't throw a TypeError → unhandled 500.
-  const first = (v: string | string[] | undefined): string | undefined => Array.isArray(v) ? v[0] : v;
-  const url = first(req.query.url as string | string[] | undefined);
-  const userAgent = first(req.query.ua as string | string[] | undefined) || 'DomainPulse/1.0 (Domain Monitor)';
+  const url = req.query.url as string;
+  const userAgent = (req.query.ua as string) || 'DomainPulse/1.0 (Domain Monitor)';
   // Sanitise user-supplied timeout: parse → clamp to one of the allowed
   // literals so CodeQL's taint never reaches setTimeout. Runtime cap in
   // ssrfGuard.ts is a second line of defence.
