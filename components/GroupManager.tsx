@@ -38,6 +38,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupColor, setNewGroupColor] = useState(COLOR_PALETTE[9]); // Default indigo
 
@@ -62,9 +63,10 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
     setIsAdding(false);
   };
 
-  const handleDeleteGroup = (groupId: string, groupName: string) => {
-    if (window.confirm(`Delete group "${groupName}"? Domains in this group will be ungrouped.`)) {
-      onRemoveGroup(groupId);
+  const confirmDeleteGroup = () => {
+    if (deletingId) {
+      onRemoveGroup(deletingId);
+      setDeletingId(null);
     }
   };
 
@@ -171,6 +173,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                           onChange={(e) => onUpdateGroup(group.id, { name: e.target.value })}
                           className="flex-1 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                           autoFocus
+                          onKeyDown={(e) => e.key === 'Enter' && setEditingId(null)}
                         />
                         <button
                           onClick={() => setEditingId(null)}
@@ -178,6 +181,24 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                           className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"
                         >
                           <Check size={16} />
+                        </button>
+                      </>
+                    ) : deletingId === group.id ? (
+                      <>
+                        <span className="flex-1 text-sm text-zinc-300">
+                          Delete <strong>{group.name}</strong>? Domains in this group will be ungrouped.
+                        </span>
+                        <button
+                          onClick={() => setDeletingId(null)}
+                          className="px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-700 rounded transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={confirmDeleteGroup}
+                          className="px-2 py-1 text-xs bg-rose-600 hover:bg-rose-500 text-white rounded transition-colors"
+                        >
+                          Delete
                         </button>
                       </>
                     ) : (
@@ -194,14 +215,14 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
                         </span>
                         <button
                           onClick={() => setEditingId(group.id)}
-                          className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                           title="Edit name"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button
-                          onClick={() => handleDeleteGroup(group.id, group.name)}
-                          className="p-1.5 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => setDeletingId(group.id)}
+                          className="p-1.5 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                           title="Delete group"
                         >
                           <Trash2 size={16} />
