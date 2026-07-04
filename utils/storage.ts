@@ -116,19 +116,25 @@ const fromStored = (stored: StoredDomain): Domain => ({
   tags: stored.tags || []
 });
 
-export const loadDomains = (): Domain[] => {
+export interface DomainsLoadResult {
+  domains: Domain[];
+  /** True when stored data was unreadable — caller must not persist [] back. */
+  loadFailed: boolean;
+}
+
+export const loadDomains = (): DomainsLoadResult => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) {
       // First time user - seed with sample domains
       saveDomains(SAMPLE_DOMAINS);
-      return SAMPLE_DOMAINS;
+      return { domains: SAMPLE_DOMAINS, loadFailed: false };
     }
     const parsed: StoredDomain[] = JSON.parse(stored);
-    return parsed.map(fromStored);
+    return { domains: parsed.map(fromStored), loadFailed: false };
   } catch (error) {
     logger.error('Failed to load domains from localStorage:', error);
-    return [];
+    return { domains: [], loadFailed: true };
   }
 };
 
@@ -152,10 +158,8 @@ export const saveDomains = (domains: Domain[]): void => {
     if (error instanceof Error && error.name === 'QuotaExceededError') {
       logger.error('LocalStorage quota exceeded! Clearing all history as last resort...');
       try {
-        // Non-recursive fallback: strip all history and write directly
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const existing: StoredDomain[] = raw ? JSON.parse(raw) : [];
-        const stripped = existing.map(d => ({ ...d, history: [] }));
+        // Non-recursive fallback: strip history from the write in flight, not stale storage
+        const stripped = domains.map(d => ({ ...toStored(d), history: [] }));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped));
       } catch {
         logger.error('Failed to recover from QuotaExceededError — localStorage may be full.');
@@ -207,7 +211,7 @@ export const addGroup = (group: DomainGroup): void => {
 export const removeGroup = (groupId: string): void => {
   const groups = loadGroups().filter(g => g.id !== groupId);
   saveGroups(groups);
-  const domains = loadDomains().map(d => 
+  const domains = loadDomains().domains.map(d => 
     d.groupId === groupId ? { ...d, groupId: undefined } : d
   );
   saveDomains(domains);
