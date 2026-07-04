@@ -95,7 +95,11 @@ export function parseWhoisData(data: string): WhoisResult {
     if (!isNaN(date.getTime())) result.updatedDate = date.toISOString();
   }
 
-  const registrarMatch = data.match(/(?:Registrar|Sponsoring Registrar)[:\s]+([^\n]+)/i);
+  // Colon-anchored + multiline so we don't capture sub-fields like
+  // "Registrar WHOIS Server:" / "Registrar URL:" (which precede the real
+  // "Registrar:" line in Verisign/ICANN gTLD output — matching on [:\s] there
+  // returned "WHOIS Server: …" as the registrar name).
+  const registrarMatch = data.match(/^\s*(?:Registrar|Sponsoring Registrar):\s*([^\n]+)/im);
   if (registrarMatch && registrarMatch[1]) result.registrar = registrarMatch[1].trim();
 
   const registrarUrlMatch = data.match(/(?:Registrar URL|Registrar Information)[:\s]+([^\n]+)/i);

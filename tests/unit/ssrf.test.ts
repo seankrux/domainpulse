@@ -47,6 +47,19 @@ describe('ssrfGuard.isBlockedIp', () => {
       expect(isBlockedIp(ip), ip).toBe(false);
     }
   });
+
+  it('blocks non-canonical numeric IPv4 forms (inet_aton bypass)', () => {
+    // All decode to 127.0.0.1 / 169.254.169.254 via getaddrinfo.
+    for (const ip of ['2130706433', '127.1', '0177.0.0.1', '017700000001', '0x7f.0.0.1', '2852039166']) {
+      expect(isBlockedIp(ip), ip).toBe(true);
+    }
+  });
+
+  it('blocks non-canonical IPv6 encodings (mapped/expanded loopback)', () => {
+    for (const ip of ['::ffff:7f00:1', '0:0:0:0:0:0:0:1', '0:0:0:0:0:ffff:127.0.0.1', '::127.0.0.1']) {
+      expect(isBlockedIp(ip), ip).toBe(true);
+    }
+  });
 });
 
 describe('ssrfGuard.validateOutboundUrlResolved (DNS rebinding)', () => {

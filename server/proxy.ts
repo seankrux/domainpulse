@@ -59,6 +59,12 @@ app.use('/api', (req, res, next) => {
   const now = Date.now();
   const rec = rlMap.get(ip);
   if (!rec || rec.reset < now) {
+    // Evict expired keys so distinct/spoofed IPs can't grow the map unbounded.
+    if (rlMap.size > 1000) {
+      for (const [key, r] of rlMap) {
+        if (r.reset < now) rlMap.delete(key);
+      }
+    }
     rlMap.set(ip, { count: 1, reset: now + RL_WINDOW_MS });
     return next();
   }

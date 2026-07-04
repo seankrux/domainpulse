@@ -26,6 +26,12 @@ export const useMonitoring = ({
   const [checkProgress, setCheckProgress] = useState({ current: 0, total: 0 });
   const workerRef = useRef<Worker | null>(null);
   const domainsRef = useRef(domains);
+  // Worker.onmessage is bound once on mount, so it must reach the LATEST
+  // callbacks through refs — otherwise it keeps calling the mount-time
+  // addHistoryRecord (which closes over the initial maxHistoryRecords) and
+  // trims history at the wrong limit after the user changes that setting.
+  const addHistoryRecordRef = useRef<(id: string, r: { status: DomainStatus; statusCode: number; latency: number }) => void>(() => {});
+  const showSuccessRef = useRef(showSuccess);
 
   useEffect(() => {
     domainsRef.current = domains;
@@ -144,8 +150,12 @@ export const useMonitoring = ({
 
   const checkAllDomains = useCallback(async (silent = false) => {
     if (isCheckingAll) return;
-    if (!silent) setIsCheckingAll(true);
     const domainsToCheck = domainsRef.current.filter(d => d.status !== DomainStatus.Checking);
+    // Nothing to check: bail BEFORE raising the flag. checkBatch early-returns
+    // on an empty list without ever posting BATCH_COMPLETE, so setting the flag
+    // here would strand it true and permanently disable "Check All".
+    if (domainsToCheck.length === 0) return;
+    if (!silent) setIsCheckingAll(true);
     await checkBatch(domainsToCheck);
   }, [isCheckingAll, checkBatch]);
 
@@ -208,6 +218,12 @@ export const useMonitoring = ({
     }
   }, [addHistoryRecord, setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid, checkSingleGmb]);
 
+  // Keep the refs the bound worker handler reads pointed at the current callbacks.
+  useEffect(() => {
+    addHistoryRecordRef.current = addHistoryRecord;
+    showSuccessRef.current = showSuccess;
+  }, [addHistoryRecord, showSuccess]);
+
   // Initialize Worker - created once on mount
   useEffect(() => {
     let isMounted = true;
@@ -236,7 +252,7 @@ export const useMonitoring = ({
             } : d
           )
         );
-        addHistoryRecord(domainId, result);
+        addHistoryRecordRef.current(domainId, result);
         setCheckProgress(prev => ({ ...prev, current: prev.current + 1 }));
       } else if (type === 'DOMAIN_ERROR') {
         if (e.data.error === 'Unauthorized') {
@@ -254,7 +270,7 @@ export const useMonitoring = ({
       } else if (type === 'BATCH_COMPLETE') {
         setIsCheckingAll(false);
         setCheckProgress({ current: 0, total: 0 });
-        showSuccess('Domain check complete');
+        showSuccessRef.current('Domain check complete');
       }
     };
 

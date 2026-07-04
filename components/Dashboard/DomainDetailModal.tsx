@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3, MapPin, Star, Phone, RefreshCw } from 'lucide-react';
 import { Domain, DomainStatus, SSLStatus, GmbStatus } from '../../types';
-import { sslColor, sslLabel, expiryColor, expiryLabel, gmbColor, gmbLabel } from '../../theme/statusColors';
+import { sslColor, sslLabel, expiryColor, expiryLabel, gmbColor, gmbLabel, STATUS_COLORS } from '../../theme/statusColors';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getTechStackColor } from '../../components/TechStackBadge';
 
@@ -74,9 +74,11 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                 Domain status: {domain.status === DomainStatus.Alive ? 'Online' : 'Offline'}
               </p>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className={`w-2 h-2 rounded-full ${domain.status === DomainStatus.Alive ? 'bg-emerald-500' : 'bg-rose-500'}`} aria-hidden="true" />
+                <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[domain.status].dot}`} aria-hidden="true" />
                 <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  {domain.status} {domain.statusCode ? `(${domain.statusCode})` : ''}
+                  {/* HTTP code only for Alive/Down — never render a stale code
+                      under Error/Unknown/Checking (AGENTS.md §3). */}
+                  {domain.status} {domain.statusCode && (domain.status === DomainStatus.Alive || domain.status === DomainStatus.Down) ? `(${domain.statusCode})` : ''}
                 </span>
               </div>
             </div>

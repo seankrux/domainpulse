@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { Domain, DomainStatus, DomainStats, SortField, SortOrder, DomainGroup, SSLStatus } from './types';
 import { parseCSV, exportToCSV } from './utils/csvHelper';
 import { config } from './lib/config';
-import { loadDomains, saveDomains, loadSettings, saveSettings, AppSettings, loadGroups, saveGroups, addGroup, removeGroup, updateGroup } from './utils/storage';
+import { loadDomains, saveDomains, loadSettings, saveSettings, AppSettings, loadGroupsResult, saveGroups, addGroup, removeGroup, updateGroup } from './utils/storage';
 import { useNotification } from './components/NotificationProvider';
 import { useAuth } from './components/AuthProvider';
 import { StatsOverview } from './components/StatsOverview';
@@ -39,7 +39,12 @@ const App: React.FC = () => {
     domainsLoadFailedRef.current = loadFailed;
     return loaded;
   });
-  const [groups, setGroups] = useState<DomainGroup[]>(() => loadGroups());
+  const groupsLoadFailedRef = useRef(false);
+  const [groups, setGroups] = useState<DomainGroup[]>(() => {
+    const { groups: loaded, loadFailed } = loadGroupsResult();
+    groupsLoadFailedRef.current = loadFailed;
+    return loaded;
+  });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [newDomainUrl, setNewDomainUrl] = useState('');
   const [inputError, setInputError] = useState<string | null>(null);
@@ -54,7 +59,11 @@ const App: React.FC = () => {
   const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
   const [showGroupManager, setShowGroupManager] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [previousStatuses, setPreviousStatuses] = useState<Map<string, DomainStatus>>(new Map());
+  // Previous per-domain statuses for down/up notification transitions. Held in
+  // a ref, not state: the notifications effect writes it every run, and if it
+  // were state (in the effect's deps) that write would retrigger the effect
+  // forever — "Maximum update depth exceeded" the moment notifications are on.
+  const previousStatusesRef = useRef<Map<string, DomainStatus>>(new Map());
   
   const [sortField, setSortField] = useState<SortField>(() => (localStorage.getItem('domainpulse_sort_field') as SortField) || 'lastChecked');
   const [sortOrder, setSortOrder] = useState<SortOrder>(() => (localStorage.getItem('domainpulse_sort_order') as SortOrder) || 'desc');
@@ -107,6 +116,8 @@ const App: React.FC = () => {
   }, [statusFilter, sslFilter, groupFilter, sortField, sortOrder]);
 
   useEffect(() => {
+    if (groupsLoadFailedRef.current && groups.length === 0) return;
+    groupsLoadFailedRef.current = false;
     saveGroups(groups);
   }, [groups]);
 
@@ -293,7 +304,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!settings.enableNotifications) return;
     domains.forEach(domain => {
-      const prevStatus = previousStatuses.get(domain.id);
+      const prevStatus = previousStatusesRef.current.get(domain.id);
       if (!prevStatus || prevStatus === domain.status) return;
       if (domain.status === DomainStatus.Down &&
           (prevStatus === DomainStatus.Alive || prevStatus === DomainStatus.Unknown)) {
@@ -308,14 +319,11 @@ const App: React.FC = () => {
     });
     const newMap = new Map<string, DomainStatus>();
     domains.forEach(d => newMap.set(d.id, d.status));
-    // Limit the size of previousStatuses map to prevent memory leak
-    if (newMap.size > 100) {
-      const entries = Array.from(newMap.entries()).slice(-100);
-      setPreviousStatuses(new Map(entries));
-    } else {
-      setPreviousStatuses(newMap);
-    }
-  }, [domains, settings.enableNotifications, settings.playSound, previousStatuses, showInfo, showSuccess]);
+    // Cap the map size to avoid unbounded growth.
+    previousStatusesRef.current = newMap.size > 100
+      ? new Map(Array.from(newMap.entries()).slice(-100))
+      : newMap;
+  }, [domains, settings.enableNotifications, settings.playSound, showInfo, showSuccess]);
 
   // Keyboard shortcuts
   useEffect(() => {
