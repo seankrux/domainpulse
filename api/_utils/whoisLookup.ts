@@ -6,7 +6,6 @@
  * so local results match production.
  */
 import * as https from 'https';
-import type { ClientRequest } from 'http';
 
 export interface WhoisResult {
   expiryDate?: string;
@@ -49,14 +48,6 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
       const apiUrl = apiUrls[index] as string;
       attempts++;
 
-      let advanced = false;                        // guard against double-advance
-      const next = (err?: Error) => {
-        if (advanced) return;
-        advanced = true;
-        if (err) lastError = err;
-        tryNextApi(index + 1);
-      };
-
       https.get(apiUrl, { timeout: 10000 }, (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
@@ -64,23 +55,18 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
           try {
             const parsed = parseWhoisData(data);
             if (parsed.expiryDate || parsed.registrar || parsed.nameServers) {
-              if (!advanced) { advanced = true; resolve(parsed); }
+              resolve(parsed);
             } else {
-              next();
+              tryNextApi(index + 1);
             }
           } catch {
-            next();
+            tryNextApi(index + 1);
           }
         });
-      })
-        .on('error', (error) => next(error))
-        // The `timeout` option only arms socket.setTimeout; without this handler
-        // a peer that connects then stalls leaves the request hung forever
-        // (leaked socket, unresolved promise). Destroy and fall through.
-        .on('timeout', function (this: ClientRequest) {
-          this.destroy();
-          next(new Error('WHOIS request timed out'));
-        });
+      }).on('error', (error) => {
+        lastError = error;
+        tryNextApi(index + 1);
+      });
     };
 
     tryNextApi(0);

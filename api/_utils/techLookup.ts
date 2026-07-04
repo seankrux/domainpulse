@@ -7,7 +7,6 @@
  * before any request, same as the other outbound-fetching endpoints.
  */
 import * as https from 'https';
-import type { ClientRequest } from 'http';
 import { validateOutboundUrlResolved } from './ssrfGuard.js';
 import { parseTechFromHTML } from '../../services/techDetectionService.js';
 
@@ -31,13 +30,6 @@ export async function detectTechStack(rawUrl: string): Promise<unknown> {
           reject(error);
         }
       });
-    })
-      .on('error', reject)
-      // Without a 'timeout' handler the request hangs forever on a stalled peer
-      // (leaked socket, unresolved promise). The `timeout` option only arms
-      // socket.setTimeout — it doesn't destroy the socket. Destroy and reject.
-      .on('timeout', function (this: ClientRequest) {
-        this.destroy(new Error('Tech-detect request timed out'));
-      });
+    }).on('error', reject);
   });
 }
