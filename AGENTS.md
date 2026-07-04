@@ -209,3 +209,30 @@ must serve every `/api/*` route the frontend services call
 
 All outbound-fetching utils (`check`, `tech-detect`) go through the SSRF guard
 (`validateOutboundUrlResolved` / `safeHeadRequest`). Keep it that way.
+
+---
+
+## Cursor Cloud specific instructions
+
+Dependencies are refreshed automatically on startup (`npm ci --legacy-peer-deps`);
+you do not need to reinstall. Standard commands live in `package.json` and the
+README "Available Commands" table — use those. Non-obvious caveats only:
+
+- **Node 22** is used here (`.nvmrc` = 22; `engines` requires >=20). Fine as-is.
+- **`--legacy-peer-deps` is required.** Plain `npm ci`/`npm install` hit peer
+  conflicts (Vite 8 vs some plugins), so CI and the update script both use it.
+  Use it for any manual dependency install too.
+- **Two apps, three dev ports.** `npm run dev:all` runs the dashboard on
+  `:3000` **and** the Express proxy on `:3001` together (via `concurrently`) —
+  the dashboard is non-functional without the proxy, which Vite proxies `/api/*`
+  to. `npm run dev` runs the separate marketing site on `:3002`. Verify the
+  dashboard against `:3000`, not `:3001`.
+- **Runs login-less with no secrets.** No `.env.local` is needed: with
+  `VITE_PASSWORD_HASH` unset the API allows unauthenticated requests (see §7),
+  and missing `GOOGLE_PLACES_API_KEY` only degrades GMB checks to "Unknown".
+  Domain checks make real outbound HTTP/DNS/TLS calls, so live results depend on
+  network egress from the VM.
+- **Unit vs GUI tests are separate runners.** `npm run test`/`test:unit`
+  (Vitest, jsdom) need no browser. `npm run test:gui` (Playwright) needs a
+  browser first: `npx playwright install chromium` (not part of the update
+  script). Playwright auto-starts its own servers via `webServer`.
