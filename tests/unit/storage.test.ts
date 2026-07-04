@@ -61,11 +61,44 @@ describe('storage', () => {
 
       expect(() => saveDomains(mockDomains as any)).not.toThrow();
     });
+
+    it('should persist incoming domains (not stale storage) on quota fallback', () => {
+      const localStorageMock = window.localStorage as any;
+      const stale = JSON.stringify([{
+        id: 'old',
+        url: 'stale.com',
+        status: 'ALIVE',
+        statusCode: 200,
+        latency: 1,
+        addedAt: '2024-01-01T00:00:00.000Z',
+        history: [{ timestamp: '2024-01-02T00:00:00.000Z', status: 'ALIVE', statusCode: 200, latency: 1 }],
+        tags: []
+      }]);
+      localStorageMock.getItem.mockReturnValue(stale);
+
+      let callCount = 0;
+      localStorageMock.setItem.mockImplementation((_key: string, value: string) => {
+        callCount += 1;
+        if (callCount === 1) {
+          const err = new Error('QuotaExceededError');
+          err.name = 'QuotaExceededError';
+          throw err;
+        }
+        const parsed = JSON.parse(value);
+        expect(parsed).toHaveLength(1);
+        expect(parsed[0].url).toBe('google.com');
+        expect(parsed[0].history).toEqual([]);
+      });
+
+      saveDomains(mockDomains as any);
+      expect(localStorageMock.setItem).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('loadDomains', () => {
     it('should return sample domains when no domains saved', () => {
-      const domains = loadDomains();
+      const { domains, loadFailed } = loadDomains();
+      expect(loadFailed).toBe(false);
       expect(domains.length).toBeGreaterThan(0); // Returns sample domains by default
     });
 
@@ -82,9 +115,19 @@ describe('storage', () => {
       }]);
       (window.localStorage.getItem as any).mockReturnValue(storedData);
 
-      const domains = loadDomains();
+      const { domains, loadFailed } = loadDomains();
+      expect(loadFailed).toBe(false);
       expect(domains.length).toBe(1);
       expect(domains[0]?.url).toBe('google.com');
+    });
+
+    it('should signal loadFailed on corrupt JSON without wiping storage', () => {
+      (window.localStorage.getItem as any).mockReturnValue('{not valid json');
+
+      const { domains, loadFailed } = loadDomains();
+      expect(loadFailed).toBe(true);
+      expect(domains).toEqual([]);
+      expect(window.localStorage.setItem).not.toHaveBeenCalled();
     });
   });
 

@@ -43,16 +43,38 @@ describe('checkDomainWithSSL — liveness invariant', () => {
   });
 
   it('stays ALIVE when enrichment hangs past the timeout (no false Error)', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/api/check')) return resp(200, ALIVE);
+        return new Promise<Response>(() => {}); // never resolves
+      });
+
+      const pending = checkDomainWithSSL('example.com', { ...cfg, timeout: 5000 });
+      await vi.runAllTimersAsync();
+      const r = await pending;
+
+      expect(r.status).toBe(DomainStatus.Alive);
+      expect(r.ssl.status).toBe(SSLStatus.Unknown);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clamps sub-minimum timeout to the server probe floor', async () => {
+    let probeTimeout = '';
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.includes('/api/check')) return resp(200, ALIVE);
-      return new Promise<Response>(() => {}); // never resolves
+      if (url.includes('/api/check')) {
+        probeTimeout = new URL(url, 'http://localhost').searchParams.get('timeout') ?? '';
+        return resp(200, ALIVE);
+      }
+      return Promise.reject(new Error('enrichment skipped'));
     });
 
-    const r = await checkDomainWithSSL('example.com', { ...cfg, timeout: 80 });
-
-    expect(r.status).toBe(DomainStatus.Alive);
-    expect(r.ssl.status).toBe(SSLStatus.Unknown);
+    await checkDomainWithSSL('example.com', { ...cfg, timeout: 2000 });
+    expect(probeTimeout).toBe('5000');
   });
 
   it('reports DOWN (not Error) when the probe says DOWN', async () => {

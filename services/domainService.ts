@@ -120,7 +120,11 @@ type EnrichmentSettled = [
  * when the uptime probe itself fails (auth, network, or timeout).
  */
 export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
-  const timeoutMs = serviceConfig?.timeout || config.timeouts.domainCheck;
+  const rawTimeout = serviceConfig?.timeout ?? config.timeouts.domainCheck;
+  const timeoutMs = Math.min(
+    Math.max(rawTimeout, config.timeouts.minProbeTimeout),
+    config.timeouts.maxProbeTimeout
+  );
   const deadline = Date.now() + timeoutMs;
 
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;

@@ -6,6 +6,8 @@
 export const config = {
   // Timeouts (milliseconds)
   timeouts: {
+    minProbeTimeout: 5000,   // Floor for uptime probes — must match api/check + ssrfGuard clamp
+    maxProbeTimeout: 30000,  // Ceiling for uptime probes
     domainCheck: 15000,      // Default timeout for domain checks
     sslCheck: 10000,         // Timeout for SSL certificate checks
     whoisCheck: 10000,       // Timeout for WHOIS expiry checks

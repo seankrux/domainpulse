@@ -33,7 +33,12 @@ import { loadQaResults, mergeQaResults } from './utils/qaResults';
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const App: React.FC = () => {
-  const [domains, setDomains] = useState<Domain[]>(() => loadDomains());
+  const domainsLoadFailedRef = useRef(false);
+  const [domains, setDomains] = useState<Domain[]>(() => {
+    const { domains: loaded, loadFailed } = loadDomains();
+    domainsLoadFailedRef.current = loadFailed;
+    return loaded;
+  });
   const [groups, setGroups] = useState<DomainGroup[]>(() => loadGroups());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [newDomainUrl, setNewDomainUrl] = useState('');
@@ -85,8 +90,11 @@ const App: React.FC = () => {
     checkAllDomainsRef.current = checkAllDomains;
   }, [domains, checkAllDomains]);
 
-  // Persistence Effects
+  // Persistence Effects — skip save when load failed and state is still empty,
+  // so corrupt localStorage is not overwritten with [].
   useEffect(() => {
+    if (domainsLoadFailedRef.current && domains.length === 0) return;
+    domainsLoadFailedRef.current = false;
     saveDomains(domains);
   }, [domains]);
 
