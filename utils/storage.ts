@@ -179,20 +179,29 @@ export const clearDomains = (): void => {
 };
 
 // Groups management
-export const loadGroups = (): DomainGroup[] => {
+export interface GroupsLoadResult {
+  groups: DomainGroup[];
+  /** True when stored data was unreadable — caller must not persist [] back. */
+  loadFailed: boolean;
+}
+
+export const loadGroupsResult = (): GroupsLoadResult => {
   try {
     const stored = localStorage.getItem(GROUPS_KEY);
     if (!stored) {
       saveGroups(SAMPLE_GROUPS);
-      return SAMPLE_GROUPS;
+      return { groups: SAMPLE_GROUPS, loadFailed: false };
     }
     const parsed: StoredGroup[] = JSON.parse(stored);
-    return parsed;
+    return { groups: parsed, loadFailed: false };
   } catch (error) {
+    // Don't clobber recoverable-but-corrupt storage with [] (mirrors loadDomains).
     logger.error('Failed to load groups from localStorage:', error);
-    return [];
+    return { groups: [], loadFailed: true };
   }
 };
+
+export const loadGroups = (): DomainGroup[] => loadGroupsResult().groups;
 
 export const saveGroups = (groups: DomainGroup[]): void => {
   try {

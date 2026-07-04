@@ -93,6 +93,30 @@ describe('sslService', () => {
       expect(result.status).toBe(SSLStatus.Unknown);
     });
 
+    it('should classify a lapsed cert as EXPIRED, not INVALID', async () => {
+      // The lookup returns valid:false for an expired cert (daysUntilExpiry<=0)
+      // but still provides validTo and no error.
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 3);
+      (global.fetch as Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, issuer: "Let's Encrypt", validTo: pastDate.toISOString(), daysUntilExpiry: -3 }),
+      });
+
+      const result = await checkSSL('example.com');
+      expect(result.status).toBe(SSLStatus.Expired);
+    });
+
+    it('should still return INVALID on a hard cert error', async () => {
+      (global.fetch as Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, error: 'self-signed certificate' }),
+      });
+
+      const result = await checkSSL('example.com');
+      expect(result.status).toBe(SSLStatus.Invalid);
+    });
+
     it('should handle domain with protocol prefix', async () => {
       const mockResponse = {
         valid: true,

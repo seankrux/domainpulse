@@ -46,7 +46,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const url = req.query.url as string;
+  const _url = req.query.url as string | string[] | undefined;
+  const url = Array.isArray(_url) ? _url[0] : _url;
 
   if (!url) {
     setHeaders(corsHeaders);

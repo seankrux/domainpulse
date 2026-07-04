@@ -48,24 +48,37 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
       const apiUrl = apiUrls[index] as string;
       attempts++;
 
-      https.get(apiUrl, { timeout: 10000 }, (res) => {
+      let advanced = false;                        // guard against double-advance
+      const next = (err?: Error) => {
+        if (advanced) return;
+        advanced = true;
+        if (err) lastError = err;
+        tryNextApi(index + 1);
+      };
+
+      const req = https.get(apiUrl, { timeout: 10000 }, (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
           try {
             const parsed = parseWhoisData(data);
             if (parsed.expiryDate || parsed.registrar || parsed.nameServers) {
-              resolve(parsed);
+              if (!advanced) { advanced = true; resolve(parsed); }
             } else {
-              tryNextApi(index + 1);
+              next();
             }
           } catch {
-            tryNextApi(index + 1);
+            next();
           }
         });
-      }).on('error', (error) => {
-        lastError = error;
-        tryNextApi(index + 1);
+      });
+      req.on('error', (error) => next(error));
+      // The `timeout` option only arms socket.setTimeout; without this handler
+      // a peer that connects then stalls leaves the request hung forever
+      // (leaked socket, unresolved promise). Destroy and fall through.
+      req.on('timeout', () => {
+        req.destroy();
+        next(new Error('WHOIS request timed out'));
       });
     };
 
@@ -95,7 +108,11 @@ export function parseWhoisData(data: string): WhoisResult {
     if (!isNaN(date.getTime())) result.updatedDate = date.toISOString();
   }
 
-  const registrarMatch = data.match(/(?:Registrar|Sponsoring Registrar)[:\s]+([^\n]+)/i);
+  // Colon-anchored + multiline so we don't capture sub-fields like
+  // "Registrar WHOIS Server:" / "Registrar URL:" (which precede the real
+  // "Registrar:" line in Verisign/ICANN gTLD output — matching on [:\s] there
+  // returned "WHOIS Server: …" as the registrar name).
+  const registrarMatch = data.match(/^\s*(?:Registrar|Sponsoring Registrar):\s*([^\n]+)/im);
   if (registrarMatch && registrarMatch[1]) result.registrar = registrarMatch[1].trim();
 
   const registrarUrlMatch = data.match(/(?:Registrar URL|Registrar Information)[:\s]+([^\n]+)/i);

@@ -129,7 +129,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
           <label className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors" title="Import CSV">
             <Upload size={18} />
-            <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
+            <input type="file" accept=".csv" aria-label="Import CSV" className="hidden" onChange={handleFileUpload} />
           </label>
           <button
             onClick={onExportCSV}

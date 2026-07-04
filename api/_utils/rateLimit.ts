@@ -80,6 +80,14 @@ export const checkRateLimit = async (ip: string, config: RateLimitConfig = defau
   const record = requestCounts.get(ip);
 
   if (!record || now > record.resetTime) {
+    // Opportunistically evict expired keys so a flood of distinct (or spoofed
+    // X-Forwarded-For) IPs can't grow this map without bound for the lifetime
+    // of the warm instance.
+    if (requestCounts.size > 1000) {
+      for (const [key, rec] of requestCounts) {
+        if (now > rec.resetTime) requestCounts.delete(key);
+      }
+    }
     requestCounts.set(ip, { count: 1, resetTime: now + config.windowMs });
     return true;
   }
@@ -109,11 +117,14 @@ export const getRateLimitHeaders = async (ip: string, config: RateLimitConfig = 
     if (kv && hasKV) {
       const key = `ratelimit:${ip}`;
       const ttl = await kv.ttl(key);
-      const remaining = ttl > 0 ? config.maxRequests : config.maxRequests;
+      // Reflect actual consumption instead of the previous no-op ternary
+      // (both arms returned maxRequests, so Remaining never decreased).
+      const used = Number(await kv.get(key)) || 0;
+      const remaining = Math.max(0, config.maxRequests - used);
 
       return {
         'X-RateLimit-Limit': String(config.maxRequests),
-        'X-RateLimit-Remaining': String(Math.max(0, remaining)),
+        'X-RateLimit-Remaining': String(remaining),
         'X-RateLimit-Reset': String(ttl > 0 ? now + (ttl * 1000) : now + config.windowMs)
       };
     }

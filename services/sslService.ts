@@ -83,14 +83,21 @@ const parseSSLResponse = (data: SslApiResponse): SSLInfo => {
     return { status: SSLStatus.Unknown };
   }
   
-  if (!data.valid || data.error) {
-    return { status: SSLStatus.Invalid };
-  }
-
   const validTo = data.validTo ? new Date(data.validTo) : null;
-  const daysUntilExpiry = validTo 
+  const daysUntilExpiry = validTo && !isNaN(validTo.getTime())
     ? Math.ceil((validTo.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : undefined;
+
+  if (!data.valid || data.error) {
+    // A cert that's invalid ONLY because it has lapsed (has a parseable, past
+    // validTo and no hard error) is Expired, not generically Invalid — the
+    // lookup sets valid:false for daysUntilExpiry<=0, so without this an
+    // expired cert would never reach the Expired branch below.
+    if (!data.error && daysUntilExpiry !== undefined && daysUntilExpiry <= 0) {
+      return { status: SSLStatus.Expired, issuer: data.issuer || 'Unknown', validTo: validTo || undefined, daysUntilExpiry };
+    }
+    return { status: SSLStatus.Invalid };
+  }
 
   let status = SSLStatus.Valid;
   if (daysUntilExpiry !== undefined) {
