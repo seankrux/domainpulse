@@ -213,11 +213,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     <input
                                       type="number"
                                       value={settings.checkTimeout}
-                                      min={1000}
+                                      min={5000}
                                       max={120000}
                                       onChange={(e) => setSettings(prev => ({
                                         ...prev,
-                                        checkTimeout: clampNumber(Number(e.target.value), 1000, 120000)
+                                        checkTimeout: clampNumber(Number(e.target.value), 5000, 120000)
                                       }))}
                                       className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-emerald-500/30 outline-none text-zinc-200 text-sm"
                                     />
