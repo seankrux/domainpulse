@@ -681,11 +681,11 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await nameInput.fill(deleteGroup);
       await modal.locator('button:has-text("Save Group")').click();
       
-      // Delete the group — GroupManager uses window.confirm() (native dialog)
+      // Delete the group — inline confirmation replaces the native dialog
       const groupRow = modal.locator(`text=${deleteGroup}`).locator('..');
       const deleteButton = groupRow.locator('button[title="Delete group"]');
-      page.once('dialog', dialog => dialog.accept());
       await deleteButton.click();
+      await modal.getByRole('button', { name: 'Delete', exact: true }).click();
       
       // Verify deletion
       await expect(modal).not.toContainText(deleteGroup);
