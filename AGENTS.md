@@ -219,9 +219,10 @@ you do not need to reinstall. Standard commands live in `package.json` and the
 README "Available Commands" table — use those. Non-obvious caveats only:
 
 - **Node 22** is used here (`.nvmrc` = 22; `engines` requires >=20). Fine as-is.
-- **`--legacy-peer-deps` is required.** Plain `npm ci`/`npm install` hit peer
-  conflicts (Vite 8 vs some plugins), so CI and the update script both use it.
-  Use it for any manual dependency install too.
+- **Installs use `--legacy-peer-deps` to match CI.** Plain `npm ci` currently
+  works too, but CI (`.github/workflows/ci.yml`) and the startup update script
+  both pass `--legacy-peer-deps` to stay resilient to peer-range drift; prefer
+  it for manual installs so you match CI.
 - **Two apps, three dev ports.** `npm run dev:all` runs the dashboard on
   `:3000` **and** the Express proxy on `:3001` together (via `concurrently`) —
   the dashboard is non-functional without the proxy, which Vite proxies `/api/*`
