@@ -7,6 +7,7 @@
  * before any request, same as the other outbound-fetching endpoints.
  */
 import * as https from 'https';
+import type { ClientRequest } from 'http';
 import { validateOutboundUrlResolved } from './ssrfGuard.js';
 import { parseTechFromHTML } from '../../services/techDetectionService.js';
 
@@ -17,7 +18,7 @@ export async function detectTechStack(rawUrl: string): Promise<unknown> {
   if (!v.ok) throw new Error(v.reason);
 
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { timeout: 10000 }, (res) => {
+    https.get(url, { timeout: 10000 }, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
@@ -30,11 +31,13 @@ export async function detectTechStack(rawUrl: string): Promise<unknown> {
           reject(error);
         }
       });
-    });
-    req.on('error', reject);
-    // Without a 'timeout' handler the request hangs forever on a stalled peer
-    // (leaked socket, unresolved promise). Destroy and reject so the caller's
-    // soft-timeout isn't the only thing that can end it.
-    req.on('timeout', () => { req.destroy(new Error('Tech-detect request timed out')); });
+    })
+      .on('error', reject)
+      // Without a 'timeout' handler the request hangs forever on a stalled peer
+      // (leaked socket, unresolved promise). The `timeout` option only arms
+      // socket.setTimeout — it doesn't destroy the socket. Destroy and reject.
+      .on('timeout', function (this: ClientRequest) {
+        this.destroy(new Error('Tech-detect request timed out'));
+      });
   });
 }

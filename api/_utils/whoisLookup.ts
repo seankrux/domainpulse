@@ -6,6 +6,7 @@
  * so local results match production.
  */
 import * as https from 'https';
+import type { ClientRequest } from 'http';
 
 export interface WhoisResult {
   expiryDate?: string;
@@ -56,7 +57,7 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
         tryNextApi(index + 1);
       };
 
-      const req = https.get(apiUrl, { timeout: 10000 }, (res) => {
+      https.get(apiUrl, { timeout: 10000 }, (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
@@ -71,15 +72,15 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
             next();
           }
         });
-      });
-      req.on('error', (error) => next(error));
-      // The `timeout` option only arms socket.setTimeout; without this handler
-      // a peer that connects then stalls leaves the request hung forever
-      // (leaked socket, unresolved promise). Destroy and fall through.
-      req.on('timeout', () => {
-        req.destroy();
-        next(new Error('WHOIS request timed out'));
-      });
+      })
+        .on('error', (error) => next(error))
+        // The `timeout` option only arms socket.setTimeout; without this handler
+        // a peer that connects then stalls leaves the request hung forever
+        // (leaked socket, unresolved promise). Destroy and fall through.
+        .on('timeout', function (this: ClientRequest) {
+          this.destroy();
+          next(new Error('WHOIS request timed out'));
+        });
     };
 
     tryNextApi(0);
