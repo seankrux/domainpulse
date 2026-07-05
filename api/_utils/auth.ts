@@ -39,6 +39,14 @@ interface JWTPayload {
 }
 
 /**
+ * Whether auth is enabled (a password hash is configured). Exposed to the
+ * frontend via `/api/auth-status` so the AuthGuard can decide between the
+ * public demo (no gate) and the login portal — front and back must agree
+ * (AGENTS.md §7).
+ */
+export const isAuthEnabled = (): boolean => AUTH_ENABLED;
+
+/**
  * Generate JWT token for authenticated user.
  */
 export const generateToken = (): { token: string; expiresAt: number } => {

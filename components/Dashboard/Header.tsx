@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, Sun, Moon, Settings, ArrowRight, Clock } from 'lucide-react';
+import { BarChart3, Sun, Moon, Settings, ArrowRight, Clock, LogOut } from 'lucide-react';
 import { AppSettings } from '../../utils/storage';
 
 interface HeaderProps {
@@ -8,6 +8,8 @@ interface HeaderProps {
   showSettings: boolean;
   setShowSettings: (show: boolean) => void;
   logout: () => void;
+  /** True only when a real login happened (auth-enabled instance). */
+  isAuthenticated?: boolean;
 }
 
 const REFRESH_INTERVALS = [
@@ -23,7 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
   toggleDarkMode,
   showSettings,
   setShowSettings,
-  logout: _logout
+  logout,
+  isAuthenticated = false
 }) => {
   return (
     <header className="bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/80 sticky top-0 z-20">
@@ -73,6 +76,16 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-zinc-800 cursor-pointer" title="Sean G">
             SG
           </div>
+          {isAuthenticated && (
+            <button
+              onClick={logout}
+              data-testid="logout-button"
+              className="text-zinc-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-zinc-800/50"
+              title="Sign out"
+            >
+              <LogOut size={20} />
+            </button>
+          )}
         </div>
       </div>
     </header>

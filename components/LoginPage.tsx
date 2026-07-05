@@ -93,14 +93,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </button>
           </form>
 
-          {/* Demo credentials hint */}
           <div className="mt-6 pt-6 border-t border-zinc-800/50">
-            <div className="bg-emerald-500/5 backdrop-blur-sm border border-emerald-500/10 rounded-xl px-4 py-3">
-              <p className="text-[11px] text-emerald-400/80 text-center font-medium tracking-wide uppercase mb-1">Demo Mode</p>
-              <p className="text-xs text-zinc-500 text-center leading-relaxed">
-                Enter any password to explore the dashboard
-              </p>
-            </div>
+            <p className="text-xs text-zinc-500 text-center leading-relaxed">
+              This instance is password-protected. Contact the administrator if you need access.
+            </p>
           </div>
         </div>
 

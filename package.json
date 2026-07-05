@@ -27,6 +27,7 @@
     "test:devtools": "playwright test tests/devtools-audit.spec.ts",
     "test:unit": "vitest tests/unit/",
     "test:watch": "vitest --watch",
+    "auth:hash": "node scripts/hash-password.mjs",
     "mcp:start": "node .mcp/auto-test/index.js",
     "qa:crawl": "tsx scripts/qa-crawl.ts"
   },

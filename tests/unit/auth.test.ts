@@ -48,3 +48,26 @@ describe('verifyAuth (opt-in auth)', () => {
     expect(mod.verifyAuth(makeReq(`Bearer ${token}`))).toBe(true);
   });
 });
+
+/**
+ * `/api/auth-status` tells the AuthGuard whether to show the login portal.
+ * It must mirror verifyAuth's opt-in switch exactly (AGENTS.md §7).
+ */
+describe('isAuthEnabled (auth-status contract)', () => {
+  beforeEach(() => { vi.resetModules(); });
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  it('is false when no password hash is configured (public demo)', async () => {
+    vi.stubEnv('VITE_PASSWORD_HASH', '');
+    const { isAuthEnabled } = await import('../../api/_utils/auth');
+    expect(isAuthEnabled()).toBe(false);
+  });
+
+  it('is true when a password hash is configured', async () => {
+    vi.stubEnv('VITE_PASSWORD_HASH', 'hash:salt');
+    vi.stubEnv('JWT_SECRET', 'test-secret-please-ignore-1234567890');
+    vi.stubEnv('NODE_ENV', 'test');
+    const { isAuthEnabled } = await import('../../api/_utils/auth');
+    expect(isAuthEnabled()).toBe(true);
+  });
+});

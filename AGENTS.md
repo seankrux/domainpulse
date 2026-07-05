@@ -97,22 +97,35 @@ Contract:
 
 ## 7. Auth is opt-in — public when no password is configured
 
-**The front end runs login-less (`AuthGuard` is a "skip authentication" stub),
-so it sends NO token. The API must therefore allow unauthenticated requests
-UNLESS a password is configured.**
+**Whether the login portal shows is decided by the SERVER, not the client.
+`AuthGuard` asks `GET /api/auth-status` (`{ authRequired }`): `false` → render
+the dashboard login-less (public demo), `true` → gate behind `LoginPage`.
+The API allows unauthenticated requests UNLESS a password is configured, and
+the front end gates in exactly the same condition — the two must never
+disagree.**
 
 - `verifyAuth` (`api/_utils/auth.ts`) returns `true` when `VITE_PASSWORD_HASH`
   is unset (public/demo mode), and only requires a valid Bearer token when it
   IS set. This mirrors the dev proxy (`server/proxy.ts`, `verifyToken` calls
   `next()` when no hash) — prod and dev must agree.
+- `/api/auth-status` exists twice on purpose (Vercel `api/auth-status.ts` via
+  `isAuthEnabled()`, dev proxy route in `server/proxy.ts`) like every other
+  endpoint — keep both, keep them identical.
+- `AuthGuard` **fails open** to public mode if the status probe errors, so a
+  transient API failure can't brick the demo. On a protected instance the
+  first `401` fires `domainpulse:auth-invalid`, which clears the session
+  (AuthProvider) and re-probes (AuthGuard) → user lands on the login page.
 - `JWT_SECRET` is required **only when auth is enabled** (`VITE_PASSWORD_HASH`
   set) in production. Don't reinstate an unconditional "deny all / throw in
-  production when unconfigured" — combined with the AuthGuard stub it returned
-  `401` for every domain → ALIVE domains showed Error (the exact bug report).
-- To run locked-down: set `VITE_PASSWORD_HASH` (+ `JWT_SECRET`) AND restore a
-  real `AuthGuard`/login so the front end actually obtains a token. The token
-  must flow through `getSessionToken()` (see §5).
-- Locked in by `tests/unit/auth.test.ts`.
+  production when unconfigured" — that combination returned `401` for every
+  domain → ALIVE domains showed Error (the exact bug report).
+- To run locked-down: generate credentials with
+  `npm run auth:hash -- 'password'` and set `VITE_PASSWORD_HASH` +
+  `JWT_SECRET` (`.env.local` in dev, deployment env in prod). The token flows
+  through `getSessionToken()` (see §5).
+- Locked in by `tests/unit/auth.test.ts` (API opt-in + auth-status contract),
+  `tests/unit/AuthGuard.test.tsx` (frontend gate), and `tests/login.spec.ts`
+  (E2E; self-skips on public instances so CI stays login-less).
 
 ## 6. Timeout guards liveness only — never enrichment
 

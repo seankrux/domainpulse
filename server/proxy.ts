@@ -97,6 +97,14 @@ const verifyToken = (req: express.Request, res: express.Response, next: express.
   }
 };
 
+// Whether this instance is password-protected. Mirrors api/auth-status.ts —
+// the AuthGuard shows the login portal only when this returns true
+// (AGENTS.md §7). Reads the live variable so dev bootstrap (first login sets
+// the password) is reflected immediately.
+app.get('/api/auth-status', (_req, res) => {
+  res.json({ authRequired: Boolean(AUTH_PASSWORD_HASH) });
+});
+
 // Auth Endpoint
 app.post('/api/login', async (req, res) => {
   const { password } = req.body;
