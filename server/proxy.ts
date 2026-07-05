@@ -150,13 +150,9 @@ app.get('/api/check', verifyToken, async (req, res) => {
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  const { safeHeadRequest, toCheckResult, toProbeUrl } = await import('../api/_utils/ssrfGuard');
-  const targetUrl = toProbeUrl(url);
-  const r = await safeHeadRequest(targetUrl, { timeoutMs: 10000 });
-  if (r.blocked) {
-    return res.status(400).json({ error: 'Blocked', message: r.reason });
-  }
-  res.json(toCheckResult(r));
+  const { probeUptime, toProbeUrl } = await import('../api/_utils/ssrfGuard');
+  const { httpStatus, body } = await probeUptime(toProbeUrl(url), { timeoutMs: 10000 });
+  res.status(httpStatus).json(body);
 });
 
 app.get('/api/ssl', verifyToken, async (req, res) => {

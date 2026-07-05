@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isBlockedHost, validateOutboundUrl, isBlockedIp, validateOutboundUrlResolved, isReachableStatus, toCheckResult } from '../../api/_utils/ssrfGuard';
+import { isBlockedHost, validateOutboundUrl, isBlockedIp, validateOutboundUrlResolved, isReachableStatus, toCheckResult, toggleWww, probeUptime } from '../../api/_utils/ssrfGuard';
 
 describe('ssrfGuard.toCheckResult (shared liveness mapping)', () => {
   it('maps a reachable probe to ALIVE with its status/latency', () => {
@@ -89,6 +89,36 @@ describe('ssrfGuard.isBlockedHost', () => {
     for (const h of ['github.com', 'example.com', '8.8.8.8', '1.1.1.1', '172.32.0.1']) {
       expect(isBlockedHost(h), h).toBe(false);
     }
+  });
+});
+
+describe('ssrfGuard.toggleWww (canonical www<->apex)', () => {
+  it('adds www to an apex host', () => {
+    expect(toggleWww('https://example.com')).toBe('https://www.example.com/');
+    expect(toggleWww('https://example.co.uk/path')).toBe('https://www.example.co.uk/path');
+  });
+  it('strips www from a www host', () => {
+    expect(toggleWww('https://www.example.com')).toBe('https://example.com/');
+  });
+  it('never toggles an IP literal', () => {
+    expect(toggleWww('https://93.184.216.34')).toBeNull();
+    expect(toggleWww('not a url')).toBeNull();
+  });
+});
+
+describe('ssrfGuard.probeUptime (canonicalisation + liveness mapping)', () => {
+  it('maps a non-resolving domain to DOWN, not a 400/Error', async () => {
+    // NXDOMAIN on both apex and www → a real negative signal about the domain.
+    const { httpStatus, body } = await probeUptime('https://nonexistent-domain-xyz-abc.example', { timeoutMs: 5000 });
+    expect(httpStatus).toBe(200);
+    expect((body as { status: string }).status).toBe('DOWN');
+    expect((body as { statusCode: number }).statusCode).toBe(0);
+  });
+
+  it('still returns HTTP 400 for an SSRF/private target (not DOWN)', async () => {
+    const { httpStatus, body } = await probeUptime('http://127.0.0.1/', { timeoutMs: 5000 });
+    expect(httpStatus).toBe(400);
+    expect((body as { error: string }).error).toBe('Blocked');
   });
 });
 
