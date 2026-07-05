@@ -144,12 +144,9 @@ app.get('/api/check', verifyToken, async (req, res) => {
 
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
-  const { safeHeadRequest, toCheckResult } = await import('../api/_utils/ssrfGuard');
-  const r = await safeHeadRequest(targetUrl, { timeoutMs: 10000 });
-  if (r.blocked) {
-    return res.status(400).json({ error: 'Blocked', message: r.reason });
-  }
-  res.json(toCheckResult(r));
+  const { probeUptime } = await import('../api/_utils/ssrfGuard');
+  const { httpStatus, body } = await probeUptime(targetUrl, { timeoutMs: 10000 });
+  res.status(httpStatus).json(body);
 });
 
 app.get('/api/ssl', verifyToken, async (req, res) => {

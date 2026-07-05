@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
-import { safeHeadRequest, toCheckResult } from './_utils/ssrfGuard.js';
+import { probeUptime } from './_utils/ssrfGuard.js';
 import { config } from '../lib/config.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -62,11 +62,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
-  // SSRF guard: resolve + validate every hop, follow redirects safely.
-  const r = await safeHeadRequest(targetUrl, { timeoutMs, userAgent });
+  // SSRF-guarded uptime probe with www↔apex canonicalisation. Non-resolving
+  // domains report DOWN; only SSRF/scheme rejects return 400.
+  const { httpStatus, body } = await probeUptime(targetUrl, { timeoutMs, userAgent });
   setHeaders(corsHeaders);
-  if (r.blocked) {
-    return res.status(400).json({ error: 'Blocked', message: r.reason });
-  }
-  return res.status(200).json(toCheckResult(r));
+  return res.status(httpStatus).json(body);
 }

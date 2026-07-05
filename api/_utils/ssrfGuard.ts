@@ -146,12 +146,19 @@ export function validateOutboundUrl(raw: string): { ok: true } | { ok: false; re
   return { ok: true };
 }
 
+/**
+ * Failure `code` distinguishes a genuinely dead target (`unresolvable` — DNS
+ * NXDOMAIN, a real DOWN signal) from an SSRF/scheme rejection (`blocked` /
+ * `invalid` — must surface as HTTP 400, never as a domain's DOWN status).
+ */
+export type ResolveResult = { ok: true } | { ok: false; reason: string; code: 'unresolvable' | 'blocked' | 'invalid' };
+
 /** Async: literal check + resolve every A/AAAA and ensure all are public. */
-export async function validateOutboundUrlResolved(raw: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+export async function validateOutboundUrlResolved(raw: string): Promise<ResolveResult> {
   const lit = validateOutboundUrl(raw);
-  if (!lit.ok) return lit;
+  if (!lit.ok) return { ...lit, code: lit.reason === 'Invalid URL' ? 'invalid' : 'blocked' };
   const host = new URL(raw).hostname.replace(/^\[|\]$/g, '');
-  if (isBlockedIp(host)) return { ok: false, reason: 'Target host is not allowed (private/internal address)' };
+  if (isBlockedIp(host)) return { ok: false, reason: 'Target host is not allowed (private/internal address)', code: 'blocked' };
   // Only skip DNS for a CANONICAL IP literal (isBlockedIp already cleared it).
   // Non-canonical numeric forms (127.1, 2130706433, 0177.0.0.1) are not valid
   // per isIP(), so they fall through to dns.lookup, whose getaddrinfo
@@ -159,14 +166,14 @@ export async function validateOutboundUrlResolved(raw: string): Promise<{ ok: tr
   if (isIP(host) !== 0) return { ok: true };
   try {
     const records = await dns.lookup(host, { all: true });
-    if (records.length === 0) return { ok: false, reason: 'Host did not resolve' };
+    if (records.length === 0) return { ok: false, reason: 'Host did not resolve', code: 'unresolvable' };
     for (const r of records) {
       if (isBlockedIp(r.address)) {
-        return { ok: false, reason: 'Host resolves to a private/internal address' };
+        return { ok: false, reason: 'Host resolves to a private/internal address', code: 'blocked' };
       }
     }
   } catch {
-    return { ok: false, reason: 'Host did not resolve' };
+    return { ok: false, reason: 'Host did not resolve', code: 'unresolvable' };
   }
   return { ok: true };
 }
@@ -183,6 +190,8 @@ export function isReachableStatus(status: number): boolean {
 
 export interface SafeHeadResult {
   blocked?: boolean;
+  /** True when `blocked` is due to DNS non-resolution (a real DOWN), not SSRF. */
+  unresolvable?: boolean;
   reason?: string;
   ok: boolean;
   status: number;
@@ -245,7 +254,7 @@ export async function safeHeadRequest(
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
     const v = await validateOutboundUrlResolved(current);
-    if (!v.ok) return { blocked: true, reason: v.reason, ok: false, status: 0, latency: Date.now() - start };
+    if (!v.ok) return { blocked: true, unresolvable: v.code === 'unresolvable', reason: v.reason, ok: false, status: 0, latency: Date.now() - start };
 
     const doFetch = async (method: 'HEAD' | 'GET'): Promise<Response> => {
       const controller = new AbortController();
@@ -291,4 +300,61 @@ export async function safeHeadRequest(
     return { ok: isReachableStatus(resp.status), status: resp.status, latency: Date.now() - start };
   }
   return { ok: false, status: 0, latency: Date.now() - start, error: 'Too many redirects' };
+}
+
+/**
+ * Return the same URL with its `www.` toggled — strip it if present, add it if
+ * absent — or null if the host isn't a plain domain we should toggle. Used to
+ * recover a domain the user typed in the "wrong" canonical form (apex vs www).
+ */
+export function toggleWww(rawUrl: string): string | null {
+  let u: URL;
+  try { u = new URL(rawUrl); } catch { return null; }
+  if (isIP(u.hostname) !== 0) return null;           // never toggle IP literals
+  if (u.hostname.startsWith('www.')) {
+    u.hostname = u.hostname.slice(4);
+  } else {
+    u.hostname = `www.${u.hostname}`;
+  }
+  return u.toString();
+}
+
+/**
+ * Uptime probe with www↔apex canonicalisation — the single source of truth for
+ * `/api/check` (Vercel fn + dev proxy). Returns a ready-to-send HTTP status +
+ * body so both endpoints behave identically.
+ *
+ * Behaviour:
+ *  - Probe the URL as given.
+ *  - If it fails ONLY because the host doesn't resolve (NXDOMAIN), retry once
+ *    with the `www.` toggled — this fixes "I added example.com but it only
+ *    serves www.example.com" (and vice-versa).
+ *  - A target that still doesn't resolve is reported as DOWN (a real negative
+ *    signal about the domain), NOT as a 400/Error. Only an SSRF/scheme reject
+ *    (private address, non-http) returns HTTP 400. See AGENTS.md §1–2.
+ */
+export async function probeUptime(
+  rawUrl: string,
+  opts: { timeoutMs?: number; userAgent?: string } = {},
+): Promise<{ httpStatus: 200 | 400; body: CheckResult | { error: string; message?: string } }> {
+  let r = await safeHeadRequest(rawUrl, opts);
+
+  if (r.blocked && r.unresolvable) {
+    const alt = toggleWww(rawUrl);
+    if (alt) {
+      const r2 = await safeHeadRequest(alt, opts);
+      // Accept the alternate only if it actually reached the host (resolved).
+      if (!r2.blocked) r = r2;
+      else if (!r2.unresolvable) r = r2;   // alt hit a real SSRF/scheme block → surface that
+    }
+  }
+
+  if (r.blocked) {
+    if (r.unresolvable) {
+      // Genuinely dead domain → DOWN, not Error (AGENTS.md §1, known-gap #2 fixed).
+      return { httpStatus: 200, body: { status: 'DOWN', statusCode: 0, latency: r.latency, message: r.reason } };
+    }
+    return { httpStatus: 400, body: { error: 'Blocked', message: r.reason } };
+  }
+  return { httpStatus: 200, body: toCheckResult(r) };
 }

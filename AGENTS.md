@@ -43,14 +43,25 @@ flagged those domains offline.
 Also in `safeHeadRequest`: when `HEAD` returns **405 or 501**, we retry **once
 with `GET`** to recover the true status. Keep this fallback.
 
-The probe→response mapping lives in **`toCheckResult(r)`** in `ssrfGuard.ts` —
-the **single source of truth** shared by the Vercel function (`api/check.ts`)
-and the dev proxy (`server/proxy.ts`). **Do not** hand-roll the
-`{ status, statusCode, latency }` mapping in either endpoint; call
-`toCheckResult` so the two environments can never disagree.
+The `/api/check` flow lives in **`probeUptime(url)`** in `ssrfGuard.ts` — the
+**single source of truth** shared by the Vercel function (`api/check.ts`) and
+the dev proxy (`server/proxy.ts`). It returns a ready-to-send `{ httpStatus,
+body }`. **Do not** hand-roll the probe/mapping in either endpoint; call
+`probeUptime` so the two environments can never disagree. It:
+- runs `safeHeadRequest` (→ `toCheckResult`, still the ALIVE/DOWN mapper);
+- **canonicalises www↔apex**: if the host doesn't resolve, it retries once with
+  `www.` toggled (`toggleWww`) — so "I added `example.com` but it only serves
+  `www.example.com`" (or vice-versa) resolves correctly;
+- maps a **genuinely unresolvable** domain (NXDOMAIN) to **DOWN**, not to a 400
+  / `Error`. Only an SSRF/scheme reject (private address, non-http) returns
+  HTTP 400. The `unresolvable` flag on `SafeHeadResult` (set from the
+  `validateOutboundUrlResolved` failure `code`) is what distinguishes "dead
+  domain → DOWN" from "blocked target → 400". **Do not** collapse these back
+  into one branch.
 
 Locked in by `tests/unit/ssrf.test.ts` ("isReachableStatus (liveness
-contract)" + "toCheckResult (shared liveness mapping)").
+contract)", "toCheckResult (shared liveness mapping)", "toggleWww", and
+"probeUptime (canonicalisation + liveness mapping)").
 
 ## 3. Status badge text vs colour
 
@@ -136,15 +147,27 @@ that was the loophole that let slow SSL/WHOIS calls produce false Error.
    Building real light mode is a large, app-wide effort. **Decision: leave as-is
    for now.** Either remove the toggle or do a full themed-colour pass — but only
    as an explicit, scoped task.
-2. **Unresolvable domains return `400 Blocked "Host did not resolve"`** rather
-   than a clean `DOWN`. The SSRF DNS check can't distinguish "private IP" from
-   "doesn't resolve". A genuinely-dead domain currently surfaces as an endpoint
-   error → `Error` status. Acceptable for now; revisit if false "Error" reports
-   appear for dead domains.
-3. **SSL filter dropdown has no "Unknown" option** (`FilterBar.tsx`), so
+2. **SSL filter dropdown has no "Unknown" option** (`FilterBar.tsx`), so
    domains with unknown SSL can't be isolated via that filter.
 
 ---
+
+## Fix log (2026-07-05) — www↔apex canonicalisation + unresolvable → DOWN
+
+- **Symptom ("I added domains; some check the www, some non-www didn't"):** a
+  domain typed in the form that doesn't resolve (apex when only `www` has an A
+  record, or vice-versa) hit `dns.lookup` NXDOMAIN → SSRF guard returned
+  `Host did not resolve` → `/api/check` replied `400 Blocked` → the client saw
+  `!response.ok`, exhausted endpoints, and surfaced amber **Error**. No attempt
+  was ever made on the other canonical form.
+- Fix: new shared `probeUptime()` in `ssrfGuard.ts` (used by `api/check.ts` +
+  `server/proxy.ts`). On a non-resolving host it retries once with `www.`
+  toggled (`toggleWww`); a still-unresolvable domain maps to **DOWN** (a real
+  negative signal), while SSRF/scheme rejects still return `400`. The
+  `unresolvable` discriminator (from `validateOutboundUrlResolved`'s failure
+  `code`) is what keeps "dead domain → DOWN" separate from "private → 400".
+  This also closes former known-gap #2. See §2.
+- Tests: `tests/unit/ssrf.test.ts` ("toggleWww", "probeUptime …").
 
 ## Fix log (2026-06-22) — login-less demo returned 401 → Error
 
