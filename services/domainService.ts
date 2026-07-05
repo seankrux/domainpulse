@@ -6,6 +6,7 @@ import { detectTechStack } from './techDetectionService';
 import { logger } from '../utils/logger';
 import { config } from '../lib/config';
 import { getSessionToken } from '../utils/authSession';
+import { toProbeUrl } from '../utils/probeUrl';
 
 const DEFAULT_PROXY_URL = config.proxy.defaultUrl;
 
@@ -77,6 +78,7 @@ export const normalizeUrl = (input: string): string => {
   return url;
 };
 
+
 /**
  * Reject `p` after `ms` with `message`. Clears its own timer so a settled
  * promise never leaves a dangling timeout (which would keep Node/tests alive).
@@ -127,7 +129,7 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
   );
   const deadline = Date.now() + timeoutMs;
 
-  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+  const targetUrl = toProbeUrl(url);
 
   // Determine proxy URL and token
   const proxyUrl = serviceConfig?.proxyUrl || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_URL) || DEFAULT_PROXY_URL;

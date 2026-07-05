@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
-import { safeHeadRequest, toCheckResult } from './_utils/ssrfGuard.js';
+import { safeHeadRequest, toCheckResult, toProbeUrl } from './_utils/ssrfGuard.js';
 import { config } from '../lib/config.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -60,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+  const targetUrl = toProbeUrl(url);
 
   // SSRF guard: resolve + validate every hop, follow redirects safely.
   const r = await safeHeadRequest(targetUrl, { timeoutMs, userAgent });

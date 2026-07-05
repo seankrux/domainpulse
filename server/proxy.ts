@@ -150,9 +150,8 @@ app.get('/api/check', verifyToken, async (req, res) => {
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
-
-  const { safeHeadRequest, toCheckResult } = await import('../api/_utils/ssrfGuard');
+  const { safeHeadRequest, toCheckResult, toProbeUrl } = await import('../api/_utils/ssrfGuard');
+  const targetUrl = toProbeUrl(url);
   const r = await safeHeadRequest(targetUrl, { timeoutMs: 10000 });
   if (r.blocked) {
     return res.status(400).json({ error: 'Blocked', message: r.reason });

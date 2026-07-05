@@ -124,3 +124,23 @@ describe('domainService', () => {
     });
   });
 });
+
+describe('toProbeUrl (scheme prefixing)', () => {
+  it('prefixes https:// onto scheme-less hosts', async () => {
+    const { toProbeUrl } = await import('../../utils/probeUrl');
+    expect(toProbeUrl('google.com')).toBe('https://google.com');
+  });
+
+  it('does NOT treat hosts that merely start with "http" as having a scheme', async () => {
+    const { toProbeUrl } = await import('../../utils/probeUrl');
+    // Regression: startsWith('http') matched these, producing "Invalid URL" → Error
+    expect(toProbeUrl('httpstat.us')).toBe('https://httpstat.us');
+    expect(toProbeUrl('httpbin.org/get')).toBe('https://httpbin.org/get');
+  });
+
+  it('leaves real schemes untouched', async () => {
+    const { toProbeUrl } = await import('../../utils/probeUrl');
+    expect(toProbeUrl('http://example.com')).toBe('http://example.com');
+    expect(toProbeUrl('HTTPS://example.com')).toBe('HTTPS://example.com');
+  });
+});

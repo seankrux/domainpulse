@@ -106,3 +106,12 @@ describe('ssrfGuard.validateOutboundUrl', () => {
     expect(validateOutboundUrl('http://example.com/path').ok).toBe(true);
   });
 });
+
+describe('toProbeUrl (server-side scheme prefixing)', () => {
+  it('matches the browser-side contract: anchored scheme test', async () => {
+    const { toProbeUrl } = await import('../../api/_utils/ssrfGuard');
+    expect(toProbeUrl('httpstat.us')).toBe('https://httpstat.us');
+    expect(toProbeUrl('example.com')).toBe('https://example.com');
+    expect(toProbeUrl('http://example.com')).toBe('http://example.com');
+  });
+});

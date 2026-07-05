@@ -181,6 +181,17 @@ export function isReachableStatus(status: number): boolean {
   return status > 0 && status < 500;
 }
 
+/**
+ * Build the probe URL for a possibly scheme-less target. Anchored scheme test:
+ * `startsWith('http')` wrongly matched hosts that merely BEGIN with "http"
+ * (httpstat.us, httpbin.org), skipping the https:// prefix and failing as
+ * "Invalid URL". Shared by `api/check.ts` and the dev proxy; the browser-side
+ * twin is `toProbeUrl` in `services/domainService.ts`.
+ */
+export function toProbeUrl(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
 export interface SafeHeadResult {
   blocked?: boolean;
   reason?: string;

@@ -1,6 +1,7 @@
 import type { ServiceConfig } from '../types';
 import { logger } from '../utils/logger.js';
 import { getSessionToken } from '../utils/authSession.js';
+import { toProbeUrl } from '../utils/probeUrl.js';
 
 export interface TechStack {
   cms?: string;
@@ -96,7 +97,7 @@ const TECH_PATTERNS: TechDetection = {
  */
 export const detectTechStack = async (url: string, config?: ServiceConfig): Promise<TechStack> => {
   const cleanDomain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+  const targetUrl = toProbeUrl(url);
 
   const proxyUrl = config?.proxyUrl || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_URL) || 'http://localhost:3001';
   let token = config?.authToken;
