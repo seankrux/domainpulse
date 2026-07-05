@@ -12,6 +12,7 @@
     { "source": "/api/whois", "destination": "/api/whois.ts" },
     { "source": "/api/dns", "destination": "/api/dns.ts" },
     { "source": "/api/gmb", "destination": "/api/gmb.ts" },
+    { "source": "/api/tech-detect", "destination": "/api/tech-detect.ts" },
     { "source": "/content/:path*", "destination": "/content/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
@@ -28,8 +29,16 @@
           "value": "DENY"
         },
         {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
         }
       ]
     }
