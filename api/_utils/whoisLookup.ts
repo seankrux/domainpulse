@@ -66,6 +66,10 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
       }).on('error', (error) => {
         lastError = error;
         tryNextApi(index + 1);
+      }).on('timeout', function onTimeout() {
+        this.destroy();
+        lastError = new Error('Request timeout');
+        tryNextApi(index + 1);
       });
     };
 
@@ -108,7 +112,7 @@ export function parseWhoisData(data: string): WhoisResult {
   const registrarIanaIdMatch = data.match(/(?:Registrar IANA ID|Registrar ID)[:\s]+([^\n]+)/i);
   if (registrarIanaIdMatch && registrarIanaIdMatch[1]) result.registrarIanaId = registrarIanaIdMatch[1].trim();
 
-  const statusMatches = data.matchAll(/(?:Domain Status|Status)[:\s]+([^\n]+)/gi);
+  const statusMatches = data.matchAll(/^\s*Domain Status:\s*(\S+)/gim);
   const statuses = Array.from(statusMatches, m => m[1]?.trim()).filter((s): s is string => !!s);
   if (statuses.length > 0) result.domainStatus = statuses;
 

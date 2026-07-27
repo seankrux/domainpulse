@@ -71,6 +71,10 @@ describe('ssrfGuard.validateOutboundUrlResolved (DNS rebinding)', () => {
   it('allows a real public host', async () => {
     const r = await validateOutboundUrlResolved('https://github.com/');
     expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.addresses.length).toBeGreaterThan(0);
+      expect(r.addresses.every(addr => !isBlockedIp(addr))).toBe(true);
+    }
   });
 });
 

@@ -101,10 +101,12 @@ export const useMonitoring = ({
               ssl: result.ssl,
               expiry: result.expiry,
               dns: result.dns,
+              techStack: result.techStack,
               lastChecked: new Date()
             } : d
           );
         });
+        addHistoryRecord(domain.id, result);
         setCheckProgress(prev => ({ ...prev, current: prev.current + 1 }));
       } catch (error) {
         if (error instanceof Error && error.message === 'Unauthorized') {
@@ -141,12 +143,13 @@ export const useMonitoring = ({
     }
 
     // Send to worker
+    setIsCheckingAll(true);
     workerRef.current.postMessage({
       type: 'CHECK_BATCH',
       domains: domainsToProcess,
       config: serviceConfig
     });
-  }, [setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid, setCheckProgress]);
+  }, [setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid, setCheckProgress, addHistoryRecord]);
 
   const checkAllDomains = useCallback(async (silent = false) => {
     if (isCheckingAll) return;
@@ -196,6 +199,7 @@ export const useMonitoring = ({
           ssl: result.ssl,
           expiry: result.expiry,
           dns: result.dns,
+          techStack: result.techStack,
           lastChecked: new Date()
         } : d
       ));
@@ -248,6 +252,7 @@ export const useMonitoring = ({
               ssl: result.ssl,
               expiry: result.expiry,
               dns: result.dns,
+              techStack: result.techStack,
               lastChecked: new Date()
             } : d
           )

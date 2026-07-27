@@ -16,8 +16,23 @@ export async function detectTechStack(rawUrl: string): Promise<unknown> {
   const v = await validateOutboundUrlResolved(url);
   if (!v.ok) throw new Error(v.reason);
 
+  const pinnedIp = v.addresses[0];
+  if (!pinnedIp) throw new Error('Host did not resolve');
+
+  const parsed = new URL(url);
+  const family = pinnedIp.includes(':') ? 6 : 4;
+  const port = parsed.port ? parseInt(parsed.port, 10) : 443;
+
   return new Promise((resolve, reject) => {
-    https.get(url, { timeout: 10000 }, (res) => {
+    const req = https.get({
+      hostname: pinnedIp,
+      port,
+      path: `${parsed.pathname}${parsed.search}`,
+      headers: { Host: parsed.host },
+      servername: parsed.hostname,
+      timeout: 10000,
+      lookup: (_hostname, _options, callback) => callback(null, pinnedIp, family),
+    }, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
@@ -30,6 +45,11 @@ export async function detectTechStack(rawUrl: string): Promise<unknown> {
           reject(error);
         }
       });
-    }).on('error', reject);
+    });
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
   });
 }

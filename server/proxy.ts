@@ -3,6 +3,7 @@ import cors from 'cors';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { generateToken, verifyAuthHeader } from '../api/_utils/auth.js';
 
 // Manual env loading for local dev stability
 try {
@@ -75,26 +76,12 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Middleware to verify auth token
+// Middleware to verify auth token (JWT — matches production api/login.ts)
 const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // If no password is set, allow all (dev mode)
-  if (!AUTH_PASSWORD_HASH) {
-    return next();
-  }
-
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!verifyAuthHeader(req.headers.authorization)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-
-  const token = authHeader.split(' ')[1];
-  const expectedToken = AUTH_PASSWORD_HASH.split(':')[0];
-  // Guard against empty hash (unconfigured) allowing blank-token bypass
-  if (token && expectedToken && token === expectedToken) {
-    next();
-  } else {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+  next();
 };
 
 // Auth Endpoint
@@ -113,9 +100,9 @@ app.post('/api/login', async (req, res) => {
     const salt = crypto.randomBytes(16).toString('hex');
     const hash = crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
     AUTH_PASSWORD_HASH = `${hash}:${salt}`;
-    console.log('Initial password set. Please save this hash for production:', AUTH_PASSWORD_HASH);
-    const expiresAt = Date.now() + Math.max(SESSION_TTL_MINUTES, 1) * 60 * 1000;
-    return res.json({ token: hash, expiresAt, message: 'Password initialized' });
+    console.log('Initial password set. Save VITE_PASSWORD_HASH in .env.local for production.');
+    const { token, expiresAt } = generateToken();
+    return res.json({ token, expiresAt, message: 'Password initialized' });
   }
 
   const [hash, salt] = AUTH_PASSWORD_HASH.split(':');
@@ -128,8 +115,8 @@ app.post('/api/login', async (req, res) => {
   const hashesMatch = checkHash.length === hash.length &&
     crypto.timingSafeEqual(Buffer.from(checkHash, 'hex'), Buffer.from(hash, 'hex'));
   if (hashesMatch) {
-    const expiresAt = Date.now() + Math.max(SESSION_TTL_MINUTES, 1) * 60 * 1000;
-    res.json({ token: hash, expiresAt });
+    const { token, expiresAt } = generateToken();
+    res.json({ token, expiresAt });
   } else {
     res.status(401).json({ error: 'Invalid password' });
   }
@@ -143,22 +130,27 @@ app.get('/api/check', verifyToken, async (req, res) => {
   }
 
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+  const userAgent = (req.query.ua as string) || 'DomainPulse/1.0 (Domain Monitor)';
+  const rawTimeout = parseInt(req.query.timeout as string, 10);
+  const timeoutMs = isNaN(rawTimeout) ? 10000 : Math.min(Math.max(rawTimeout, 5000), 30000);
 
   const { probeUptime } = await import('../api/_utils/ssrfGuard');
-  const { httpStatus, body } = await probeUptime(targetUrl, { timeoutMs: 10000 });
+  const { httpStatus, body } = await probeUptime(targetUrl, { timeoutMs, userAgent });
   res.status(httpStatus).json(body);
 });
 
 app.get('/api/ssl', verifyToken, async (req, res) => {
   const domain = req.query.domain as string;
   const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
-  if (domain && isBlockedHost(domain.replace(/^https?:\/\//, '').split('/')[0])) {
-    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
-  }
+  const { getSSLCertificate, normalizeSslHost } = await import('../api/_utils/sslLookup');
   if (!domain) return res.status(400).json({ error: 'Domain is required' });
 
-  const { getSSLCertificate } = await import('../api/_utils/sslLookup');
-  res.json(await getSSLCertificate(domain));
+  const normalizedHost = normalizeSslHost(domain);
+  if (isBlockedHost(normalizedHost)) {
+    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
+  }
+
+  res.json(await getSSLCertificate(normalizedHost));
 });
 
 app.get('/api/dns', verifyToken, async (req, res) => {
@@ -173,7 +165,7 @@ app.get('/api/dns', verifyToken, async (req, res) => {
     const { getDNSInfo } = await import('../api/_utils/dnsLookup');
     res.json(await getDNSInfo(domain));
   } catch (e) {
-    res.status(500).json({ error: e instanceof Error ? e.message : 'DNS lookup failed' });
+    res.status(200).json({ error: e instanceof Error ? e.message : 'DNS lookup failed' });
   }
 });
 
@@ -203,7 +195,7 @@ app.get('/api/tech-detect', verifyToken, async (req, res) => {
     const { detectTechStack } = await import('../api/_utils/techLookup');
     res.json(await detectTechStack(url));
   } catch (e) {
-    res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown error' });
+    res.status(200).json({ error: e instanceof Error ? e.message : 'Unknown error' });
   }
 });
 

@@ -300,10 +300,11 @@ const App: React.FC = () => {
     }
   }, [domains, showSuccess, showError]);
 
-  // Notifications
+  // Notifications — skip transient Checking state so down/up alerts fire correctly.
   useEffect(() => {
     if (!settings.enableNotifications) return;
     domains.forEach(domain => {
+      if (domain.status === DomainStatus.Checking) return;
       const prevStatus = previousStatusesRef.current.get(domain.id);
       if (!prevStatus || prevStatus === domain.status) return;
       if (domain.status === DomainStatus.Down &&
@@ -317,13 +318,26 @@ const App: React.FC = () => {
         showSuccess(`${domain.url} is back up!`);
       }
     });
-    const newMap = new Map<string, DomainStatus>();
-    domains.forEach(d => newMap.set(d.id, d.status));
-    // Cap the map size to avoid unbounded growth.
-    previousStatusesRef.current = newMap.size > 100
-      ? new Map(Array.from(newMap.entries()).slice(-100))
+    const newMap = new Map(previousStatusesRef.current);
+    domains.forEach(d => {
+      if (d.status !== DomainStatus.Checking) newMap.set(d.id, d.status);
+    });
+    previousStatusesRef.current = newMap.size > config.monitoring.maxPreviousStatuses
+      ? new Map(Array.from(newMap.entries()).slice(-config.monitoring.maxPreviousStatuses))
       : newMap;
   }, [domains, settings.enableNotifications, settings.playSound, showInfo, showSuccess]);
+
+  // Auto-refresh on the configured interval (silent background checks).
+  useEffect(() => {
+    const intervalMs = Math.min(
+      Math.max(settings.refreshInterval, config.monitoring.minRefreshInterval),
+      config.monitoring.maxRefreshInterval,
+    );
+    const timer = setInterval(() => {
+      void checkAllDomainsRef.current(true);
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [settings.refreshInterval]);
 
   // Keyboard shortcuts
   useEffect(() => {
