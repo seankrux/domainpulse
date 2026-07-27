@@ -311,7 +311,7 @@ const App: React.FC = () => {
           (prevStatus === DomainStatus.Alive || prevStatus === DomainStatus.Unknown)) {
         if (settings.playSound) playAlertSound();
         sendDomainDownNotification(domain.url, domain.statusCode);
-        showInfo(`${domain.url} is down!`);
+        showError(`${domain.url} is down!`);
       }
       if (domain.status === DomainStatus.Alive && prevStatus === DomainStatus.Down) {
         sendDomainUpNotification(domain.url, domain.latency);
@@ -325,10 +325,11 @@ const App: React.FC = () => {
     previousStatusesRef.current = newMap.size > config.monitoring.maxPreviousStatuses
       ? new Map(Array.from(newMap.entries()).slice(-config.monitoring.maxPreviousStatuses))
       : newMap;
-  }, [domains, settings.enableNotifications, settings.playSound, showInfo, showSuccess]);
+  }, [domains, settings.enableNotifications, settings.playSound, showError, showSuccess]);
 
   // Auto-refresh on the configured interval (silent background checks).
   useEffect(() => {
+    if (!settings.autoRefresh) return;
     const intervalMs = Math.min(
       Math.max(settings.refreshInterval, config.monitoring.minRefreshInterval),
       config.monitoring.maxRefreshInterval,
@@ -337,7 +338,7 @@ const App: React.FC = () => {
       void checkAllDomainsRef.current(true);
     }, intervalMs);
     return () => clearInterval(timer);
-  }, [settings.refreshInterval]);
+  }, [settings.autoRefresh, settings.refreshInterval]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -466,7 +467,17 @@ const App: React.FC = () => {
       let comparison = 0;
       switch (sortField) {
         case 'url': comparison = a.url.localeCompare(b.url); break;
-        case 'status': comparison = a.status.localeCompare(b.status); break;
+        case 'status': {
+          const statusOrder: Record<DomainStatus, number> = {
+            [DomainStatus.Down]: 0,
+            [DomainStatus.Error]: 1,
+            [DomainStatus.Checking]: 2,
+            [DomainStatus.Unknown]: 3,
+            [DomainStatus.Alive]: 4,
+          };
+          comparison = (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5);
+          break;
+        }
         case 'latency': comparison = (a.latency || 0) - (b.latency || 0); break;
         case 'lastChecked': comparison = (a.lastChecked?.getTime() || 0) - (b.lastChecked?.getTime() || 0); break;
         case 'ssl': {
@@ -494,6 +505,13 @@ const App: React.FC = () => {
     if (!viewingDetailId) return null;
     return domains.find(d => d.id === viewingDetailId) || null;
   }, [viewingDetailId, domains]);
+
+  const handleClearFilters = useCallback(() => {
+    setFilter('');
+    setStatusFilter('ALL');
+    setSslFilter('ALL');
+    setGroupFilter('ALL');
+  }, []);
 
   const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -587,13 +605,13 @@ const App: React.FC = () => {
         )}
 
         {isCheckingAll && checkProgress.total > 0 && (
-          <div className="mb-6 animate-in fade-in slide-in-from-top-2">
-            <div className="glass-card rounded-xl p-4">
+          <div className="sticky top-16 z-10 mb-6 animate-in fade-in slide-in-from-top-2">
+            <div className="glass-card rounded-xl p-4 border border-emerald-500/20 shadow-lg shadow-emerald-500/5">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-zinc-200">Checking domains...</span>
                 <span className="text-xs font-mono text-zinc-400">{checkProgress.current} / {checkProgress.total}</span>
               </div>
-              <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={checkProgress.current} aria-valuemin={0} aria-valuemax={checkProgress.total}>
                 <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300 shadow-glow-emerald" style={{ width: `${(checkProgress.current / checkProgress.total) * 100}%` }} />
               </div>
             </div>
@@ -627,6 +645,7 @@ const App: React.FC = () => {
               domains={displayDomains}
               groups={groups}
               isFiltered={filter.length > 0 || statusFilter !== 'ALL' || sslFilter !== 'ALL' || groupFilter !== 'ALL'}
+              onClearFilters={handleClearFilters}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
               onToggleAll={handleToggleAll}
@@ -656,10 +675,10 @@ const App: React.FC = () => {
       {/* Bottom Panel - Alerts & Stats (Collapsible) */}
       <BottomPanel domains={domains} stats={stats} onViewDomain={scrollToDomain} />
 
-      <footer id="footer" className="text-center py-8 text-sm text-zinc-500" role="contentinfo">
+      <footer id="footer" className="text-center py-8 text-sm text-zinc-400" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4">
-          <p className="text-zinc-400">Built by Sean G</p>
-          <div className="mt-2 text-xs text-zinc-600">
+          <p>Built by Sean G</p>
+          <div className="mt-2 text-xs text-zinc-500">
             <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘K</kbd> Focus search
             <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘Enter</kbd> Check all
           </div>

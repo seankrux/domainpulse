@@ -20,6 +20,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onAddDomain,
   onShowBulkImport
 }) => {
+  const errorId = 'domain-input-error';
+
   return (
     <div className={`mb-8 max-w-2xl mx-auto transition-all duration-500 ${domainCount > 0 ? 'scale-95' : 'scale-100'}`}>
       <div className={`text-center mb-6 transition-all duration-500 ${domainCount > 0 ? 'opacity-50 h-0 overflow-hidden mb-0' : 'opacity-100'}`}>
@@ -30,13 +32,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       <div className="relative group z-10">
         <div className={`absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000 group-hover:duration-200 ${inputError ? 'from-red-500 to-rose-500 opacity-40' : ''}`}></div>
         <div className="relative flex items-center bg-zinc-900/90 backdrop-blur-md rounded-xl shadow-lg border border-zinc-700/80 p-2 transition-colors focus-within:border-emerald-500/50">
-          <div className="pl-4 text-zinc-500 group-focus-within:text-emerald-400 transition-colors">
+          <div className="pl-4 text-zinc-500 group-focus-within:text-emerald-400 transition-colors" aria-hidden="true">
             <Plus size={20} />
           </div>
           <input
             type="text"
+            id="add-domain-input"
+            aria-label="Enter domain to monitor"
+            aria-invalid={!!inputError}
+            aria-describedby={inputError ? errorId : undefined}
             placeholder="Enter domain to monitor (e.g., google.com)"
-            className="flex-1 px-4 py-3 text-lg bg-transparent border-none focus:ring-0 text-white placeholder:text-zinc-500 font-medium"
+            className="flex-1 px-4 py-3 text-lg bg-transparent border-none focus:ring-0 text-white placeholder:text-zinc-400 font-medium"
             value={newDomainUrl}
             onChange={(e) => {
               setNewDomainUrl(e.target.value);
@@ -46,13 +52,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           />
           <div className="flex items-center gap-1.5 mr-1">
             <button
+              type="button"
               onClick={onShowBulkImport}
               className="text-zinc-400 hover:text-emerald-400 px-3 py-2 text-sm font-medium transition-colors"
-              title="Bulk Import"
+              aria-label="Bulk import domains from CSV"
             >
               Bulk
             </button>
             <button
+              type="button"
               onClick={() => onAddDomain(newDomainUrl)}
               className="bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-2.5 rounded-lg font-medium transition-all shadow-md active:transform active:scale-95 shadow-emerald-500/20"
             >
@@ -61,8 +69,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
         {inputError && (
-          <div className="absolute top-full left-0 mt-2 flex items-center gap-2 text-red-400 text-sm font-medium animate-in slide-in-from-top-2">
-            <AlertCircle size={14} />
+          <div id={errorId} role="alert" className="absolute top-full left-0 mt-2 flex items-center gap-2 text-red-400 text-sm font-medium animate-in slide-in-from-top-2">
+            <AlertCircle size={14} aria-hidden="true" />
             {inputError}
           </div>
         )}

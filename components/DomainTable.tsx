@@ -30,6 +30,7 @@ import { UptimeBadge } from "./UptimeBadge";
 import { HistorySparkline } from "./HistorySparkline";
 import { TechStackBadge } from "./TechStackBadge";
 import { logger } from "../utils/logger";
+import { latencyColor } from "../theme/statusColors";
 
 /* ─── Types ──────────────────────────────────────────── */
 
@@ -37,6 +38,7 @@ interface DomainTableProps {
   domains: Domain[];
   selectedIds: Set<string>;
   isFiltered?: boolean;
+  onClearFilters?: () => void;
   groups?: DomainGroup[];
   onToggleSelect: (id: string) => void;
   onToggleAll: () => void;
@@ -57,15 +59,24 @@ const Skeleton = ({ className = "w-16" }: { className?: string }) => (
 
 /* ─── Empty states ──────────────────────────────────── */
 
-const FilteredEmptyState = () => (
+const FilteredEmptyState: React.FC<{ onClearFilters?: () => void }> = ({ onClearFilters }) => (
   <div className="text-center py-16 glass-card rounded-2xl flex flex-col items-center justify-center">
-    <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center mb-3 text-zinc-500">
-      <Search size={24} />
+    <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center mb-3 text-zinc-400">
+      <Search size={24} aria-hidden="true" />
     </div>
     <h3 className="text-white font-medium text-lg">No matching domains</h3>
     <p className="text-zinc-400 mt-1 max-w-sm mx-auto text-sm">
       Try adjusting your filters to find what you're looking for.
     </p>
+    {onClearFilters && (
+      <button
+        type="button"
+        onClick={onClearFilters}
+        className="mt-4 px-4 py-2 text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors"
+      >
+        Clear all filters
+      </button>
+    )}
   </div>
 );
 
@@ -73,25 +84,18 @@ const EmptyState = () => (
   <div className="text-center py-24 glass-card rounded-3xl border-dashed flex flex-col items-center justify-center relative overflow-hidden group">
     <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
     <div className="w-20 h-20 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 text-emerald-400 transform group-hover:scale-110 transition-transform duration-500 shadow-glow-emerald border border-emerald-500/20">
-      <LayoutDashboard size={32} />
+      <LayoutDashboard size={32} aria-hidden="true" />
     </div>
     <h3 className="text-white font-display font-bold text-xl mb-2">
       Ready to monitor your domains?
     </h3>
-    <p className="text-zinc-400 max-w-sm mx-auto text-sm mb-8 leading-relaxed">
+    <p className="text-zinc-400 max-w-sm mx-auto text-sm mb-4 leading-relaxed">
       Track uptime, latency, SSL status, and domain expiry in one powerful
-      dashboard. Start by adding your first domain above.
+      dashboard. Add a domain above or import a CSV to get started.
     </p>
-    <div className="flex items-center gap-4">
-      <div className="flex -space-x-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="w-8 h-8 rounded-full border-2 border-zinc-900 bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-            {["G", "A", "M"][i - 1]}
-          </div>
-        ))}
-      </div>
-      <p className="text-xs text-zinc-500 font-medium">Trusted by teams worldwide</p>
-    </div>
+    <p className="text-xs text-zinc-500">
+      Tip: use <kbd className="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-400">⌘K</kbd> to search and <kbd className="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-400">⌘Enter</kbd> to check all
+    </p>
   </div>
 );
 
@@ -349,7 +353,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
         {isChecking ? (
           <Skeleton className="w-12 h-4" />
         ) : domain.latency ? (
-          <span className={domain.latency > 500 ? "text-amber-400" : "text-zinc-300"}>{domain.latency}ms</span>
+          <span className={latencyColor(domain.latency)}>{domain.latency}ms</span>
         ) : (
           <span className="text-zinc-600">-</span>
         )}
@@ -405,6 +409,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   domains,
   selectedIds,
   isFiltered = false,
+  onClearFilters,
   groups = [],
   onToggleSelect,
   onToggleAll,
@@ -456,7 +461,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   // ── Empty states ────────────────────────────────────
 
   if (domains.length === 0) {
-    return isFiltered ? <FilteredEmptyState /> : <EmptyState />;
+    return isFiltered ? <FilteredEmptyState onClearFilters={onClearFilters} /> : <EmptyState />;
   }
 
   // Only render optional columns when at least one domain actually has that data —

@@ -142,13 +142,9 @@ that was the loophole that let slow SSL/WHOIS calls produce false Error.
 
 1. **Light mode is not implemented.** The app is dark-only: the shell uses
    hardcoded dark classes (`bg-zinc-950`, `text-zinc-100`) with almost no
-   `dark:` variants. The light/dark toggle (`settings.darkMode` →
-   `documentElement.classList` in `App.tsx`) therefore does almost nothing.
-   Building real light mode is a large, app-wide effort. **Decision: leave as-is
-   for now.** Either remove the toggle or do a full themed-colour pass — but only
-   as an explicit, scoped task.
-2. **SSL filter dropdown has no "Unknown" option** (`FilterBar.tsx`), so
-   domains with unknown SSL can't be isolated via that filter.
+   `dark:` variants. The header no longer shows a dark-mode toggle (it was a
+   no-op). Building real light mode is a large, app-wide effort. **Decision:
+   leave as-is for now** unless doing a full scoped theming pass.
 
 ---
 
