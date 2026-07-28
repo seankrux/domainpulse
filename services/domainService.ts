@@ -1,8 +1,9 @@
-import { DomainStatus, SSLStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo } from '../types';
+import { DomainStatus, SSLStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo, CanonicalCheckInfo } from '../types';
 import { checkSSL } from './sslService';
 import { checkDomainExpiry } from './expiryService';
 import { checkDNS } from './dnsService';
 import { detectTechStack } from './techDetectionService';
+import { checkCanonical } from './canonicalService';
 import { logger } from '../utils/logger';
 import { config } from '../lib/config';
 import { getSessionToken } from '../utils/authSession';
@@ -107,7 +108,8 @@ type EnrichmentSettled = [
   PromiseSettledResult<SSLInfo>,
   PromiseSettledResult<DomainExpiry>,
   PromiseSettledResult<DNSInfo>,
-  PromiseSettledResult<TechStackInfo>
+  PromiseSettledResult<TechStackInfo>,
+  PromiseSettledResult<CanonicalCheckInfo>
 ];
 
 /**
@@ -119,7 +121,7 @@ type EnrichmentSettled = [
  * sub-check can never turn an ALIVE domain into Error. `Error` is reachable only
  * when the uptime probe itself fails (auth, network, or timeout).
  */
-export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
+export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo; canonical?: CanonicalCheckInfo }> => {
   const rawTimeout = serviceConfig?.timeout ?? config.timeouts.domainCheck;
   const timeoutMs = Math.min(
     Math.max(rawTimeout, config.timeouts.minProbeTimeout),
@@ -216,7 +218,8 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
       checkSSL(url, serviceConfig),
       checkDomainExpiry(url, serviceConfig),
       checkDNS(url, serviceConfig),
-      detectTechStack(url, serviceConfig)
+      detectTechStack(url, serviceConfig),
+      checkCanonical(url, serviceConfig),
     ]) as Promise<EnrichmentSettled>,
     remaining,
     null
@@ -226,12 +229,14 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
   const expiryResult = settled && settled[1].status === 'fulfilled' ? settled[1].value : { status: 'unknown' as const };
   const dnsResult = settled && settled[2].status === 'fulfilled' ? settled[2].value : undefined;
   const techResult = settled && settled[3].status === 'fulfilled' ? settled[3].value : { confidence: 'low' as const };
+  const canonicalResult = settled && settled[4].status === 'fulfilled' ? settled[4].value : undefined;
 
   return {
     ...domainResult,
     ssl: sslResult,
     expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined,
     dns: dnsResult && !dnsResult.error ? dnsResult : undefined,
-    techStack: techResult.confidence !== 'low' ? techResult : undefined
+    techStack: techResult.confidence !== 'low' ? techResult : undefined,
+    canonical: canonicalResult && canonicalResult.status !== 'unknown' ? canonicalResult : canonicalResult,
   };
 };

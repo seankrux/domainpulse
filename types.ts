@@ -63,6 +63,28 @@ export interface TechStackInfo {
   confidence: 'high' | 'medium' | 'low';
 }
 
+export type UrlVariant = 'https_apex' | 'https_www' | 'http_apex' | 'http_www';
+
+export interface UrlVariantResult {
+  variant: UrlVariant;
+  inputUrl: string;
+  finalUrl: string;
+  statusCode: number;
+  reachable: boolean;
+  redirectChain: string[];
+}
+
+export interface CanonicalCheckInfo {
+  status: 'correct' | 'issues' | 'unknown';
+  variants: UrlVariantResult[];
+  canonicalUrl?: string;
+  issues: string[];
+  httpsEnforced: boolean;
+  wwwConsistent: boolean;
+  preferredHost?: 'www' | 'apex';
+  lastChecked?: Date;
+}
+
 export interface Domain {
   id: string;
   url: string;
@@ -76,6 +98,7 @@ export interface Domain {
   expiry?: DomainExpiry;
   dns?: DNSInfo;
   techStack?: TechStackInfo;
+  canonical?: CanonicalCheckInfo;
   groupId?: string;
   tags: string[];
   formCheck?: { status: FormCheckStatus; lastRun?: Date; results: FormResult[] };

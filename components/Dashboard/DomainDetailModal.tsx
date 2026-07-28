@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3, MapPin, Star, Phone, RefreshCw } from 'lucide-react';
+import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3, MapPin, Star, Phone, RefreshCw, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Domain, DomainStatus, SSLStatus, GmbStatus } from '../../types';
 import { sslColor, sslLabel, expiryColor, expiryLabel, gmbColor, gmbLabel, STATUS_COLORS } from '../../theme/statusColors';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getTechStackColor } from '../../components/TechStackBadge';
+import { HistoryChart } from '../HistoryChart';
+import { formatMonitoringDuration } from '../../utils/uptimeStats';
 
 interface DomainDetailModalProps {
   domain: Domain;
@@ -49,7 +51,7 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
     >
       <div
         ref={modalContentRef}
-        className="bg-zinc-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
+        className="bg-zinc-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -120,12 +122,96 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             </div>
             <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-800">
               <div className="flex items-center gap-2 text-zinc-400 mb-1">
-                <Globe size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Group</span>
+                <Calendar size={14} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Monitored</span>
               </div>
-              <p className="text-sm font-bold text-white truncate">{domain.groupId || 'None'}</p>
+              <p className="text-sm font-bold text-white">{formatMonitoringDuration(domain.addedAt)}</p>
+              <p className="text-[10px] text-zinc-500 mt-0.5">Since {domain.addedAt.toLocaleDateString()}</p>
             </div>
           </div>
+
+          {/* Uptime History */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="text-emerald-400" size={18} />
+              <h3 className="font-bold text-white">Uptime History</h3>
+            </div>
+            <HistoryChart domain={domain} />
+          </section>
+
+          {/* HTTPS / Canonical Check */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Link2 className="text-emerald-400" size={18} />
+              <h3 className="font-bold text-white">HTTPS & Canonical URLs</h3>
+              {domain.canonical && (
+                <span className={`text-[10px] font-bold uppercase tracking-tight px-2 py-0.5 rounded border ${
+                  domain.canonical.status === 'correct'
+                    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                    : domain.canonical.status === 'issues'
+                      ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                      : 'text-zinc-400 bg-zinc-800 border-zinc-700'
+                }`}>
+                  {domain.canonical.status === 'correct' ? 'Configured' : domain.canonical.status === 'issues' ? 'Issues Found' : 'Unknown'}
+                </span>
+              )}
+            </div>
+            {domain.canonical && domain.canonical.variants.length > 0 ? (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                {domain.canonical.canonicalUrl && (
+                  <div className="px-4 py-3 border-b border-zinc-800 bg-emerald-500/5">
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Canonical URL</p>
+                    <p className="text-sm font-mono text-emerald-400">{domain.canonical.canonicalUrl}</p>
+                  </div>
+                )}
+                <div className="p-4 space-y-2">
+                  {domain.canonical.variants.map((v) => {
+                    const labels: Record<string, string> = {
+                      https_apex: 'https://domain',
+                      https_www: 'https://www.domain',
+                      http_apex: 'http://domain',
+                      http_www: 'http://www.domain',
+                    };
+                    return (
+                      <div key={v.variant} className="flex items-center gap-2 text-xs bg-zinc-800/50 rounded-lg px-3 py-2">
+                        <span className="font-mono text-zinc-400 w-28 shrink-0">{labels[v.variant]}</span>
+                        <ArrowRight size={12} className="text-zinc-600 shrink-0" />
+                        <span className={`font-mono truncate ${v.reachable ? 'text-zinc-200' : 'text-zinc-600'}`}>
+                          {v.finalUrl || 'No response'}
+                        </span>
+                        <span className={`ml-auto shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          v.reachable ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                        }`}>
+                          {v.statusCode || '—'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {domain.canonical.issues.length > 0 && (
+                  <div className="px-4 py-3 bg-amber-500/5 border-t border-zinc-800">
+                    {domain.canonical.issues.map((issue, i) => (
+                      <p key={i} className="text-xs text-amber-400 flex items-center gap-1.5">
+                        <AlertTriangle size={12} /> {issue}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                <div className="px-4 py-3 border-t border-zinc-800 flex gap-4 text-xs">
+                  <span className={domain.canonical.httpsEnforced ? 'text-emerald-400' : 'text-amber-400'}>
+                    {domain.canonical.httpsEnforced ? '✓' : '✗'} HTTPS enforced
+                  </span>
+                  <span className={domain.canonical.wwwConsistent ? 'text-emerald-400' : 'text-amber-400'}>
+                    {domain.canonical.wwwConsistent ? '✓' : '✗'} www consistent
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-zinc-800/30 rounded-xl border border-dashed border-zinc-800">
+                <p className="text-sm text-zinc-500">Run a check to analyse HTTP/HTTPS and www redirects.</p>
+              </div>
+            )}
+          </section>
 
           {/* SSL Information */}
           <section>
@@ -145,10 +231,20 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                     <p className="font-medium text-zinc-200">{domain.ssl.issuer || 'Unknown'}</p>
                   </div>
                   <div>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Valid From</p>
+                    <p className="font-medium text-zinc-200">
+                      {domain.ssl.validFrom ? new Date(domain.ssl.validFrom).toLocaleDateString() : 'Unknown'}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Valid To</p>
                     <p className="font-medium text-zinc-200">
                       {domain.ssl.validTo ? new Date(domain.ssl.validTo).toLocaleDateString() : 'Unknown'}
                     </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Days Remaining</p>
+                    <p className="font-medium text-zinc-200">{domain.ssl.daysUntilExpiry ?? '—'}</p>
                   </div>
                 </div>
               </div>
@@ -202,6 +298,14 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                     <div>
                       <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Registrar IANA ID</p>
                       <p className="font-medium text-zinc-200">{domain.expiry.registrarIanaId}</p>
+                    </div>
+                  )}
+                  {domain.expiry.registrarUrl && (
+                    <div>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Registrar URL</p>
+                      <a href={domain.expiry.registrarUrl} target="_blank" rel="noreferrer" className="font-medium text-emerald-400 hover:underline text-xs break-all">
+                        {domain.expiry.registrarUrl}
+                      </a>
                     </div>
                   )}
                   {domain.expiry.dnssec && (
@@ -412,6 +516,32 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                         )}
                       </div>
                     </div>
+
+                    {/* CNAME Records */}
+                    {domain.dns.cname && domain.dns.cname.length > 0 && (
+                      <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-800">
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase mb-3 tracking-widest">CNAME Records</p>
+                        <div className="flex flex-wrap gap-2">
+                          {domain.dns.cname.map((c, i) => (
+                            <span key={i} className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-zinc-300 shadow-sm">{c}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TXT Records */}
+                    {domain.dns.txt && domain.dns.txt.length > 0 && (
+                      <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-800">
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase mb-3 tracking-widest">TXT Records</p>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                          {domain.dns.txt.map((txtGroup, i) => (
+                            <div key={i} className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-[10px] font-mono text-zinc-400 break-all">
+                              {txtGroup.join('')}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

@@ -184,6 +184,33 @@ app.get('/api/tech-detect', verifyToken, async (req, res) => {
   }
 });
 
+app.get('/api/canonical', verifyToken, async (req, res) => {
+  const domain = req.query.domain as string;
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+
+  const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
+  const cleanDomain = domain.replace(/^https?:\/\//, '').split('/')[0]!.toLowerCase();
+  if (isBlockedHost(cleanDomain)) {
+    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
+  }
+
+  const userAgent = (req.query.ua as string) || 'DomainPulse/1.0 (Domain Monitor)';
+  const timeoutMs = Math.min(Math.max(parseInt(req.query.timeout as string, 10) || 10000, 5000), 30000);
+
+  try {
+    const { checkCanonicalVariants } = await import('../api/_utils/canonicalLookup');
+    res.json(await checkCanonicalVariants(cleanDomain, { timeoutMs, userAgent }));
+  } catch (e) {
+    res.status(200).json({
+      status: 'unknown',
+      variants: [],
+      issues: [e instanceof Error ? e.message : 'Unknown error'],
+      httpsEnforced: false,
+      wwwConsistent: false,
+    });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

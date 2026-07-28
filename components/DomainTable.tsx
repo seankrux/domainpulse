@@ -28,9 +28,11 @@ import { CallCheckBadge } from "./CallCheckBadge";
 import { GmbBadge } from "./GmbBadge";
 import { UptimeBadge } from "./UptimeBadge";
 import { HistorySparkline } from "./HistorySparkline";
+import { CanonicalBadge } from "./CanonicalBadge";
 import { TechStackBadge } from "./TechStackBadge";
 import { logger } from "../utils/logger";
 import { latencyColor } from "../theme/statusColors";
+import { formatMonitoringDuration } from "../utils/uptimeStats";
 
 /* ─── Types ──────────────────────────────────────────── */
 
@@ -169,6 +171,7 @@ interface ColVisibility {
   call: boolean;
   gmb: boolean;
   ns: boolean;
+  canonical: boolean;
 }
 
 interface DomainRowProps {
@@ -350,6 +353,11 @@ const DomainRow: React.FC<DomainRowProps> = ({
         )}
       </td>}
 
+      {/* Canonical / HTTPS */}
+      {show.canonical && <td className="p-4 align-middle hidden xl:table-cell">
+        <CanonicalBadge canonical={domain.canonical} onClick={() => onViewDetails?.(domain)} />
+      </td>}
+
       {/* Latency */}
       <td className="p-4 align-middle text-sm text-zinc-300 font-mono">
         {isChecking ? (
@@ -361,34 +369,39 @@ const DomainRow: React.FC<DomainRowProps> = ({
         )}
       </td>
 
-      {/* Last Checked */}
+      {/* Last Checked / Monitoring */}
       <td className="p-4 align-middle text-sm text-zinc-400 hidden md:table-cell">
         {isChecking ? (
           <Skeleton className="w-20 h-4" />
-        ) : domain.lastChecked ? (
-          <span className="flex items-center gap-2">
-            {(() => {
-              const diffMs = Date.now() - domain.lastChecked.getTime();
-              const diffMins = Math.floor(diffMs / 60000);
-              const diffHours = Math.floor(diffMins / 60);
-              const diffDays = Math.floor(diffHours / 24);
-              let label = "Never";
-              if (diffMins < 1) label = "Just now";
-              else if (diffMins < 60) label = `${diffMins}m ago`;
-              else if (diffHours < 24) label = `${diffHours}h ago`;
-              else if (diffDays < 7) label = `${diffDays}d ago`;
-              else label = domain.lastChecked!.toLocaleDateString();
-              return label;
-            })()}
-          </span>
         ) : (
-          <span className="text-zinc-600">Never</span>
+          <div className="flex flex-col gap-0.5">
+            {domain.lastChecked ? (
+              <span title={domain.lastChecked.toLocaleString()}>
+                {(() => {
+                  const diffMs = Date.now() - domain.lastChecked.getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  const diffHours = Math.floor(diffMins / 60);
+                  const diffDays = Math.floor(diffHours / 24);
+                  if (diffMins < 1) return "Just now";
+                  if (diffMins < 60) return `${diffMins}m ago`;
+                  if (diffHours < 24) return `${diffHours}h ago`;
+                  if (diffDays < 7) return `${diffDays}d ago`;
+                  return domain.lastChecked.toLocaleDateString();
+                })()}
+              </span>
+            ) : (
+              <span className="text-zinc-600">Never</span>
+            )}
+            <span className="text-[9px] text-zinc-600" title={`Added ${domain.addedAt.toLocaleDateString()}`}>
+              {formatMonitoringDuration(domain.addedAt)}
+            </span>
+          </div>
         )}
       </td>
 
       {/* Uptime / History row (2 cells, lg only) */}
       <td className="p-4 align-middle hidden lg:table-cell"><HistorySparkline history={domain.history} /></td>
-      <td className="p-4 align-middle hidden lg:table-cell"><UptimeBadge history={domain.history} /></td>
+      <td className="p-4 align-middle hidden lg:table-cell"><UptimeBadge history={domain.history} addedAt={domain.addedAt} /></td>
 
       {/* Actions */}
       <td className="p-4 align-middle text-right" role="gridcell">
@@ -475,6 +488,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
     call: domains.some((d) => !!d.callCheck),
     gmb: domains.some((d) => !!d.gmb || !!d.gmbPlaceId),
     ns: domains.some((d) => (d.expiry?.nameServers?.length ?? 0) > 0 || (d.dns?.ns?.length ?? 0) > 0),
+    canonical: domains.some((d) => !!d.canonical && d.canonical.variants.length > 0),
   };
 
   return (
@@ -492,10 +506,11 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               {show.forms && <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Forms</th>}
               {show.call && <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Call</th>}
               {show.gmb && <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">GMB</th>}
+              {show.canonical && <th className="px-4 py-3.5 hidden xl:table-cell min-w-[100px]" role="columnheader">Canonical</th>}
               {show.ns && <th className="px-4 py-3.5 hidden xl:table-cell min-w-[160px]" role="columnheader">Nameservers</th>}
               <th className="px-4 py-3.5 min-w-[80px]" role="columnheader">Latency</th>
               <th className="px-4 py-3.5 hidden lg:table-cell min-w-[90px]" role="columnheader">Uptime</th>
-              <th className="px-4 py-3.5 hidden md:table-cell min-w-[110px]" role="columnheader">Last Checked</th>
+              <th className="px-4 py-3.5 hidden md:table-cell min-w-[110px]" role="columnheader">Monitored</th>
               <th className="px-4 py-3.5 hidden lg:table-cell min-w-[90px]" role="columnheader">History</th>
               <th className="px-4 py-3.5 text-right min-w-[120px]" role="columnheader">Actions</th>
             </tr>

@@ -102,6 +102,7 @@ export const useMonitoring = ({
               expiry: result.expiry,
               dns: result.dns,
               techStack: result.techStack,
+              canonical: result.canonical,
               lastChecked: new Date()
             } : d
           );
@@ -200,6 +201,7 @@ export const useMonitoring = ({
           expiry: result.expiry,
           dns: result.dns,
           techStack: result.techStack,
+          canonical: result.canonical,
           lastChecked: new Date()
         } : d
       ));
@@ -267,6 +269,7 @@ export const useMonitoring = ({
               expiry: result.expiry,
               dns: result.dns,
               techStack: result.techStack,
+              canonical: result.canonical,
               lastChecked: new Date()
             } : d
           )

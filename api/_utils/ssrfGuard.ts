@@ -375,6 +375,130 @@ export function toggleWww(rawUrl: string): string | null {
  *    signal about the domain), NOT as a 400/Error. Only an SSRF/scheme reject
  *    (private address, non-http) returns HTTP 400. See AGENTS.md §1–2.
  */
+export interface RedirectProbeResult {
+  blocked?: boolean;
+  reason?: string;
+  inputUrl: string;
+  finalUrl: string;
+  status: number;
+  reachable: boolean;
+  redirectChain: string[];
+  latency: number;
+}
+
+/**
+ * Follow redirects for a URL and return the full chain. Used by canonical /
+ * HTTPS variant checks — enrichment only, never for liveness. SSRF-safe.
+ */
+export async function probeRedirectChain(
+  rawUrl: string,
+  opts: { timeoutMs?: number; userAgent?: string; maxRedirects?: number } = {},
+): Promise<RedirectProbeResult> {
+  const { timeoutMs = 10000, userAgent = 'DomainPulse/1.0 (Domain Monitor)', maxRedirects = 8 } = opts;
+  const safeTimeoutMs = Math.min(Math.max(timeoutMs, 5000), 30000);
+  const start = Date.now();
+  const chain: string[] = [];
+  let current = rawUrl;
+
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    chain.push(current);
+    const v = await validateOutboundUrlResolved(current);
+    if (!v.ok) {
+      return {
+        blocked: true,
+        reason: v.reason,
+        inputUrl: rawUrl,
+        finalUrl: current,
+        status: 0,
+        reachable: false,
+        redirectChain: chain,
+        latency: Date.now() - start,
+      };
+    }
+
+    const pinnedIp = v.addresses[0];
+    if (!pinnedIp) {
+      return {
+        blocked: true,
+        reason: 'Host did not resolve',
+        inputUrl: rawUrl,
+        finalUrl: current,
+        status: 0,
+        reachable: false,
+        redirectChain: chain,
+        latency: Date.now() - start,
+      };
+    }
+
+    let resp: { status: number; headers: http.IncomingHttpHeaders };
+    try {
+      resp = await pinnedRequest(current, pinnedIp, { method: 'HEAD', timeoutMs: safeTimeoutMs, userAgent });
+      if (resp.status === 405 || resp.status === 501) {
+        try {
+          resp = await pinnedRequest(current, pinnedIp, { method: 'GET', timeoutMs: safeTimeoutMs, userAgent });
+        } catch {
+          // keep HEAD response
+        }
+      }
+    } catch {
+      return {
+        inputUrl: rawUrl,
+        finalUrl: current,
+        status: 0,
+        reachable: false,
+        redirectChain: chain,
+        latency: Date.now() - start,
+      };
+    }
+
+    if (resp.status >= 300 && resp.status < 400) {
+      const locHeader = resp.headers.location;
+      const loc = Array.isArray(locHeader) ? locHeader[0] : locHeader;
+      if (!loc) {
+        return {
+          inputUrl: rawUrl,
+          finalUrl: current,
+          status: resp.status,
+          reachable: isReachableStatus(resp.status),
+          redirectChain: chain,
+          latency: Date.now() - start,
+        };
+      }
+      try {
+        current = new URL(loc, current).toString();
+      } catch {
+        return {
+          inputUrl: rawUrl,
+          finalUrl: current,
+          status: resp.status,
+          reachable: false,
+          redirectChain: chain,
+          latency: Date.now() - start,
+        };
+      }
+      continue;
+    }
+
+    return {
+      inputUrl: rawUrl,
+      finalUrl: current,
+      status: resp.status,
+      reachable: isReachableStatus(resp.status),
+      redirectChain: chain,
+      latency: Date.now() - start,
+    };
+  }
+
+  return {
+    inputUrl: rawUrl,
+    finalUrl: current,
+    status: 0,
+    reachable: false,
+    redirectChain: chain,
+    latency: Date.now() - start,
+  };
+}
+
 export async function probeUptime(
   rawUrl: string,
   opts: { timeoutMs?: number; userAgent?: string } = {},

@@ -316,7 +316,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await historyButton.click();
       
       // Verify history modal/chart is visible
-      await expect(page.locator(`h2:has-text("History - ${historyDomain}")`)).toBeVisible();
+      await expect(page.locator(`h2:has-text("Uptime History — ${historyDomain}")`)).toBeVisible();
       
       // Close modal
       await page.locator('button[aria-label="Close"]').last().click();
