@@ -235,6 +235,20 @@ export const useMonitoring = ({
       type: 'module'
     });
 
+    MonitoringWorker.onerror = (event) => {
+      if (!isMounted) return;
+      logger.error('Monitoring worker crashed', event.message ?? event);
+      setIsCheckingAll(false);
+      setCheckProgress({ current: 0, total: 0 });
+    };
+
+    MonitoringWorker.onmessageerror = (event) => {
+      if (!isMounted) return;
+      logger.error('Monitoring worker message error', event);
+      setIsCheckingAll(false);
+      setCheckProgress({ current: 0, total: 0 });
+    };
+
     MonitoringWorker.onmessage = (e) => {
       if (!isMounted || !e?.data || typeof e.data !== 'object' || typeof e.data.type !== 'string') {
         return;

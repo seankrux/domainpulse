@@ -133,7 +133,7 @@ export function uptimeColor(pct: number): { text: string; bg: string } {
   return { text: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' };
 }
 
-/** Latency ms → tailwind text colour. */
-export function latencyColor(ms: number): string {
-  return ms > 500 ? 'text-amber-400' : 'text-zinc-300';
+/** Latency ms → tailwind text colour. Uses configurable slow threshold from settings. */
+export function latencyColor(ms: number, slowThresholdMs = 500): string {
+  return ms > slowThresholdMs ? 'text-amber-400' : 'text-zinc-300';
 }

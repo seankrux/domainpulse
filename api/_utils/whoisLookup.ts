@@ -50,7 +50,12 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
 
       const req = https.get(apiUrl, { timeout: 10000 }, (res) => {
         let data = '';
-        res.on('data', (chunk) => { data += chunk; });
+        let bytes = 0;
+        const maxBytes = 512 * 1024;
+        res.on('data', (chunk) => {
+          bytes += chunk.length;
+          if (bytes <= maxBytes) data += chunk;
+        });
         res.on('end', () => {
           try {
             const parsed = parseWhoisData(data);

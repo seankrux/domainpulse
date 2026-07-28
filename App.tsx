@@ -64,6 +64,7 @@ const App: React.FC = () => {
   // were state (in the effect's deps) that write would retrigger the effect
   // forever — "Maximum update depth exceeded" the moment notifications are on.
   const previousStatusesRef = useRef<Map<string, DomainStatus>>(new Map());
+  const outageNotifiedRef = useRef<Set<string>>(new Set());
   
   const [sortField, setSortField] = useState<SortField>(() => (localStorage.getItem('domainpulse_sort_field') as SortField) || 'lastChecked');
   const [sortOrder, setSortOrder] = useState<SortOrder>(() => (localStorage.getItem('domainpulse_sort_order') as SortOrder) || 'desc');
@@ -270,24 +271,16 @@ const App: React.FC = () => {
     reader.onload = (event) => {
       const content = event.target?.result as string;
       const parsed = parseCSV(content);
-      const newDomains = parsed.map(p => ({
-        id: generateId(),
-        url: p.url!,
-        status: DomainStatus.Unknown,
-        addedAt: new Date(),
-        history: [],
-        tags: []
-      } as Domain));
-      setDomains(prev => {
-        const existingUrls = new Set(prev.map(d => d.url));
-        const filteredNew = newDomains.filter(d => !existingUrls.has(d.url));
-        return [...filteredNew, ...prev];
-      });
-      showInfo(`Imported ${parsed.length} domains from CSV`);
+      const urls = parsed.map((p) => p.url).filter((u): u is string => Boolean(u));
+      if (urls.length === 0) {
+        showError('No valid URLs found in CSV.');
+        return;
+      }
+      handleBulkImport(urls);
     };
     reader.readAsText(file);
     e.target.value = '';
-  }, [showInfo]);
+  }, [handleBulkImport, showError]);
 
   // CSV Export with error handling
   const handleExportCSV = useCallback(() => {
@@ -306,13 +299,25 @@ const App: React.FC = () => {
     domains.forEach(domain => {
       if (domain.status === DomainStatus.Checking) return;
       const prevStatus = previousStatusesRef.current.get(domain.id);
-      if (!prevStatus || prevStatus === domain.status) return;
-      if (domain.status === DomainStatus.Down &&
-          (prevStatus === DomainStatus.Alive || prevStatus === DomainStatus.Unknown)) {
+
+      if (domain.status === DomainStatus.Alive) {
+        outageNotifiedRef.current.delete(domain.id);
+      }
+
+      let consecutiveDowns = 0;
+      for (let i = domain.history.length - 1; i >= 0; i--) {
+        if (domain.history[i]?.status === DomainStatus.Down) consecutiveDowns++;
+        else break;
+      }
+
+      if (domain.status === DomainStatus.Down && consecutiveDowns >= 2 && !outageNotifiedRef.current.has(domain.id)) {
+        outageNotifiedRef.current.add(domain.id);
         if (settings.playSound) playAlertSound();
         sendDomainDownNotification(domain.url, domain.statusCode);
         showError(`${domain.url} is down!`);
       }
+
+      if (!prevStatus || prevStatus === domain.status) return;
       if (domain.status === DomainStatus.Alive && prevStatus === DomainStatus.Down) {
         sendDomainUpNotification(domain.url, domain.latency);
         showSuccess(`${domain.url} is back up!`);
@@ -646,6 +651,7 @@ const App: React.FC = () => {
               groups={groups}
               isFiltered={filter.length > 0 || statusFilter !== 'ALL' || sslFilter !== 'ALL' || groupFilter !== 'ALL'}
               onClearFilters={handleClearFilters}
+              latencyThresholdMs={settings.latencyThreshold}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
               onToggleAll={handleToggleAll}

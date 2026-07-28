@@ -39,6 +39,7 @@ interface DomainTableProps {
   selectedIds: Set<string>;
   isFiltered?: boolean;
   onClearFilters?: () => void;
+  latencyThresholdMs?: number;
   groups?: DomainGroup[];
   onToggleSelect: (id: string) => void;
   onToggleAll: () => void;
@@ -197,6 +198,7 @@ interface DomainRowProps {
   onAddTag: (id: string, tag: string) => void;
   onRemoveTag: (id: string, tags: string[], tag: string) => void;
   onEditGroup: ((id: string, groupId?: string) => void) | undefined;
+  latencyThresholdMs: number;
 }
 
 const DomainRow: React.FC<DomainRowProps> = ({
@@ -205,7 +207,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
   editingId, editValue, setEditValue,
   onViewDetails, onViewHistory, onCheck, onRemove, onCopy, copiedId,
   editingTagsId, setEditingTagsId, editingGroupId, setEditingGroupId,
-  onAddTag, onRemoveTag, onEditGroup,
+  onAddTag, onRemoveTag, onEditGroup, latencyThresholdMs,
 }) => {
   const isChecking = domain.status === DomainStatus.Checking;
 
@@ -353,7 +355,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
         {isChecking ? (
           <Skeleton className="w-12 h-4" />
         ) : domain.latency ? (
-          <span className={latencyColor(domain.latency)}>{domain.latency}ms</span>
+          <span className={latencyColor(domain.latency, latencyThresholdMs)} title={domain.latency > latencyThresholdMs ? 'Slow response' : undefined}>{domain.latency}ms</span>
         ) : (
           <span className="text-zinc-600">-</span>
         )}
@@ -410,6 +412,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   selectedIds,
   isFiltered = false,
   onClearFilters,
+  latencyThresholdMs = 500,
   groups = [],
   onToggleSelect,
   onToggleAll,
@@ -526,6 +529,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                 onAddTag={addTag}
                 onRemoveTag={removeTag}
                 onEditGroup={onEditGroup}
+                latencyThresholdMs={latencyThresholdMs}
               />
             ))}
           </tbody>

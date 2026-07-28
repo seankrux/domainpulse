@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
 import { generateToken, verifyAuthHeader } from '../api/_utils/auth.js';
+import { config } from '../lib/config.js';
 
 // Manual env loading for local dev stability
 try {
@@ -27,7 +28,6 @@ const app = express();
 const PORT = process.env.PROXY_PORT || 3001;
 
 let AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
-const SESSION_TTL_MINUTES = Number(process.env.VITE_AUTH_SESSION_TTL_MINUTES || 720); // 12h
 const ALLOW_INITIAL_LOGIN = process.env.VITE_ALLOW_INITIAL_LOGIN === 'true';
 
 // CORS allowlist: the proxy makes outbound requests on the caller's behalf,
@@ -53,8 +53,8 @@ app.use(express.json());
 
 // Rate limit all /api routes (CodeQL-recognized + dev/prod parity with Vercel fns).
 const apiRateLimiter = rateLimit({
-  windowMs: 60_000,
-  max: 120,
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.maxRequests,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Rate limit exceeded', message: 'Too many requests. Please wait a minute.' },
