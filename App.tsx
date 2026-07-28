@@ -10,7 +10,7 @@ import { StatsOverview } from './components/StatsOverview';
 import { DomainTable } from './components/DomainTable';
 import { HistoryChart } from './components/HistoryChart';
 import { GroupManager } from './components/GroupManager';
-import { requestNotificationPermission, sendDomainDownNotification, sendDomainUpNotification, playAlertSound } from './services/notificationService';
+import { requestNotificationPermission, sendDomainDownNotification, sendDomainUpNotification, sendNotification, playAlertSound } from './services/notificationService';
 import { validateAndNormalizeUrl } from './services/domainService';
 
 // New Components & Hooks
@@ -65,6 +65,7 @@ const App: React.FC = () => {
   // forever — "Maximum update depth exceeded" the moment notifications are on.
   const previousStatusesRef = useRef<Map<string, DomainStatus>>(new Map());
   const outageNotifiedRef = useRef<Set<string>>(new Set());
+  const expiryNotifiedRef = useRef<Set<string>>(new Set());
   
   const [sortField, setSortField] = useState<SortField>(() => (localStorage.getItem('domainpulse_sort_field') as SortField) || 'lastChecked');
   const [sortOrder, setSortOrder] = useState<SortOrder>(() => (localStorage.getItem('domainpulse_sort_order') as SortOrder) || 'desc');
@@ -332,6 +333,30 @@ const App: React.FC = () => {
       : newMap;
   }, [domains, settings.enableNotifications, settings.playSound, showError, showSuccess]);
 
+  // Proactive SSL / domain-expiry warnings (once per asset per session).
+  useEffect(() => {
+    if (!settings.enableNotifications) return;
+    domains.forEach((domain) => {
+      const sslUrgent = domain.ssl?.status === SSLStatus.Expiring || domain.ssl?.status === SSLStatus.Expired;
+      const domainUrgent = domain.expiry?.status === 'expiring' || domain.expiry?.status === 'expired';
+      if (!sslUrgent && !domainUrgent) return;
+
+      const key = sslUrgent ? `ssl:${domain.id}` : `expiry:${domain.id}`;
+      if (expiryNotifiedRef.current.has(key)) return;
+      expiryNotifiedRef.current.add(key);
+
+      const label = sslUrgent
+        ? `SSL ${domain.ssl?.status === SSLStatus.Expired ? 'expired' : `expires in ${domain.ssl?.daysUntilExpiry ?? '?'}d`}`
+        : `Domain ${domain.expiry?.status === 'expired' ? 'expired' : `expires in ${domain.expiry?.daysUntilExpiry ?? '?'}d`}`;
+
+      void sendNotification({
+        title: 'Expiry warning',
+        body: `${domain.url}: ${label}`,
+      });
+      showInfo(`${domain.url}: ${label}`);
+    });
+  }, [domains, settings.enableNotifications, showInfo]);
+
   // Auto-refresh on the configured interval (silent background checks).
   useEffect(() => {
     if (!settings.autoRefresh) return;
@@ -410,10 +435,13 @@ const App: React.FC = () => {
 
     const pct = (a: number, b: number) => (b > 0 ? ((a - b) / b) * 100 : 0);
 
+    const prevAliveRate = prevTotal > 0 ? (prevAlive / prevTotal) * 100 : 100;
+    const currAliveRate = currTotal > 0 ? (currAlive / currTotal) * 100 : 100;
+
     return {
       total, alive, down, unknown, avgLatency, uptime,
       trends: {
-        alive:  pct(alive, prevAlive * (prevTotal > 0 ? total / prevTotal : 1)) > 5  ? 'up' : pct(alive, prevAlive * (prevTotal > 0 ? total / prevTotal : 1)) < -5 ? 'down' : 'stable',
+        alive:  pct(currAliveRate, prevAliveRate) > 1  ? 'up' : pct(currAliveRate, prevAliveRate) < -1 ? 'down' : 'stable',
         down:   pct(currDown, prevDown) > 5  ? 'up' : pct(currDown, prevDown) < -5 ? 'down' : 'stable',
         latency: pct(currAvgLat, prevAvgLat) > 10 ? 'up' : pct(currAvgLat, prevAvgLat) < -10 ? 'down' : 'stable',
         uptime: pct(currUptime, prevUptime) > 1  ? 'up' : pct(currUptime, prevUptime) < -1 ? 'down' : 'stable',
