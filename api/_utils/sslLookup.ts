@@ -20,7 +20,8 @@ export interface SSLResult {
 
 /** Strip protocol/path/port from a user-supplied domain string. */
 export function normalizeSslHost(domain: string): string {
-  return domain.replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
+  const withoutPath = domain.replace(/^https?:\/\//, '').split('/')[0] ?? '';
+  return withoutPath.split(':')[0] ?? '';
 }
 
 export async function getSSLCertificate(domain: string): Promise<SSLResult> {

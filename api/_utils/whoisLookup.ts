@@ -48,7 +48,7 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
       const apiUrl = apiUrls[index] as string;
       attempts++;
 
-      https.get(apiUrl, { timeout: 10000 }, (res) => {
+      const req = https.get(apiUrl, { timeout: 10000 }, (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
@@ -63,11 +63,13 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
             tryNextApi(index + 1);
           }
         });
-      }).on('error', (error) => {
+      });
+      req.on('error', (error) => {
         lastError = error;
         tryNextApi(index + 1);
-      }).on('timeout', function onTimeout() {
-        this.destroy();
+      });
+      req.on('timeout', () => {
+        req.destroy();
         lastError = new Error('Request timeout');
         tryNextApi(index + 1);
       });

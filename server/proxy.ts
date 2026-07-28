@@ -3,6 +3,7 @@ import cors from 'cors';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import rateLimit from 'express-rate-limit';
 import { generateToken, verifyAuthHeader } from '../api/_utils/auth.js';
 
 // Manual env loading for local dev stability
@@ -50,31 +51,15 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Simple in-memory rate limiter for /api/* (dev proxy parity with the
-// Vercel functions' rate limiting).
-const rlMap = new Map<string, { count: number; reset: number }>();
-const RL_MAX = 120;
-const RL_WINDOW_MS = 60_000;
-app.use('/api', (req, res, next) => {
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  const now = Date.now();
-  const rec = rlMap.get(ip);
-  if (!rec || rec.reset < now) {
-    // Evict expired keys so distinct/spoofed IPs can't grow the map unbounded.
-    if (rlMap.size > 1000) {
-      for (const [key, r] of rlMap) {
-        if (r.reset < now) rlMap.delete(key);
-      }
-    }
-    rlMap.set(ip, { count: 1, reset: now + RL_WINDOW_MS });
-    return next();
-  }
-  rec.count += 1;
-  if (rec.count > RL_MAX) {
-    return res.status(429).json({ error: 'Rate limit exceeded', message: 'Too many requests. Please wait a minute.' });
-  }
-  next();
+// Rate limit all /api routes (CodeQL-recognized + dev/prod parity with Vercel fns).
+const apiRateLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Rate limit exceeded', message: 'Too many requests. Please wait a minute.' },
 });
+app.use('/api', apiRateLimiter);
 
 // Middleware to verify auth token (JWT — matches production api/login.ts)
 const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
