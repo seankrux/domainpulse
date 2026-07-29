@@ -247,11 +247,17 @@ README "Available Commands" table — use those. Non-obvious caveats only:
   the dashboard is non-functional without the proxy, which Vite proxies `/api/*`
   to. `npm run dev` runs the separate marketing site on `:3002`. Verify the
   dashboard against `:3000`, not `:3001`.
-- **Runs login-less with no secrets.** No `.env.local` is needed: with
-  `VITE_PASSWORD_HASH` unset the API allows unauthenticated requests (see §7),
-  and missing `GOOGLE_PLACES_API_KEY` only degrades GMB checks to "Unknown".
-  Domain checks make real outbound HTTP/DNS/TLS calls, so live results depend on
-  network egress from the VM.
+- **Runs login-less with no secrets.** No `.env.local` is needed for basic
+  checks: with `VITE_PASSWORD_HASH` unset the API allows unauthenticated
+  requests (see §7), and missing `GOOGLE_PLACES_API_KEY` only degrades GMB
+  checks to "Unknown". Domain checks make real outbound HTTP/DNS/TLS calls, so
+  live results depend on network egress from the VM.
+- **Persistent storage (Neon).** Set `DATABASE_URL` (Neon Postgres connection
+  string) in `.env.local` and in the Vercel project env. When set, `/api/store`
+  persists domains, history, groups, and settings to Neon. When unset, the app
+  falls back to browser `localStorage` (ephemeral across browsers/sessions).
+  Prefer a dedicated Neon project/DB — do not put DomainPulse tables into an
+  unrelated product's `public` schema without a `domainpulse` schema boundary.
 - **Unit vs GUI tests are separate runners.** `npm run test`/`test:unit`
   (Vitest, jsdom) need no browser. `npm run test:gui` (Playwright) needs a
   browser first: `npx playwright install chromium` (not part of the update

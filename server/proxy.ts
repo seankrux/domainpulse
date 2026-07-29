@@ -46,7 +46,7 @@ app.use(cors({
   origin: (origin, callback) => {
     callback(null, !origin || allowedOrigins.has(origin));
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
@@ -208,6 +208,58 @@ app.get('/api/canonical', verifyToken, async (req, res) => {
       httpsEnforced: false,
       wwwConsistent: false,
     });
+  }
+});
+
+app.get('/api/store', verifyToken, async (_req, res) => {
+  const { isDatabaseConfigured } = await import('../api/_utils/db');
+  if (!isDatabaseConfigured()) {
+    return res.status(503).json({
+      error: 'Database unavailable',
+      message: 'DATABASE_URL is not configured. Using local browser storage.',
+      persistence: 'local',
+    });
+  }
+  try {
+    const { loadStore } = await import('../api/_utils/domainStore');
+    const store = await loadStore();
+    res.json({ ...store, persistence: 'neon' });
+  } catch (e) {
+    res.status(500).json({ error: 'Store load failed', message: e instanceof Error ? e.message : 'Unknown error' });
+  }
+});
+
+app.put('/api/store', verifyToken, async (req, res) => {
+  const { isDatabaseConfigured } = await import('../api/_utils/db');
+  if (!isDatabaseConfigured()) {
+    return res.status(503).json({
+      error: 'Database unavailable',
+      message: 'DATABASE_URL is not configured. Using local browser storage.',
+      persistence: 'local',
+    });
+  }
+  try {
+    const { saveStore } = await import('../api/_utils/domainStore');
+    const body = req.body || {};
+    const domains = Array.isArray(body.domains)
+      ? body.domains.map((d: Record<string, unknown>) => ({
+          ...d,
+          addedAt: new Date(String(d.addedAt)),
+          lastChecked: d.lastChecked ? new Date(String(d.lastChecked)) : undefined,
+          history: Array.isArray(d.history)
+            ? d.history.map((h: Record<string, unknown>) => ({
+                ...h,
+                timestamp: new Date(String(h.timestamp)),
+              }))
+            : [],
+        }))
+      : [];
+    const groups = Array.isArray(body.groups) ? body.groups : [];
+    const settings = body.settings && typeof body.settings === 'object' ? body.settings : {};
+    await saveStore({ domains, groups, settings });
+    res.json({ ok: true, persistence: 'neon', count: domains.length });
+  } catch (e) {
+    res.status(500).json({ error: 'Store save failed', message: e instanceof Error ? e.message : 'Unknown error' });
   }
 });
 

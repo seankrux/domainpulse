@@ -3,7 +3,8 @@ import { X } from 'lucide-react';
 import { Domain, DomainStatus, DomainStats, SortField, SortOrder, DomainGroup, SSLStatus } from './types';
 import { parseCSV, exportToCSV } from './utils/csvHelper';
 import { config } from './lib/config';
-import { loadDomains, saveDomains, loadSettings, saveSettings, AppSettings, loadGroupsResult, saveGroups, addGroup, removeGroup, updateGroup } from './utils/storage';
+import { loadDomains, loadSettings, AppSettings, loadGroupsResult, addGroup, removeGroup, updateGroup } from './utils/storage';
+import { loadAppStore, saveAppStore, PersistenceMode } from './utils/remoteStore';
 import { useNotification } from './components/NotificationProvider';
 import { useAuth } from './components/AuthProvider';
 import { StatsOverview } from './components/StatsOverview';
@@ -59,6 +60,8 @@ const App: React.FC = () => {
   const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
   const [showGroupManager, setShowGroupManager] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [persistenceMode, setPersistenceMode] = useState<PersistenceMode>('unknown');
   // Previous per-domain statuses for down/up notification transitions. Held in
   // a ref, not state: the notifications effect writes it every run, and if it
   // were state (in the effect's deps) that write would retrigger the effect
@@ -101,13 +104,36 @@ const App: React.FC = () => {
     checkAllDomainsRef.current = checkAllDomains;
   }, [domains, checkAllDomains]);
 
-  // Persistence Effects — skip save when load failed and state is still empty,
-  // so corrupt localStorage is not overwritten with [].
+  // Hydrate from Neon (preferred) or keep localStorage snapshot
   useEffect(() => {
+    let active = true;
+    void loadAppStore().then((store) => {
+      if (!active) return;
+      setDomains(store.domains);
+      setGroups(store.groups);
+      setSettings(store.settings);
+      setPersistenceMode(store.persistence);
+      domainsLoadFailedRef.current = false;
+      groupsLoadFailedRef.current = false;
+      setHydrated(true);
+      if (store.persistence === 'neon') {
+        showInfo('Connected to Neon — domains persist across sessions');
+      }
+    });
+    return () => { active = false; };
+  // showInfo is stable enough for mount-only hydration
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist to Neon + localStorage after hydration
+  useEffect(() => {
+    if (!hydrated) return;
     if (domainsLoadFailedRef.current && domains.length === 0) return;
+    if (groupsLoadFailedRef.current && groups.length === 0) return;
     domainsLoadFailedRef.current = false;
-    saveDomains(domains);
-  }, [domains]);
+    groupsLoadFailedRef.current = false;
+    void saveAppStore({ domains, groups, settings });
+  }, [domains, groups, settings, hydrated]);
 
   useEffect(() => {
     localStorage.setItem('domainpulse_status_filter', statusFilter);
@@ -116,12 +142,6 @@ const App: React.FC = () => {
     localStorage.setItem('domainpulse_sort_field', sortField);
     localStorage.setItem('domainpulse_sort_order', sortOrder);
   }, [statusFilter, sslFilter, groupFilter, sortField, sortOrder]);
-
-  useEffect(() => {
-    if (groupsLoadFailedRef.current && groups.length === 0) return;
-    groupsLoadFailedRef.current = false;
-    saveGroups(groups);
-  }, [groups]);
 
   // Load the latest QA snapshot (published by `npm run qa:crawl`) once on mount
   // and merge form/call-button results into the matching domains by URL.
@@ -135,7 +155,6 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    saveSettings(settings);
     if (settings.darkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -712,6 +731,14 @@ const App: React.FC = () => {
       <footer id="footer" className="text-center py-8 text-sm text-zinc-400" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4">
           <p>Built by Sean G</p>
+          <p className="mt-1 text-[11px] text-zinc-600">
+            Storage:{' '}
+            {persistenceMode === 'neon'
+              ? 'Neon Postgres (persistent)'
+              : persistenceMode === 'local'
+                ? 'Browser localStorage only'
+                : 'Connecting…'}
+          </p>
           <div className="mt-2 text-xs text-zinc-500">
             <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘K</kbd> Focus search
             <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘Enter</kbd> Check all
