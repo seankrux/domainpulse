@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Shield, Calendar, Globe, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3, MapPin, Star, Phone, RefreshCw, ArrowRight, AlertTriangle } from 'lucide-react';
+import { X, Shield, Calendar, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3, MapPin, Star, Phone, RefreshCw, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Domain, DomainStatus, SSLStatus, GmbStatus } from '../../types';
 import { sslColor, sslLabel, expiryColor, expiryLabel, gmbColor, gmbLabel, STATUS_COLORS } from '../../theme/statusColors';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
