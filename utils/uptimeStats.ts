@@ -39,7 +39,7 @@ export interface UptimeIncident {
   status: DomainStatus.Down | DomainStatus.Error;
 }
 
-export function computeIncidents(history: StatusRecord[]): UptimeIncident[] {
+export function computeIncidents(history: StatusRecord[], now: Date = new Date()): UptimeIncident[] {
   const incidents: UptimeIncident[] = [];
   let current: UptimeIncident | null = null;
 
@@ -57,14 +57,16 @@ export function computeIncidents(history: StatusRecord[]): UptimeIncident[] {
         current.end = record.timestamp;
       }
     } else if (current) {
-      current.durationMs = current.end.getTime() - current.start.getTime();
+      current.durationMs = Math.max(current.end.getTime() - current.start.getTime(), 60_000);
       incidents.push(current);
       current = null;
     }
   }
 
   if (current) {
-    current.durationMs = current.end.getTime() - current.start.getTime();
+    // Open incident: extend to now so ongoing outages aren't shown as 0ms
+    current.end = now;
+    current.durationMs = Math.max(current.end.getTime() - current.start.getTime(), 60_000);
     incidents.push(current);
   }
 
@@ -132,7 +134,7 @@ export function computeUptimeSummary(
   now: Date = new Date(),
 ): UptimeSummary {
   const filtered = filterHistoryByWindow(history, addedAt, window, now);
-  const incidents = computeIncidents(filtered);
+  const incidents = computeIncidents(filtered, now);
   const longestIncidentMs = incidents.reduce((max, i) => Math.max(max, i.durationMs), 0);
 
   let currentStreakMs = 0;

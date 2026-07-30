@@ -73,6 +73,12 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
     );
   }
 
+  const periodLabel =
+    window === '24h' ? 'Last 24 hours'
+      : window === '7d' ? 'Last 7 days'
+        : window === '30d' ? 'Last 30 days'
+          : summary.monitoringDuration;
+
   return (
     <div className="space-y-6">
       {/* Monitoring period header */}
@@ -111,6 +117,13 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
         </div>
       </div>
 
+      {filteredHistory.length === 0 ? (
+        <div className="text-center py-10 bg-zinc-900/50 rounded-xl border border-dashed border-zinc-800 text-zinc-400">
+          <p>No checks in this time window</p>
+          <p className="text-xs mt-1 text-zinc-500">Try a wider range like Since Added or All</p>
+        </div>
+      ) : (
+        <>
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
@@ -154,12 +167,12 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
             <Calendar size={12} />
             <span>Period</span>
           </div>
-          <div className="text-sm font-bold text-white">{summary.monitoringDuration}</div>
+          <div className="text-sm font-bold text-white">{periodLabel}</div>
         </div>
       </div>
 
       {/* Uptime bar chart */}
-      {chartData.length > 1 && (
+      {chartData.length >= 1 && (
         <div>
           <h3 className="text-sm font-semibold text-zinc-300 mb-3">Uptime Over Time</h3>
           <div className="h-32 bg-zinc-900/80 rounded-xl border border-zinc-800 p-4">
@@ -179,7 +192,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
                     borderRadius: '12px',
                     color: '#e4e4e7',
                   }}
-                  formatter={(value, _name, props) => {
+                  formatter={(_value, _name, props) => {
                     const payload = props.payload as ChartDataPoint;
                     return [
                       payload.status === DomainStatus.Alive ? 'Up' : 'Down',
@@ -202,7 +215,7 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
       )}
 
       {/* Latency Chart */}
-      {chartData.length > 1 && (
+      {chartData.length >= 1 && (
         <div>
           <h3 className="text-sm font-semibold text-zinc-300 mb-3">Response Time (ms)</h3>
           <div className="h-64 bg-zinc-900/80 rounded-xl border border-zinc-800 p-4">
@@ -309,6 +322,8 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ domain }) => {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

@@ -13,6 +13,7 @@
     { "source": "/api/dns", "destination": "/api/dns.ts" },
     { "source": "/api/gmb", "destination": "/api/gmb.ts" },
     { "source": "/api/tech-detect", "destination": "/api/tech-detect.ts" },
+    { "source": "/api/canonical", "destination": "/api/canonical.ts" },
     { "source": "/content/:path*", "destination": "/content/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],

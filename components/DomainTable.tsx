@@ -329,6 +329,11 @@ const DomainRow: React.FC<DomainRowProps> = ({
       {/* Google Business Profile */}
       {show.gmb && <td className="p-4 align-middle"><GmbBadge gmb={domain.gmb} configured={!!domain.gmbPlaceId} onClick={() => onViewDetails?.(domain)} /></td>}
 
+      {/* Canonical / HTTPS — must match header order (Canonical before Nameservers) */}
+      {show.canonical && <td className="p-4 align-middle hidden xl:table-cell">
+        <CanonicalBadge canonical={domain.canonical} onClick={() => onViewDetails?.(domain)} />
+      </td>}
+
       {/* Nameservers */}
       {show.ns && <td className="p-4 align-middle hidden xl:table-cell">
         {isChecking ? (
@@ -353,11 +358,6 @@ const DomainRow: React.FC<DomainRowProps> = ({
         )}
       </td>}
 
-      {/* Canonical / HTTPS */}
-      {show.canonical && <td className="p-4 align-middle hidden xl:table-cell">
-        <CanonicalBadge canonical={domain.canonical} onClick={() => onViewDetails?.(domain)} />
-      </td>}
-
       {/* Latency */}
       <td className="p-4 align-middle text-sm text-zinc-300 font-mono">
         {isChecking ? (
@@ -368,6 +368,9 @@ const DomainRow: React.FC<DomainRowProps> = ({
           <span className="text-zinc-600">-</span>
         )}
       </td>
+
+      {/* Uptime % — must match header order (Uptime → Monitored → History) */}
+      <td className="p-4 align-middle hidden lg:table-cell"><UptimeBadge history={domain.history} /></td>
 
       {/* Last Checked / Monitoring */}
       <td className="p-4 align-middle text-sm text-zinc-400 hidden md:table-cell">
@@ -399,19 +402,18 @@ const DomainRow: React.FC<DomainRowProps> = ({
         )}
       </td>
 
-      {/* Uptime / History row (2 cells, lg only) */}
+      {/* History sparkline */}
       <td className="p-4 align-middle hidden lg:table-cell"><HistorySparkline history={domain.history} /></td>
-      <td className="p-4 align-middle hidden lg:table-cell"><UptimeBadge history={domain.history} addedAt={domain.addedAt} /></td>
 
       {/* Actions */}
       <td className="p-4 align-middle text-right" role="gridcell">
         <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onViewHistory?.(domain)} className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50" title="View history"><History size={16} /></button>
-          <button onClick={() => onCheck(domain.id)} disabled={isChecking} className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50" title="Check status">
+          <button onClick={() => onViewHistory?.(domain)} className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50" title="View history" aria-label="View history"><History size={16} /></button>
+          <button onClick={() => onCheck(domain.id)} disabled={isChecking} className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50" title="Check status" aria-label="Check status">
             <RefreshCw size={16} className={isChecking ? "animate-spin" : ""} />
           </button>
-          <button onClick={() => onStartEdit(domain)} className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50" title="Edit domain"><Edit2 size={16} /></button>
-          <button onClick={() => onRemove(domain.id)} className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50" title="Remove"><Trash2 size={16} /></button>
+          <button onClick={() => onStartEdit(domain)} className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50" title="Edit domain" aria-label="Edit domain"><Edit2 size={16} /></button>
+          <button onClick={() => onRemove(domain.id)} className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50" title="Remove" aria-label="Remove"><Trash2 size={16} /></button>
         </div>
       </td>
     </tr>

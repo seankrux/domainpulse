@@ -73,7 +73,13 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                 </a>
               </h2>
               <p id="modal-description" className="sr-only">
-                Domain status: {domain.status === DomainStatus.Alive ? 'Online' : 'Offline'}
+                Domain status: {
+                  domain.status === DomainStatus.Alive ? 'Online'
+                    : domain.status === DomainStatus.Down ? 'Offline'
+                      : domain.status === DomainStatus.Checking ? 'Checking'
+                        : domain.status === DomainStatus.Error ? 'Error'
+                          : 'Unknown'
+                }
               </p>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[domain.status].dot}`} aria-hidden="true" />
@@ -205,6 +211,14 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                     {domain.canonical.wwwConsistent ? '✓' : '✗'} www consistent
                   </span>
                 </div>
+              </div>
+            ) : domain.canonical && domain.canonical.issues.length > 0 ? (
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 space-y-2">
+                {domain.canonical.issues.map((issue, i) => (
+                  <p key={i} className="text-xs text-amber-400 flex items-center gap-1.5">
+                    <AlertTriangle size={12} /> {issue}
+                  </p>
+                ))}
               </div>
             ) : (
               <div className="text-center py-6 bg-zinc-800/30 rounded-xl border border-dashed border-zinc-800">

@@ -38,7 +38,7 @@ describe('checkDomainWithSSL — liveness invariant', () => {
 
     expect(r.status).toBe(DomainStatus.Alive);
     expect(r.statusCode).toBe(200);
-    expect(r.ssl.status).toBe(SSLStatus.Unknown);
+    expect(r.ssl?.status).toBe(SSLStatus.Unknown);
     expect(r.expiry).toBeUndefined();
   });
 
@@ -56,7 +56,9 @@ describe('checkDomainWithSSL — liveness invariant', () => {
       const r = await pending;
 
       expect(r.status).toBe(DomainStatus.Alive);
-      expect(r.ssl.status).toBe(SSLStatus.Unknown);
+      // Soft timeout: keep prior enrichment — do not invent Unknown defaults that wipe UI.
+      expect(r.enrichmentTimedOut).toBe(true);
+      expect(r.ssl).toBeUndefined();
     } finally {
       vi.useRealTimers();
     }

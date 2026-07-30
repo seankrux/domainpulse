@@ -98,12 +98,14 @@ export const useMonitoring = ({
               status: result.status,
               statusCode: result.statusCode,
               latency: result.latency,
-              ssl: result.ssl,
-              expiry: result.expiry,
-              dns: result.dns,
-              techStack: result.techStack,
-              canonical: result.canonical,
-              lastChecked: new Date()
+              lastChecked: new Date(),
+              ...(result.enrichmentTimedOut ? {} : {
+                ssl: result.ssl,
+                expiry: result.expiry,
+                dns: result.dns,
+                techStack: result.techStack,
+                canonical: result.canonical,
+              }),
             } : d
           );
         });
@@ -197,12 +199,14 @@ export const useMonitoring = ({
           status: result.status,
           statusCode: result.statusCode,
           latency: result.latency,
-          ssl: result.ssl,
-          expiry: result.expiry,
-          dns: result.dns,
-          techStack: result.techStack,
-          canonical: result.canonical,
-          lastChecked: new Date()
+          lastChecked: new Date(),
+          ...(result.enrichmentTimedOut ? {} : {
+            ssl: result.ssl,
+            expiry: result.expiry,
+            dns: result.dns,
+            techStack: result.techStack,
+            canonical: result.canonical,
+          }),
         } : d
       ));
       addHistoryRecord(id, result);
@@ -265,12 +269,14 @@ export const useMonitoring = ({
               status: result.status,
               statusCode: result.statusCode,
               latency: result.latency,
-              ssl: result.ssl,
-              expiry: result.expiry,
-              dns: result.dns,
-              techStack: result.techStack,
-              canonical: result.canonical,
-              lastChecked: new Date()
+              lastChecked: new Date(),
+              ...(result.enrichmentTimedOut ? {} : {
+                ssl: result.ssl,
+                expiry: result.expiry,
+                dns: result.dns,
+                techStack: result.techStack,
+                canonical: result.canonical,
+              }),
             } : d
           )
         );
