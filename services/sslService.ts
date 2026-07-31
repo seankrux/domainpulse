@@ -9,6 +9,10 @@ interface SslApiResponse {
   validFrom?: string;
   validTo?: string;
   daysUntilExpiry?: number;
+  protocol?: string;
+  cipher?: string;
+  fingerprint256?: string;
+  grade?: string;
   error?: string;
 }
 
@@ -113,7 +117,11 @@ const parseSSLResponse = (data: SslApiResponse): SSLInfo => {
     issuer: data.issuer || 'Unknown',
     validFrom: data.validFrom ? new Date(data.validFrom) : undefined,
     validTo: validTo || undefined,
-    daysUntilExpiry
+    daysUntilExpiry,
+    protocol: data.protocol,
+    cipher: data.cipher,
+    fingerprint256: data.fingerprint256,
+    grade: data.grade,
   };
 };
 

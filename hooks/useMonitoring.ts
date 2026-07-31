@@ -105,6 +105,9 @@ export const useMonitoring = ({
                 dns: result.dns,
                 techStack: result.techStack,
                 canonical: result.canonical,
+                emailAuth: result.emailAuth,
+                securityHeaders: result.securityHeaders,
+                health: result.health,
               }),
             } : d
           );
@@ -206,6 +209,9 @@ export const useMonitoring = ({
             dns: result.dns,
             techStack: result.techStack,
             canonical: result.canonical,
+            emailAuth: result.emailAuth,
+            securityHeaders: result.securityHeaders,
+            health: result.health,
           }),
         } : d
       ));
@@ -276,6 +282,9 @@ export const useMonitoring = ({
                 dns: result.dns,
                 techStack: result.techStack,
                 canonical: result.canonical,
+                emailAuth: result.emailAuth,
+                securityHeaders: result.securityHeaders,
+                health: result.health,
               }),
             } : d
           )

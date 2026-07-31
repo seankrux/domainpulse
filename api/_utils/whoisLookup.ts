@@ -1,11 +1,9 @@
 /**
- * WHOIS lookup — single source of truth for the `/api/whois` endpoint and the
- * dev proxy. Tries multiple public WHOIS APIs and parses the raw text.
- *
- * The dev proxy used to return a hard-coded fake registrar; it now calls this
- * so local results match production.
+ * WHOIS / RDAP lookup — single source of truth for `/api/whois` and the dev
+ * proxy. Prefers RDAP via `rdapper`, then falls back to public WHOIS scrapers.
  */
 import * as https from 'https';
+import { lookupDomain } from 'rdapper';
 
 export interface WhoisResult {
   expiryDate?: string;
@@ -17,16 +15,45 @@ export interface WhoisResult {
   domainStatus?: string[];
   nameServers?: string[];
   dnssec?: string;
+  source?: 'rdap' | 'whois';
   error?: string;
   raw?: string;
 }
 
-export function getWhoisInfo(domain: string): Promise<WhoisResult> {
+function normalizeDomain(domain: string): string {
+  return domain.replace(/^https?:\/\//, '').split('/')[0]!.toLowerCase();
+}
+
+function mapRdapRecord(record: {
+  creationDate?: string;
+  updatedDate?: string;
+  expirationDate?: string;
+  registrar?: { name?: string; url?: string; ianaId?: string };
+  statuses?: { status?: string; raw?: string }[];
+  nameservers?: { host: string }[];
+  dnssec?: { enabled: boolean };
+  source?: string;
+}): WhoisResult {
+  return {
+    createdDate: record.creationDate,
+    updatedDate: record.updatedDate,
+    expiryDate: record.expirationDate,
+    registrar: record.registrar?.name,
+    registrarUrl: record.registrar?.url,
+    registrarIanaId: record.registrar?.ianaId,
+    domainStatus: record.statuses
+      ?.map((s) => s.status || s.raw)
+      .filter((s): s is string => !!s),
+    nameServers: record.nameservers?.map((n) => n.host).filter(Boolean),
+    dnssec: record.dnssec
+      ? (record.dnssec.enabled ? 'signedDelegation' : 'unsigned')
+      : undefined,
+    source: 'rdap',
+  };
+}
+
+function legacyWhois(domain: string): Promise<WhoisResult> {
   return new Promise((resolve) => {
-    // Try multiple WHOIS APIs in order of reliability
-    // Encode the user-supplied domain so it can only ever be a path/query
-    // value on these fixed third-party hosts — never break out of the path or
-    // alter the request target.
     const d = encodeURIComponent(domain);
     const apiUrls = [
       `https://whoisapi.domainsdb.eu/whois/${d}`,
@@ -60,7 +87,7 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
           try {
             const parsed = parseWhoisData(data);
             if (parsed.expiryDate || parsed.registrar || parsed.nameServers) {
-              resolve(parsed);
+              resolve({ ...parsed, source: 'whois' });
             } else {
               tryNextApi(index + 1);
             }
@@ -82,6 +109,24 @@ export function getWhoisInfo(domain: string): Promise<WhoisResult> {
 
     tryNextApi(0);
   });
+}
+
+export async function getWhoisInfo(domain: string): Promise<WhoisResult> {
+  const clean = normalizeDomain(domain);
+
+  try {
+    const result = await lookupDomain(clean);
+    if (result.ok && result.record && (result.record.isRegistered || result.record.expirationDate || result.record.registrar)) {
+      const mapped = mapRdapRecord(result.record);
+      if (mapped.expiryDate || mapped.registrar || mapped.nameServers) {
+        return mapped;
+      }
+    }
+  } catch {
+    // Fall through to legacy WHOIS scrapers.
+  }
+
+  return legacyWhois(clean);
 }
 
 /** Parse raw WHOIS text with enhanced field extraction. */

@@ -20,6 +20,53 @@ export interface SSLInfo {
   validFrom?: Date;
   validTo?: Date;
   daysUntilExpiry?: number;
+  /** TLS protocol negotiated (e.g. TLSv1.3). */
+  protocol?: string;
+  /** Cipher suite name. */
+  cipher?: string;
+  /** SHA-256 fingerprint of the leaf cert. */
+  fingerprint256?: string;
+  /** Optional letter grade from richer SSL checks. */
+  grade?: string;
+}
+
+export type LetterGrade = 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
+
+export interface EmailAuthRecord {
+  present: boolean;
+  raw?: string;
+  /** Parsed policy bits (mechanism summary / p= / etc.). */
+  detail?: string;
+}
+
+export interface EmailAuthInfo {
+  grade: LetterGrade;
+  spf: EmailAuthRecord;
+  dkim: EmailAuthRecord & { selectors?: string[] };
+  dmarc: EmailAuthRecord & { policy?: string };
+  issues: string[];
+}
+
+export interface SecurityHeaderEntry {
+  name: string;
+  present: boolean;
+  value?: string;
+  score: number;
+}
+
+export interface SecurityHeadersInfo {
+  grade: LetterGrade;
+  score: number;
+  maxScore: number;
+  headers: SecurityHeaderEntry[];
+  issues: string[];
+}
+
+export interface DomainHealthInfo {
+  grade: LetterGrade;
+  score: number;
+  maxScore: number;
+  factors: { name: string; score: number; max: number; note?: string }[];
 }
 
 export interface DomainExpiry {
@@ -45,10 +92,21 @@ export interface StatusRecord {
 
 export interface DNSInfo {
   a?: string[];
+  aaaa?: string[];
   mx?: { exchange: string; priority: number }[];
   ns?: string[];
   txt?: string[][];
   cname?: string[];
+  caa?: { critical: number; issue?: string; issuewild?: string; iodef?: string; raw: string }[];
+  soa?: {
+    nsname: string;
+    hostmaster: string;
+    serial: number;
+    refresh: number;
+    retry: number;
+    expire: number;
+    minttl: number;
+  };
   error?: string;
 }
 
@@ -99,6 +157,9 @@ export interface Domain {
   dns?: DNSInfo;
   techStack?: TechStackInfo;
   canonical?: CanonicalCheckInfo;
+  emailAuth?: EmailAuthInfo;
+  securityHeaders?: SecurityHeadersInfo;
+  health?: DomainHealthInfo;
   groupId?: string;
   tags: string[];
   formCheck?: { status: FormCheckStatus; lastRun?: Date; results: FormResult[] };

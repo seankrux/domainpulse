@@ -30,6 +30,7 @@ import { UptimeBadge } from "./UptimeBadge";
 import { HistorySparkline } from "./HistorySparkline";
 import { CanonicalBadge } from "./CanonicalBadge";
 import { TechStackBadge } from "./TechStackBadge";
+import { HealthBadge } from "./HealthBadge";
 import { logger } from "../utils/logger";
 import { latencyColor } from "../theme/statusColors";
 import { formatMonitoringDuration } from "../utils/uptimeStats";
@@ -172,6 +173,7 @@ interface ColVisibility {
   gmb: boolean;
   ns: boolean;
   canonical: boolean;
+  health: boolean;
 }
 
 interface DomainRowProps {
@@ -310,6 +312,9 @@ const DomainRow: React.FC<DomainRowProps> = ({
 
       {/* Status */}
       <td className="p-4 align-middle"><StatusBadge status={domain.status} statusCode={domain.statusCode} /></td>
+
+      {/* Health */}
+      {show.health && <td className="p-4 align-middle"><HealthBadge health={domain.health} onClick={() => onViewDetails?.(domain)} /></td>}
 
       {/* Tech Stack */}
       {show.tech && <td className="p-4 align-middle"><TechStackBadge techStack={domain.techStack} domain={domain.url} onClick={() => onViewDetails?.(domain)} /></td>}
@@ -491,6 +496,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
     gmb: domains.some((d) => !!d.gmb || !!d.gmbPlaceId),
     ns: domains.some((d) => (d.expiry?.nameServers?.length ?? 0) > 0 || (d.dns?.ns?.length ?? 0) > 0),
     canonical: domains.some((d) => !!d.canonical && d.canonical.variants.length > 0),
+    health: domains.some((d) => !!d.health),
   };
 
   return (
@@ -502,6 +508,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               <th className="px-4 py-3.5 w-12 text-center" role="columnheader"><input ref={headerCheckboxRef} type="checkbox" className="rounded border-zinc-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer transition-all bg-zinc-800" checked={allSelected} onChange={onToggleAll} aria-label="Select all domains" /></th>
               <th className="px-4 py-3.5 pl-2 min-w-[240px]" role="columnheader">Domain</th>
               <th className="px-4 py-3.5 min-w-[110px]" role="columnheader">Status</th>
+              {show.health && <th className="px-4 py-3.5 min-w-[80px]" role="columnheader">Health</th>}
               {show.tech && <th className="px-4 py-3.5 min-w-[120px]" role="columnheader">Tech Stack</th>}
               <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">SSL</th>
               <th className="px-4 py-3.5 min-w-[100px]" role="columnheader">Expiry</th>

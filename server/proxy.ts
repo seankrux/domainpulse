@@ -211,6 +211,56 @@ app.get('/api/canonical', verifyToken, async (req, res) => {
   }
 });
 
+app.get('/api/email-auth', verifyToken, async (req, res) => {
+  const domain = req.query.domain as string;
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+
+  const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
+  const cleanDomain = domain.replace(/^https?:\/\//, '').split('/')[0]!.toLowerCase();
+  if (isBlockedHost(cleanDomain)) {
+    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
+  }
+
+  try {
+    const { getEmailAuthInfo } = await import('../api/_utils/emailAuthLookup');
+    res.json(await getEmailAuthInfo(cleanDomain));
+  } catch (e) {
+    res.status(200).json({
+      grade: 'F',
+      spf: { present: false },
+      dkim: { present: false },
+      dmarc: { present: false },
+      issues: [e instanceof Error ? e.message : 'Unknown error'],
+    });
+  }
+});
+
+app.get('/api/security-headers', verifyToken, async (req, res) => {
+  const domain = req.query.domain as string;
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+
+  const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
+  const cleanDomain = domain.replace(/^https?:\/\//, '').split('/')[0]!.toLowerCase();
+  if (isBlockedHost(cleanDomain)) {
+    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
+  }
+
+  const userAgent = (req.query.ua as string) || 'DomainPulse/1.0 (Domain Monitor)';
+
+  try {
+    const { getSecurityHeadersInfo } = await import('../api/_utils/securityHeadersLookup');
+    res.json(await getSecurityHeadersInfo(cleanDomain, { userAgent }));
+  } catch (e) {
+    res.status(200).json({
+      grade: 'F',
+      score: 0,
+      maxScore: 100,
+      headers: [],
+      issues: [e instanceof Error ? e.message : 'Unknown error'],
+    });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

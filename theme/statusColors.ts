@@ -137,3 +137,22 @@ export function uptimeColor(pct: number): { text: string; bg: string } {
 export function latencyColor(ms: number, slowThresholdMs = 500): string {
   return ms > slowThresholdMs ? 'text-amber-400' : 'text-zinc-300';
 }
+
+/** Letter grade (email / headers / health) → badge colour classes. */
+export function healthGradeColor(grade: string): string {
+  switch (grade) {
+    case 'A+':
+    case 'A':
+      return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+    case 'B':
+      return 'bg-lime-500/10 text-lime-400 border border-lime-500/20';
+    case 'C':
+      return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+    case 'D':
+      return 'bg-orange-500/10 text-orange-400 border border-orange-500/20';
+    case 'F':
+      return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+    default:
+      return 'bg-zinc-800 text-zinc-400 border border-zinc-700';
+  }
+}

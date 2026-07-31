@@ -14,6 +14,8 @@
     { "source": "/api/gmb", "destination": "/api/gmb.ts" },
     { "source": "/api/tech-detect", "destination": "/api/tech-detect.ts" },
     { "source": "/api/canonical", "destination": "/api/canonical.ts" },
+    { "source": "/api/email-auth", "destination": "/api/email-auth.ts" },
+    { "source": "/api/security-headers", "destination": "/api/security-headers.ts" },
     { "source": "/content/:path*", "destination": "/content/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],

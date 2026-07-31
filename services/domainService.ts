@@ -1,9 +1,12 @@
-import { DomainStatus, SSLStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo, CanonicalCheckInfo } from '../types';
+import { DomainStatus, SSLStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo, CanonicalCheckInfo, EmailAuthInfo, SecurityHeadersInfo, DomainHealthInfo } from '../types';
 import { checkSSL } from './sslService';
 import { checkDomainExpiry } from './expiryService';
 import { checkDNS } from './dnsService';
 import { detectTechStack } from './techDetectionService';
 import { checkCanonical } from './canonicalService';
+import { checkEmailAuth } from './emailAuthService';
+import { checkSecurityHeaders } from './securityHeadersService';
+import { computeDomainHealth } from '../utils/domainHealth';
 import { logger } from '../utils/logger';
 import { config } from '../lib/config';
 import { getSessionToken } from '../utils/authSession';
@@ -109,11 +112,13 @@ type EnrichmentSettled = [
   PromiseSettledResult<DomainExpiry>,
   PromiseSettledResult<DNSInfo>,
   PromiseSettledResult<TechStackInfo>,
-  PromiseSettledResult<CanonicalCheckInfo>
+  PromiseSettledResult<CanonicalCheckInfo>,
+  PromiseSettledResult<EmailAuthInfo>,
+  PromiseSettledResult<SecurityHeadersInfo>
 ];
 
 /**
- * Check domain liveness, then enrich with SSL/expiry/DNS/Tech.
+ * Check domain liveness, then enrich with SSL/expiry/DNS/Tech/canonical/email/headers.
  *
  * INVARIANT (AGENTS.md §1): liveness is the single source of truth. The hard
  * timeout guards ONLY the uptime probe. Enrichment runs afterwards under
@@ -127,6 +132,9 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
   dns?: DNSInfo;
   techStack?: TechStackInfo;
   canonical?: CanonicalCheckInfo;
+  emailAuth?: EmailAuthInfo;
+  securityHeaders?: SecurityHeadersInfo;
+  health?: DomainHealthInfo;
   /** True when enrichment lost the soft timeout race — callers must keep prior enrichment. */
   enrichmentTimedOut?: boolean;
 }> => {
@@ -228,6 +236,8 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
       checkDNS(url, serviceConfig),
       detectTechStack(url, serviceConfig),
       checkCanonical(url, serviceConfig),
+      checkEmailAuth(url, serviceConfig),
+      checkSecurityHeaders(url, serviceConfig),
     ]) as Promise<EnrichmentSettled>,
     remaining,
     null
@@ -243,13 +253,29 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
   const dnsResult = settled[2].status === 'fulfilled' ? settled[2].value : undefined;
   const techResult = settled[3].status === 'fulfilled' ? settled[3].value : { confidence: 'low' as const };
   const canonicalResult = settled[4].status === 'fulfilled' ? settled[4].value : undefined;
+  const emailAuthResult = settled[5].status === 'fulfilled' ? settled[5].value : undefined;
+  const securityHeadersResult = settled[6].status === 'fulfilled' ? settled[6].value : undefined;
+
+  const dns = dnsResult && !dnsResult.error ? dnsResult : undefined;
+  const emailAuth = emailAuthResult;
+  const securityHeaders = securityHeadersResult;
+  const health = computeDomainHealth({
+    ssl: sslResult,
+    dns,
+    canonical: canonicalResult,
+    emailAuth,
+    securityHeaders,
+  });
 
   return {
     ...domainResult,
     ssl: sslResult,
     expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined,
-    dns: dnsResult && !dnsResult.error ? dnsResult : undefined,
+    dns,
     techStack: techResult.confidence !== 'low' ? techResult : undefined,
     canonical: canonicalResult,
+    emailAuth,
+    securityHeaders,
+    health,
   };
 };
