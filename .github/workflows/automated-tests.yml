@@ -43,8 +43,11 @@ jobs:
     - name: Unit Tests
       run: npm run test:unit -- --run --reporter=verbose
     
-    - name: Build
+    - name: Build Dashboard
       run: npm run build:app
+
+    - name: Build Site
+      run: npm run build
     
     - name: GUI Tests
       run: npm run test:gui -- --reporter=list
