@@ -7,6 +7,9 @@ const DEFAULT_PROXY_URL = 'http://localhost:3001';
 /**
  * Fetch SPF/DKIM/DMARC email-auth grade for a domain.
  * Enrichment only — never affects liveness (AGENTS.md §1).
+ *
+ * On transport failure this throws so `Promise.allSettled` marks the slot
+ * rejected and callers can keep prior enrichment (do not invent grade F).
  */
 export const checkEmailAuth = async (domain: string, config?: ServiceConfig): Promise<EmailAuthInfo> => {
   const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -54,11 +57,5 @@ export const checkEmailAuth = async (domain: string, config?: ServiceConfig): Pr
     }
   }
 
-  return {
-    grade: 'F',
-    spf: { present: false },
-    dkim: { present: false },
-    dmarc: { present: false },
-    issues: ['Failed to fetch email authentication info'],
-  };
+  throw new Error(`Failed to fetch email authentication info for ${cleanDomain}`);
 };

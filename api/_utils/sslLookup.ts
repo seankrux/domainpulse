@@ -2,8 +2,10 @@
  * SSL certificate lookup — single source of truth for the `/api/ssl` endpoint
  * and the dev proxy. Do not reimplement cert parsing elsewhere.
  *
- * Prefers `ssl-checker` (protocol/cipher/fingerprint/grade) with SSRF-pinned
- * DNS lookup; falls back to a direct TLS HEAD if that fails.
+ * Uses a direct TLS HEAD with SSRF-pinned DNS lookup. We intentionally do NOT
+ * enable ssl-checker's `grade: true` — those extra protocol probes call
+ * `tls.connect({ host })` without our pinned `lookup`, which reopens
+ * DNS-rebinding TOCTOU.
  *
  * rejectUnauthorized is false so we still retrieve invalid/expired certs;
  * validity is judged from the cert dates, not the TLS handshake.
@@ -32,12 +34,15 @@ export function normalizeSslHost(domain: string): string {
   return withoutPath.split(':')[0] ?? '';
 }
 
+/**
+ * ssl-checker without `grade` — the leaf handshake honors our pinned lookup.
+ * Grade probes are omitted (they re-resolve DNS).
+ */
 async function viaSslChecker(host: string, pinnedIp: string): Promise<SSLResult | null> {
   const family = pinnedIp.includes(':') ? 6 : 4;
   try {
     const result = await sslChecker(host, {
       timeout: 10000,
-      grade: true,
       validateSubjectAltName: true,
       servername: host,
       lookup: (_hostname: string, _options: unknown, callback: (err: Error | null, address: string, family: number) => void) => {
@@ -64,7 +69,6 @@ async function viaSslChecker(host: string, pinnedIp: string): Promise<SSLResult 
       protocol: result.protocol,
       cipher: result.cipher,
       fingerprint256: result.fingerprint256,
-      grade: result.grade?.grade,
       error: result.validationError || undefined,
     };
   } catch {

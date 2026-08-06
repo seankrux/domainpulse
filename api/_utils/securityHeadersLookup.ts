@@ -31,7 +31,12 @@ function headerValue(headers: http.IncomingHttpHeaders, name: string): string | 
   return typeof v === 'string' ? v : undefined;
 }
 
-function pinnedHead(urlString: string, pinnedIp: string, userAgent: string): Promise<http.IncomingHttpHeaders> {
+function pinnedRequest(
+  urlString: string,
+  pinnedIp: string,
+  userAgent: string,
+  method: 'HEAD' | 'GET',
+): Promise<{ status: number; headers: http.IncomingHttpHeaders }> {
   const parsed = new URL(urlString);
   const isHttps = parsed.protocol === 'https:';
   const transport = isHttps ? https : http;
@@ -43,7 +48,7 @@ function pinnedHead(urlString: string, pinnedIp: string, userAgent: string): Pro
       hostname: pinnedIp,
       port,
       path: `${parsed.pathname}${parsed.search}` || '/',
-      method: 'HEAD',
+      method,
       headers: {
         Host: parsed.host,
         'User-Agent': userAgent,
@@ -54,8 +59,9 @@ function pinnedHead(urlString: string, pinnedIp: string, userAgent: string): Pro
       lookup: (_hostname, _options, callback) => callback(null, pinnedIp, family),
       agent: isHttps ? new https.Agent({ rejectUnauthorized: false }) : undefined,
     }, (res) => {
+      // We only need headers — discard any body.
       res.resume();
-      res.on('end', () => resolve(res.headers));
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, headers: res.headers }));
     });
     req.on('error', reject);
     req.on('timeout', () => {
@@ -64,6 +70,19 @@ function pinnedHead(urlString: string, pinnedIp: string, userAgent: string): Pro
     });
     req.end();
   });
+}
+
+async function fetchHeadersPinned(
+  urlString: string,
+  pinnedIp: string,
+  userAgent: string,
+): Promise<http.IncomingHttpHeaders> {
+  const head = await pinnedRequest(urlString, pinnedIp, userAgent, 'HEAD');
+  if (head.status === 405 || head.status === 501) {
+    const get = await pinnedRequest(urlString, pinnedIp, userAgent, 'GET');
+    return get.headers;
+  }
+  return head.headers;
 }
 
 function gradeHeader(name: string, value: string | undefined, weight: number): { score: number; issue?: string } {
@@ -79,7 +98,7 @@ function gradeHeader(name: string, value: string | undefined, weight: number): {
       return { score: 0, issue: 'HSTS present but invalid' };
     }
     case 'Content-Security-Policy':
-      if (/unsafe-inline|unsafe-eval|\*/.test(lower) && !/script-src/.test(lower)) {
+      if (/unsafe-inline|unsafe-eval/.test(lower) || /(?:^|[;\s])\*(?:[;\s]|$)/.test(lower)) {
         return { score: Math.round(weight * 0.5), issue: 'CSP is weak (wildcards / unsafe)' };
       }
       return { score: weight };
@@ -127,7 +146,7 @@ export async function getSecurityHeadersInfo(
 
   let headers: http.IncomingHttpHeaders;
   try {
-    headers = await pinnedHead(target, pinnedIp, userAgent);
+    headers = await fetchHeadersPinned(target, pinnedIp, userAgent);
   } catch (e) {
     return {
       grade: 'F',

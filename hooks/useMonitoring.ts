@@ -4,6 +4,40 @@ import { checkDomainWithSSL } from '../services/domainService';
 import { checkGmb } from '../services/gmbService';
 import { logger } from '../utils/logger';
 import { getSessionToken } from '../utils/authSession';
+import { computeDomainHealth } from '../utils/domainHealth';
+
+/** Only overwrite enrichment keys that are present — never wipe prior data with undefined. */
+function enrichmentPatch(
+  result: Awaited<ReturnType<typeof checkDomainWithSSL>>,
+): Partial<Domain> {
+  if (result.enrichmentTimedOut) return {};
+  const patch: Partial<Domain> = {};
+  if (result.ssl !== undefined) patch.ssl = result.ssl;
+  if (result.expiry !== undefined) patch.expiry = result.expiry;
+  if (result.dns !== undefined) patch.dns = result.dns;
+  if (result.techStack !== undefined) patch.techStack = result.techStack;
+  if (result.canonical !== undefined) patch.canonical = result.canonical;
+  if (result.emailAuth !== undefined) patch.emailAuth = result.emailAuth;
+  if (result.securityHeaders !== undefined) patch.securityHeaders = result.securityHeaders;
+  // health is recomputed from the merged domain below — do not copy a partial score.
+  return patch;
+}
+
+function applyCheckResult(domain: Domain, result: Awaited<ReturnType<typeof checkDomainWithSSL>>): Domain {
+  const merged: Domain = {
+    ...domain,
+    status: result.status,
+    statusCode: result.statusCode,
+    latency: result.latency,
+    lastChecked: new Date(),
+    ...enrichmentPatch(result),
+  };
+  if (!result.enrichmentTimedOut) {
+    const health = computeDomainHealth(merged);
+    if (health) merged.health = health;
+  }
+  return merged;
+}
 
 interface MonitoringHookProps {
   domains: Domain[];
@@ -93,23 +127,7 @@ export const useMonitoring = ({
           if (!domainExists) return prev;
           
           return prev.map(d =>
-            d.id === domain.id ? {
-              ...d,
-              status: result.status,
-              statusCode: result.statusCode,
-              latency: result.latency,
-              lastChecked: new Date(),
-              ...(result.enrichmentTimedOut ? {} : {
-                ssl: result.ssl,
-                expiry: result.expiry,
-                dns: result.dns,
-                techStack: result.techStack,
-                canonical: result.canonical,
-                emailAuth: result.emailAuth,
-                securityHeaders: result.securityHeaders,
-                health: result.health,
-              }),
-            } : d
+            d.id === domain.id ? applyCheckResult(d, result) : d
           );
         });
         addHistoryRecord(domain.id, result);
@@ -197,23 +215,7 @@ export const useMonitoring = ({
       };
       const result = await checkDomainWithSSL(url, serviceConfig);
       setDomains(prev => prev.map(d =>
-        d.id === id ? {
-          ...d,
-          status: result.status,
-          statusCode: result.statusCode,
-          latency: result.latency,
-          lastChecked: new Date(),
-          ...(result.enrichmentTimedOut ? {} : {
-            ssl: result.ssl,
-            expiry: result.expiry,
-            dns: result.dns,
-            techStack: result.techStack,
-            canonical: result.canonical,
-            emailAuth: result.emailAuth,
-            securityHeaders: result.securityHeaders,
-            health: result.health,
-          }),
-        } : d
+        d.id === id ? applyCheckResult(d, result) : d
       ));
       addHistoryRecord(id, result);
       // Refresh GMB snapshot too, when a Place ID is configured for this domain.
@@ -270,23 +272,7 @@ export const useMonitoring = ({
       if (type === 'DOMAIN_RESULT') {
         setDomains(prev =>
           prev.map(d =>
-            d.id === domainId ? {
-              ...d,
-              status: result.status,
-              statusCode: result.statusCode,
-              latency: result.latency,
-              lastChecked: new Date(),
-              ...(result.enrichmentTimedOut ? {} : {
-                ssl: result.ssl,
-                expiry: result.expiry,
-                dns: result.dns,
-                techStack: result.techStack,
-                canonical: result.canonical,
-                emailAuth: result.emailAuth,
-                securityHeaders: result.securityHeaders,
-                health: result.health,
-              }),
-            } : d
+            d.id === domainId ? applyCheckResult(d, result) : d
           )
         );
         addHistoryRecordRef.current(domainId, result);

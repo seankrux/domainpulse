@@ -15,11 +15,6 @@ const COMMON_DKIM_SELECTORS = [
   's2',
   'mail',
   'dkim',
-  'smtp',
-  'cm',
-  'mandrill',
-  'everlytickey1',
-  'krs',
 ];
 
 function flattenTxt(records: string[][]): string[] {
@@ -67,7 +62,7 @@ export async function getEmailAuthInfo(domain: string): Promise<EmailAuthInfo> {
   const dmarcPolicy = dmarcRaw ? parseDmarcPolicy(dmarcRaw) : undefined;
 
   if (!spfRaw) issues.push('No SPF record (v=spf1) on apex');
-  else if (/[+\?]all\b/i.test(spfRaw) || !/\s-all\b|\s~all\b/i.test(spfRaw)) {
+  else if (/[+?]all\b/i.test(spfRaw) || !/\s-all\b|\s~all\b/i.test(spfRaw)) {
     issues.push('SPF lacks a restrictive terminal (~all / -all)');
   }
 

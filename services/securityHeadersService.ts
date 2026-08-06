@@ -7,6 +7,9 @@ const DEFAULT_PROXY_URL = 'http://localhost:3001';
 /**
  * Fetch security-header grade for a domain.
  * Enrichment only — never affects liveness (AGENTS.md §1).
+ *
+ * On transport failure this throws so `Promise.allSettled` marks the slot
+ * rejected and callers can keep prior enrichment (do not invent grade F).
  */
 export const checkSecurityHeaders = async (domain: string, config?: ServiceConfig): Promise<SecurityHeadersInfo> => {
   const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -56,11 +59,5 @@ export const checkSecurityHeaders = async (domain: string, config?: ServiceConfi
     }
   }
 
-  return {
-    grade: 'F',
-    score: 0,
-    maxScore: 100,
-    headers: [],
-    issues: ['Failed to fetch security headers'],
-  };
+  throw new Error(`Failed to fetch security headers for ${cleanDomain}`);
 };
