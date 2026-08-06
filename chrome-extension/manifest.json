@@ -2,13 +2,12 @@
   "manifest_version": 3,
   "name": "PulseSEO — GSC Command Center",
   "short_name": "PulseSEO",
-  "version": "1.0.0",
-  "description": "Superior GSC sidekick: live page analytics, URL Inspection, indexing requests, on-page SEO audit, and annotations — without leaving the tab.",
+  "version": "1.1.0",
+  "description": "GSC analytics, URL Inspection, indexing helpers, sitemap/WebSub, bulk inspect, on-page audit — side panel, no SaaS middleman.",
   "permissions": [
     "storage",
     "identity",
     "sidePanel",
-    "activeTab",
     "scripting",
     "tabs"
   ],
@@ -17,7 +16,9 @@
     "https://searchconsole.googleapis.com/*",
     "https://indexing.googleapis.com/*",
     "https://oauth2.googleapis.com/*",
-    "https://accounts.google.com/*"
+    "https://pubsubhubbub.appspot.com/*",
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js",

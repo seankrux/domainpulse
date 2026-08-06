@@ -1,22 +1,25 @@
 /**
- * Google Search Console + Indexing API client.
- * All requests use a Bearer token from chrome.identity.
+ * Google Search Console + Indexing API + WebSub helpers.
  */
+
+import { invalidateToken } from './auth.js';
+import { assertPublicHttpUrl } from './ssrf.js';
 
 const WEBMASTERS = 'https://www.googleapis.com/webmasters/v3';
 const SEARCH_CONSOLE = 'https://searchconsole.googleapis.com/v1';
 const INDEXING = 'https://indexing.googleapis.com/v3';
+const WEBSUB_HUB = 'https://pubsubhubbub.appspot.com/';
 
-async function gscFetch(url, token, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  });
+async function gscFetch(url, token, options = {}, { retryOnAuth = true } = {}) {
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    ...(options.headers || {}),
+  };
+  if (options.body !== undefined && options.body !== null && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
+  const res = await fetch(url, { ...options, headers });
   const text = await res.text();
   let body = null;
   try {
@@ -25,11 +28,18 @@ async function gscFetch(url, token, options = {}) {
     body = { raw: text };
   }
 
+  if (res.status === 401 && retryOnAuth) {
+    await invalidateToken();
+    const err = new Error('Unauthorized — sign in again.');
+    err.status = 401;
+    err.code = 'AUTH_EXPIRED';
+    err.body = body;
+    throw err;
+  }
+
   if (!res.ok) {
     const message =
-      body?.error?.message ||
-      body?.error_description ||
-      `HTTP ${res.status}`;
+      body?.error?.message || body?.error_description || `HTTP ${res.status}`;
     const err = new Error(message);
     err.status = res.status;
     err.body = body;
@@ -42,7 +52,6 @@ export function encodeSiteUrl(siteUrl) {
   return encodeURIComponent(siteUrl);
 }
 
-/** List properties the signed-in user can access. */
 export async function listSites(token) {
   const data = await gscFetch(`${WEBMASTERS}/sites`, token);
   return (data.siteEntry || []).map((s) => ({
@@ -51,9 +60,17 @@ export async function listSites(token) {
   }));
 }
 
+function pathUnderPrefix(pagePath, sitePath) {
+  const prefix = sitePath.endsWith('/') ? sitePath : `${sitePath}/`;
+  if (sitePath === '/' || sitePath === '') return true;
+  return pagePath === sitePath || pagePath === prefix.slice(0, -1) || pagePath.startsWith(prefix);
+}
+
 /**
  * Pick the best matching GSC property for a page URL.
- * Prefers longest matching URL-prefix, then sc-domain.
+ * URL-prefix: same origin + path under property path (no host-prefix string tricks).
+ * sc-domain: host or subdomain of the domain.
+ * No www↔apex fallback for URL-prefix (those are different properties).
  */
 export function matchProperty(pageUrl, sites) {
   let parsed;
@@ -69,7 +86,7 @@ export function matchProperty(pageUrl, sites) {
   for (const site of sites) {
     const su = site.siteUrl;
     if (su.startsWith('sc-domain:')) {
-      const domain = su.slice('sc-domain:'.length);
+      const domain = su.slice('sc-domain:'.length).toLowerCase();
       if (host === domain || host.endsWith(`.${domain}`)) {
         candidates.push({ site, score: 1000 + domain.length });
       }
@@ -77,13 +94,9 @@ export function matchProperty(pageUrl, sites) {
     }
     try {
       const siteParsed = new URL(su);
-      if (pageUrl.startsWith(su) || pageUrl.startsWith(su.replace(/\/$/, ''))) {
+      if (parsed.origin !== siteParsed.origin) continue;
+      if (pathUnderPrefix(parsed.pathname, siteParsed.pathname)) {
         candidates.push({ site, score: 2000 + su.length });
-      } else if (
-        siteParsed.hostname.replace(/^www\./, '') === host ||
-        parsed.hostname === siteParsed.hostname
-      ) {
-        candidates.push({ site, score: 500 + su.length });
       }
     } catch {
       /* ignore malformed property URLs */
@@ -94,56 +107,92 @@ export function matchProperty(pageUrl, sites) {
   return candidates[0]?.site ?? null;
 }
 
+/** Strip hash + common tracking params for more reliable page equals filters. */
+export function normalizePageUrl(pageUrl) {
+  let u;
+  try {
+    u = new URL(pageUrl);
+  } catch {
+    return pageUrl;
+  }
+  u.hash = '';
+  const drop = [
+    'utm_source',
+    'utm_medium',
+    'utm_campaign',
+    'utm_term',
+    'utm_content',
+    'gclid',
+    'fbclid',
+    'mc_cid',
+    'mc_eid',
+  ];
+  for (const key of drop) u.searchParams.delete(key);
+  return u.toString();
+}
+
+function pageFilterGroup(pageUrl) {
+  return {
+    groupType: 'and',
+    filters: [{ dimension: 'page', operator: 'equals', expression: pageUrl }],
+  };
+}
+
 export async function searchAnalytics(token, siteUrl, body) {
   const url = `${WEBMASTERS}/sites/${encodeSiteUrl(siteUrl)}/searchAnalytics/query`;
   return gscFetch(url, token, { method: 'POST', body: JSON.stringify(body) });
 }
 
-/** Aggregate metrics for a single page (or whole property if pageUrl omitted). */
-export async function pageMetrics(token, siteUrl, { startDate, endDate, pageUrl }) {
+export async function pageMetrics(token, siteUrl, { startDate, endDate, pageUrl, type = 'web', device, country }) {
   const body = {
     startDate,
     endDate,
-    searchType: 'web',
+    type,
     rowLimit: 1,
   };
+  const filters = [];
   if (pageUrl) {
     body.dimensions = ['page'];
     body.aggregationType = 'byPage';
-    body.dimensionFilterGroups = [
-      {
-        groupType: 'and',
-        filters: [{ dimension: 'page', operator: 'equals', expression: pageUrl }],
-      },
-    ];
+    filters.push({ dimension: 'page', operator: 'equals', expression: pageUrl });
+  }
+  if (device && device !== 'ALL') {
+    filters.push({ dimension: 'device', operator: 'equals', expression: device });
+  }
+  if (country && country !== 'ALL') {
+    filters.push({ dimension: 'country', operator: 'equals', expression: country });
+  }
+  if (filters.length) {
+    body.dimensionFilterGroups = [{ groupType: 'and', filters }];
   }
   const data = await searchAnalytics(token, siteUrl, body);
   const row = data.rows?.[0];
+  if (!row) {
+    return { clicks: 0, impressions: 0, ctr: 0, position: null, empty: true };
+  }
   return {
-    clicks: row?.clicks ?? 0,
-    impressions: row?.impressions ?? 0,
-    ctr: row?.ctr ?? 0,
-    position: row?.position ?? 0,
+    clicks: row.clicks ?? 0,
+    impressions: row.impressions ?? 0,
+    ctr: row.ctr ?? 0,
+    position: row.position ?? 0,
+    empty: false,
   };
 }
 
-/** Daily series for charting. */
-export async function dailySeries(token, siteUrl, { startDate, endDate, pageUrl }) {
+export async function dailySeries(token, siteUrl, { startDate, endDate, pageUrl, type = 'web', device, country }) {
   const body = {
     startDate,
     endDate,
     dimensions: ['date'],
-    searchType: 'web',
+    type,
     rowLimit: 500,
   };
-  if (pageUrl) {
-    body.dimensionFilterGroups = [
-      {
-        groupType: 'and',
-        filters: [{ dimension: 'page', operator: 'equals', expression: pageUrl }],
-      },
-    ];
-  }
+  const filters = [];
+  if (pageUrl) filters.push({ dimension: 'page', operator: 'equals', expression: pageUrl });
+  if (device && device !== 'ALL') filters.push({ dimension: 'device', operator: 'equals', expression: device });
+  if (country && country !== 'ALL') filters.push({ dimension: 'country', operator: 'equals', expression: country });
+  if (filters.length) body.dimensionFilterGroups = [{ groupType: 'and', filters }];
+
   const data = await searchAnalytics(token, siteUrl, body);
   return (data.rows || []).map((r) => ({
     date: r.keys[0],
@@ -154,23 +203,24 @@ export async function dailySeries(token, siteUrl, { startDate, endDate, pageUrl 
   }));
 }
 
-/** Top queries for a page (or property). */
-export async function topQueries(token, siteUrl, { startDate, endDate, pageUrl, rowLimit = 25 }) {
+export async function topQueries(
+  token,
+  siteUrl,
+  { startDate, endDate, pageUrl, rowLimit = 25, type = 'web', device, country }
+) {
   const body = {
     startDate,
     endDate,
     dimensions: ['query'],
-    searchType: 'web',
+    type,
     rowLimit,
   };
-  if (pageUrl) {
-    body.dimensionFilterGroups = [
-      {
-        groupType: 'and',
-        filters: [{ dimension: 'page', operator: 'equals', expression: pageUrl }],
-      },
-    ];
-  }
+  const filters = [];
+  if (pageUrl) filters.push({ dimension: 'page', operator: 'equals', expression: pageUrl });
+  if (device && device !== 'ALL') filters.push({ dimension: 'device', operator: 'equals', expression: device });
+  if (country && country !== 'ALL') filters.push({ dimension: 'country', operator: 'equals', expression: country });
+  if (filters.length) body.dimensionFilterGroups = [{ groupType: 'and', filters }];
+
   const data = await searchAnalytics(token, siteUrl, body);
   return (data.rows || []).map((r) => ({
     query: r.keys[0],
@@ -181,15 +231,15 @@ export async function topQueries(token, siteUrl, { startDate, endDate, pageUrl, 
   }));
 }
 
-/** Growing / decaying queries by comparing two periods. */
 export async function queryDeltas(
   token,
   siteUrl,
-  { current, previous, pageUrl, rowLimit = 50 }
+  { current, previous, pageUrl, rowLimit = 100, type = 'web', device, country }
 ) {
+  const opts = { pageUrl, rowLimit, type, device, country };
   const [cur, prev] = await Promise.all([
-    topQueries(token, siteUrl, { ...current, pageUrl, rowLimit }),
-    topQueries(token, siteUrl, { ...previous, pageUrl, rowLimit }),
+    topQueries(token, siteUrl, { ...current, ...opts }),
+    topQueries(token, siteUrl, { ...previous, ...opts }),
   ]);
 
   const prevMap = new Map(prev.map((q) => [q.query, q]));
@@ -233,7 +283,6 @@ export async function queryDeltas(
   };
 }
 
-/** URL Inspection API — index status for a URL. */
 export async function inspectUrl(token, { inspectionUrl, siteUrl, languageCode = 'en-US' }) {
   return gscFetch(`${SEARCH_CONSOLE}/urlInspection/index:inspect`, token, {
     method: 'POST',
@@ -242,9 +291,9 @@ export async function inspectUrl(token, { inspectionUrl, siteUrl, languageCode =
 }
 
 /**
- * Indexing API — notify Google of URL_UPDATED / URL_DELETED.
- * Officially intended for JobPosting / BroadcastEvent pages; users
- * should understand quota + policy limits.
+ * Indexing API notify. Officially JobPosting/BroadcastEvent; often needs a
+ * service-account token. User OAuth frequently returns 403 — callers should
+ * fall back to GSC Inspection UI.
  */
 export async function publishUrlNotification(token, { url, type }) {
   return gscFetch(`${INDEXING}/urlNotifications:publish`, token, {
@@ -268,10 +317,30 @@ export async function listSitemaps(token, siteUrl) {
 
 export async function submitSitemap(token, siteUrl, feedpath) {
   const path = `${WEBMASTERS}/sites/${encodeSiteUrl(siteUrl)}/sitemaps/${encodeURIComponent(feedpath)}`;
-  return gscFetch(path, token, { method: 'PUT', body: '' });
+  return gscFetch(path, token, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: '',
+  });
 }
 
-/** Deep-link into the GSC URL Inspection UI for manual “Request indexing”. */
+/** Official Google WebSub hub ping after sitemap changes. */
+export async function pingWebSub(sitemapUrl) {
+  const body = new URLSearchParams({
+    'hub.mode': 'publish',
+    'hub.url': sitemapUrl,
+  });
+  const res = await fetch(WEBSUB_HUB, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+  if (!res.ok) {
+    throw new Error(`WebSub ping failed (HTTP ${res.status})`);
+  }
+  return { ok: true, status: res.status };
+}
+
 export function gscInspectDeepLink(siteUrl, pageUrl) {
   const resource = encodeURIComponent(siteUrl);
   const id = encodeURIComponent(pageUrl);
@@ -281,3 +350,53 @@ export function gscInspectDeepLink(siteUrl, pageUrl) {
 export function gscPropertyDeepLink(siteUrl) {
   return `https://search.google.com/search-console/performance/search-analytics?resource_id=${encodeURIComponent(siteUrl)}`;
 }
+
+/** Fetch sitemap or sitemap-index and return URL list (capped). */
+export async function fetchSitemapUrls(
+  sitemapUrl,
+  { limit = 500, _visited = null } = {}
+) {
+  const visited = _visited || new Set();
+  const start = assertPublicHttpUrl(sitemapUrl, 'sitemap URL');
+  if (visited.has(start)) return [];
+  visited.add(start);
+
+  const res = await fetch(start, { redirect: 'follow' });
+  if (!res.ok) throw new Error(`Sitemap fetch failed (HTTP ${res.status})`);
+  // Re-check final URL after redirects
+  assertPublicHttpUrl(res.url || start, 'sitemap redirect');
+
+  const xml = await res.text();
+  const locs = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)]
+    .map((m) => m[1].trim())
+    .filter((u) => {
+      try {
+        assertPublicHttpUrl(u, 'sitemap loc');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  const indexes = locs.filter((u) => /sitemap/i.test(u) && /\.xml(\.gz)?$/i.test(u));
+  const pages = locs.filter((u) => !indexes.includes(u));
+
+  if (indexes.length && pages.length < 5) {
+    const nested = [];
+    for (const idx of indexes.slice(0, 10)) {
+      if (nested.length >= limit) break;
+      try {
+        const child = await fetchSitemapUrls(idx, {
+          limit: limit - nested.length,
+          _visited: visited,
+        });
+        nested.push(...child);
+      } catch {
+        /* skip bad child */
+      }
+    }
+    return [...new Set(nested)].slice(0, limit);
+  }
+  return [...new Set(pages.length ? pages : locs)].slice(0, limit);
+}
+
+export { pageFilterGroup, WEBSUB_HUB };

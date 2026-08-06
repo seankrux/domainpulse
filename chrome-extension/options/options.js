@@ -1,13 +1,25 @@
+import { MSG } from '../lib/constants.js';
+
 const $ = (sel) => document.querySelector(sel);
 
 async function api(type, payload = {}) {
   const res = await chrome.runtime.sendMessage({ type, ...payload });
-  if (!res?.ok) throw new Error(res?.error || 'Failed');
+  if (!res?.ok) {
+    const err = new Error(res?.error || 'Failed');
+    err.code = res?.code;
+    throw err;
+  }
   return res.result;
 }
 
+function setMsg(text, ok) {
+  const el = $('#savedMsg');
+  el.textContent = text;
+  el.className = `saved ${ok ? 'msg-ok' : 'msg-err'}`;
+}
+
 async function init() {
-  const setup = await api('GET_SETUP');
+  const setup = await api(MSG.GET_SETUP);
   $('#extId').textContent = setup.extensionId;
   $('#redirectUri').textContent = setup.redirectUri;
   $('#scopes').textContent = setup.scopes;
@@ -15,15 +27,23 @@ async function init() {
 }
 
 $('#saveBtn').addEventListener('click', async () => {
-  const clientId = $('#clientId').value.trim();
-  if (!clientId) {
-    $('#savedMsg').textContent = 'Client ID is required.';
-    return;
+  try {
+    const clientId = $('#clientId').value.trim();
+    await api(MSG.SET_CLIENT_ID, { clientId });
+    setMsg('Saved. Use Test sign-in or open the side panel.', true);
+  } catch (err) {
+    setMsg(err.message, false);
   }
-  await api('SET_CLIENT_ID', { clientId });
-  $('#savedMsg').textContent = 'Saved. Open the side panel and sign in.';
 });
 
-init().catch((err) => {
-  $('#savedMsg').textContent = err.message;
+$('#testSignInBtn').addEventListener('click', async () => {
+  try {
+    setMsg('Opening Google sign-in…', true);
+    await api(MSG.SIGN_IN);
+    setMsg('Sign-in OK. Open the side panel on a property page.', true);
+  } catch (err) {
+    setMsg(err.message, false);
+  }
 });
+
+init().catch((err) => setMsg(err.message, false));

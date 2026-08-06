@@ -6,7 +6,7 @@
   <title>PulseSEO</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="booting" aria-busy="true">
   <header class="top">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"></span>
@@ -29,29 +29,31 @@
         <option value="">No property matched</option>
       </select>
       <div class="seg" role="group" aria-label="Scope">
-        <button type="button" class="seg-btn active" data-scope="page">Page</button>
-        <button type="button" class="seg-btn" data-scope="domain">Domain</button>
+        <button type="button" class="seg-btn active" data-scope="page" aria-pressed="true">Page</button>
+        <button type="button" class="seg-btn" data-scope="domain" aria-pressed="false">Domain</button>
       </div>
     </div>
+    <div class="quota" id="quotaMeter" hidden>Quota —</div>
   </section>
 
-  <nav class="tabs" role="tablist">
-    <button type="button" class="tab active" role="tab" data-tab="analytics" aria-selected="true">Analytics</button>
-    <button type="button" class="tab" role="tab" data-tab="inspect" aria-selected="false">Inspect</button>
-    <button type="button" class="tab" role="tab" data-tab="actions" aria-selected="false">Actions</button>
-    <button type="button" class="tab" role="tab" data-tab="onpage" aria-selected="false">On-page</button>
-    <button type="button" class="tab" role="tab" data-tab="notes" aria-selected="false">Notes</button>
+  <nav class="tabs" role="tablist" aria-label="PulseSEO panels">
+    <button type="button" class="tab active" role="tab" id="tab-analytics" data-tab="analytics" aria-selected="true" aria-controls="panel-analytics">Analytics</button>
+    <button type="button" class="tab" role="tab" id="tab-inspect" data-tab="inspect" aria-selected="false" aria-controls="panel-inspect">Inspect</button>
+    <button type="button" class="tab" role="tab" id="tab-monitor" data-tab="monitor" aria-selected="false" aria-controls="panel-monitor">Monitor</button>
+    <button type="button" class="tab" role="tab" id="tab-actions" data-tab="actions" aria-selected="false" aria-controls="panel-actions">Actions</button>
+    <button type="button" class="tab" role="tab" id="tab-onpage" data-tab="onpage" aria-selected="false" aria-controls="panel-onpage">On-page</button>
+    <button type="button" class="tab" role="tab" id="tab-notes" data-tab="notes" aria-selected="false" aria-controls="panel-notes">Notes</button>
   </nav>
 
   <main>
-    <div id="authGate" class="panel hidden">
+    <div id="authGate" class="panel" hidden>
       <div class="empty">
         <h2>Connect Google Search Console</h2>
-        <p>PulseSEO talks to GSC APIs directly from your browser — analytics, URL Inspection, indexing notifications, and sitemaps.</p>
+        <p>PulseSEO talks to GSC APIs from your browser — analytics, Inspection, sitemaps, WebSub, and bulk inspect.</p>
         <ol class="steps">
           <li>Open Settings and paste your OAuth Client ID</li>
           <li>Sign in with a Google account that owns the property</li>
-          <li>Browse any page on that property</li>
+          <li>Browse any page on that property (hit Refresh after navigating)</li>
         </ol>
         <div class="btn-row">
           <button type="button" class="btn primary" id="signInBtn">Sign in with Google</button>
@@ -61,17 +63,30 @@
       </div>
     </div>
 
-    <div id="errorBanner" class="banner error hidden" role="alert"></div>
-    <div id="statusBanner" class="banner info hidden" role="status"></div>
+    <div id="errorBanner" class="banner error" hidden role="alert"></div>
+    <div id="statusBanner" class="banner info" hidden role="status"></div>
 
-    <!-- Analytics -->
-    <section id="panel-analytics" class="panel" role="tabpanel">
-      <div class="range-row">
+    <section id="panel-analytics" class="panel" role="tabpanel" aria-labelledby="tab-analytics">
+      <div class="range-row wrap">
         <label for="rangeSelect">Range</label>
         <select id="rangeSelect">
           <option value="7">Last 7 days</option>
           <option value="28" selected>Last 28 days</option>
           <option value="90">Last 90 days</option>
+        </select>
+        <label for="deviceSelect" class="sr-only">Device</label>
+        <select id="deviceSelect" title="Device">
+          <option value="ALL">All devices</option>
+          <option value="DESKTOP">Desktop</option>
+          <option value="MOBILE">Mobile</option>
+          <option value="TABLET">Tablet</option>
+        </select>
+        <label for="typeSelect" class="sr-only">Search type</label>
+        <select id="typeSelect" title="Search type">
+          <option value="web">Web</option>
+          <option value="image">Image</option>
+          <option value="video">Video</option>
+          <option value="news">News</option>
         </select>
       </div>
       <div class="metrics" id="metricsGrid">
@@ -81,51 +96,74 @@
         <div class="metric"><div class="metric-label">Avg position</div><div class="metric-value" data-k="position">—</div><div class="metric-delta" data-d="position"></div></div>
       </div>
       <div class="card">
-        <div class="card-head">Trend</div>
-        <canvas id="chart" width="360" height="120" aria-label="Performance chart"></canvas>
+        <div class="card-head"><span>Trend</span><span class="muted" id="chartSummary"></span></div>
+        <canvas id="chart" width="360" height="120" role="img" aria-label="Performance chart"></canvas>
         <div class="legend">
           <span class="lg clicks">Clicks</span>
           <span class="lg impressions">Impressions</span>
         </div>
       </div>
       <div class="card">
-        <div class="card-head">
+        <div class="card-head wrap">
           <span>Top queries</span>
-          <div class="mini-seg" id="queryFilter">
-            <button type="button" class="mini active" data-qf="all">All</button>
-            <button type="button" class="mini" data-qf="growing">Growing</button>
-            <button type="button" class="mini" data-qf="decaying">Decaying</button>
-            <button type="button" class="mini" data-qf="new">New</button>
+          <div class="mini-seg" id="queryFilter" role="group" aria-label="Query filter">
+            <button type="button" class="mini active" data-qf="all" aria-pressed="true">All</button>
+            <button type="button" class="mini" data-qf="growing" aria-pressed="false">Growing</button>
+            <button type="button" class="mini" data-qf="decaying" aria-pressed="false">Decaying</button>
+            <button type="button" class="mini" data-qf="new" aria-pressed="false">New</button>
           </div>
         </div>
         <div id="queriesTable" class="table"></div>
+        <button type="button" class="btn ghost block" id="exportQueriesBtn">Export queries CSV</button>
       </div>
-      <button type="button" class="btn ghost block" id="openGscPerf">Open in Search Console</button>
+      <button type="button" class="btn ghost block" id="openGscPerf">Open property Performance in GSC</button>
     </section>
 
-    <!-- Inspect -->
-    <section id="panel-inspect" class="panel hidden" role="tabpanel">
-      <div class="card" id="inspectCard">
-        <p class="muted">Run URL Inspection to see Google’s indexed version of this page.</p>
+    <section id="panel-inspect" class="panel" role="tabpanel" aria-labelledby="tab-inspect" hidden>
+      <div class="card">
+        <p class="muted">URL Inspection API — Google’s indexed version of this page.</p>
         <button type="button" class="btn primary" id="inspectBtn">Inspect this URL</button>
       </div>
-      <div id="inspectResult" class="hidden"></div>
+      <div id="inspectResult" hidden></div>
     </section>
 
-    <!-- Actions -->
-    <section id="panel-actions" class="panel hidden" role="tabpanel">
+    <section id="panel-monitor" class="panel" role="tabpanel" aria-labelledby="tab-monitor" hidden>
+      <div class="card">
+        <div class="card-head">Sitemap → bulk inspect</div>
+        <p class="muted">Load URLs from a sitemap (max 200), inspect up to 25 per run. Filters: Indexed / Not / Error.</p>
+        <div class="form-row">
+          <input type="url" id="monitorSitemap" placeholder="https://example.com/sitemap.xml" />
+          <button type="button" class="btn primary" id="loadSitemapBtn">Load</button>
+        </div>
+        <textarea id="monitorPaste" rows="3" placeholder="Or paste URLs (one per line)"></textarea>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="runBulkInspectBtn">Inspect batch (≤25)</button>
+          <button type="button" class="btn ghost" id="exportMonitorBtn">Export CSV</button>
+        </div>
+        <div class="mini-seg" id="monitorFilter" role="group" aria-label="Monitor filter">
+          <button type="button" class="mini active" data-mf="all" aria-pressed="true">All</button>
+          <button type="button" class="mini" data-mf="indexed" aria-pressed="false">Indexed</button>
+          <button type="button" class="mini" data-mf="not" aria-pressed="false">Not indexed</button>
+          <button type="button" class="mini" data-mf="error" aria-pressed="false">Error</button>
+        </div>
+        <div id="monitorTable" class="table muted">No URLs loaded.</div>
+      </div>
+    </section>
+
+    <section id="panel-actions" class="panel" role="tabpanel" aria-labelledby="tab-actions" hidden>
       <div class="card">
         <div class="card-head">Request indexing</div>
         <p class="muted">
-          Uses the <strong>Indexing API</strong> (<code>URL_UPDATED</code>). Google documents this API for JobPosting / livestream pages; quota and policy apply. For general pages, also open GSC Inspection and use “Request indexing” there.
+          <strong>Recommended:</strong> Open GSC Inspection and use Google’s Request indexing button.
+          Indexing API notify (<code>URL_UPDATED</code>) often needs a <em>service account</em> as property Owner — user OAuth may 403.
         </p>
         <div class="btn-row">
-          <button type="button" class="btn primary" id="indexUpdatedBtn">Notify URL updated</button>
-          <button type="button" class="btn danger" id="indexDeletedBtn">Notify URL deleted</button>
+          <button type="button" class="btn primary" id="openGscInspect">Open GSC Inspection</button>
+          <button type="button" class="btn ghost" id="indexUpdatedBtn">Try Indexing API (updated)</button>
+          <button type="button" class="btn danger" id="indexDeletedBtn">Try Indexing API (deleted)</button>
         </div>
-        <button type="button" class="btn ghost block" id="openGscInspect">Open GSC Inspection (manual request)</button>
-        <button type="button" class="btn ghost block" id="indexingMetaBtn">Check Indexing API status</button>
-        <pre id="indexingOut" class="code hidden"></pre>
+        <button type="button" class="btn ghost block" id="indexingMetaBtn">Check Indexing API metadata</button>
+        <pre id="indexingOut" class="code" hidden></pre>
       </div>
       <div class="card">
         <div class="card-head">Sitemaps</div>
@@ -134,17 +172,19 @@
           <input type="url" id="sitemapUrl" placeholder="https://example.com/sitemap.xml" />
           <button type="button" class="btn primary" id="submitSitemapBtn">Submit</button>
         </div>
+        <label class="check">
+          <input type="checkbox" id="pingWebSub" checked />
+          Also ping Google WebSub hub after submit
+        </label>
       </div>
     </section>
 
-    <!-- On-page -->
-    <section id="panel-onpage" class="panel hidden" role="tabpanel">
+    <section id="panel-onpage" class="panel" role="tabpanel" aria-labelledby="tab-onpage" hidden>
       <button type="button" class="btn primary block" id="auditBtn">Run on-page audit</button>
       <div id="auditResult"></div>
     </section>
 
-    <!-- Notes -->
-    <section id="panel-notes" class="panel hidden" role="tabpanel">
+    <section id="panel-notes" class="panel" role="tabpanel" aria-labelledby="tab-notes" hidden>
       <div class="card">
         <div class="card-head">Add annotation</div>
         <input type="text" id="noteTitle" placeholder="Title (e.g. Rewrote H1 + meta)" />
@@ -162,7 +202,7 @@
   </main>
 
   <footer class="foot">
-    <button type="button" class="linkish" id="signOutBtn">Sign out</button>
+    <button type="button" class="linkish" id="signOutBtn" hidden>Sign out</button>
     <span id="rangeHint" class="muted"></span>
   </footer>
 
