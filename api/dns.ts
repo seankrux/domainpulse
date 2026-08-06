@@ -3,9 +3,10 @@ import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
 import { isBlockedHost } from './_utils/ssrfGuard.js';
 import { getDNSInfo } from './_utils/dnsLookup.js';
+import { withObservability } from './_utils/observability.js';
 import { config } from '../lib/config.js';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);
@@ -71,3 +72,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
+
+export default withObservability('dns', handler);

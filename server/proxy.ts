@@ -3,6 +3,7 @@ import cors from 'cors';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { createLogger } from '../api/_utils/logger';
 
 // Manual env loading for local dev stability
 try {
@@ -48,6 +49,26 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+
+// Structured request logging (dev parity with the Vercel functions'
+// withObservability wrapper): correlation id + start/finish with duration.
+app.use((req, res, next) => {
+  const inbound = req.headers['x-request-id'];
+  const requestId = (typeof inbound === 'string' && inbound) || crypto.randomUUID();
+  res.setHeader('x-request-id', requestId);
+  const logger = createLogger({ operation: 'proxy', requestId });
+  const startedAt = Date.now();
+  logger.info('request.start', { method: req.method, path: req.path });
+  res.on('finish', () => {
+    logger.info('request.finish', {
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode,
+      durationMs: Date.now() - startedAt,
+    });
+  });
+  next();
+});
 
 // Simple in-memory rate limiter for /api/* (dev proxy parity with the
 // Vercel functions' rate limiting).

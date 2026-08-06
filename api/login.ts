@@ -1,12 +1,13 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import { getCorsHeaders, isAuthBootstrapAllowed, generateToken } from './_utils/auth.js';
+import { withObservability } from './_utils/observability.js';
 
 let AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SESSION_TTL_MINUTES = Number(process.env.VITE_AUTH_SESSION_TTL_MINUTES || 720); // 12h
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);
@@ -79,3 +80,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(401).json({ error: 'Invalid password' });
   }
 }
+
+export default withObservability('login', handler);

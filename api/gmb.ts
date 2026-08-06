@@ -2,6 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
 import { lookupGmb } from './_utils/gmbLookup.js';
+import { withObservability } from './_utils/observability.js';
 import { config } from '../lib/config.js';
 
 /**
@@ -15,7 +16,7 @@ import { config } from '../lib/config.js';
  * descriptive error so the UI degrades gracefully (same pattern as SSL/WHOIS).
  */
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
   };
@@ -58,3 +59,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const result = await lookupGmb({ placeId, query });
   return res.status(200).json(result);
 }
+
+export default withObservability('gmb', handler);

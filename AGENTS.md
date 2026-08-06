@@ -233,6 +233,24 @@ must serve every `/api/*` route the frontend services call
 All outbound-fetching utils (`check`, `tech-detect`) go through the SSRF guard
 (`validateOutboundUrlResolved` / `safeHeadRequest`). Keep it that way.
 
+## Observability is additive — never changes response contracts
+
+The API layer has a structured-logging + error-taxonomy stack
+(`api/_utils/logger.ts`, `api/_utils/errors.ts`, `api/_utils/observability.ts`),
+documented in `docs/logging-and-errors.md`. Rules:
+- Each endpoint is wrapped with `withObservability('<op>', handler)`. The
+  wrapper is **additive**: it adds an `x-request-id` header + start/finish logs
+  and funnels only **uncaught** throws through the error taxonomy. It must
+  **never** change a handler's existing status codes or response bodies.
+- The enrichment endpoints (`ssl`/`dns`/`whois`/`tech-detect`) intentionally
+  return `200` with an `{ error }` body on lookup failure so a failed
+  enrichment can't downgrade liveness (§1/§6). Do **not** "fix" this into a 4xx/5xx.
+- `logger.ts` must never throw and must redact secrets/PII — keep the
+  `redact()` guards (secret-key patterns, email masking, circular/depth limits).
+- Logs go to `stdout`/`stderr` as JSON, not `console.*` (the `no-console` lint
+  rule allows only `warn`/`error`). Keep the direct-stream sink.
+- Locked in by `tests/unit/{logger,errors,observability}.test.ts`.
+
 ---
 
 ## Cursor Cloud specific instructions

@@ -2,9 +2,10 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
 import { probeUptime } from './_utils/ssrfGuard.js';
+import { withObservability } from './_utils/observability.js';
 import { config } from '../lib/config.js';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);
@@ -68,3 +69,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   setHeaders(corsHeaders);
   return res.status(httpStatus).json(body);
 }
+
+export default withObservability('check', handler);

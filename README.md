@@ -177,6 +177,22 @@ Two React apps built from a single codebase:
 
 <br>
 
+## Documentation
+
+Deeper docs live in [`docs/`](docs/):
+
+| Doc | Contents |
+|-----|----------|
+| [architecture.md](docs/architecture.md) | Components, request pipeline, cross-cutting concerns |
+| [logging-and-errors.md](docs/logging-and-errors.md) | Structured JSON logging, redaction, error taxonomy, `withObservability` |
+| [runbook.md](docs/runbook.md) | Running, env vars, tracing via `x-request-id`, incidents, deploy |
+| [development-workflow.md](docs/development-workflow.md) | Setup, testing conventions, coding standards, PR checklist |
+| [adr/](docs/adr/) | Architecture Decision Records |
+
+Behavioral invariants and known gaps are tracked in [AGENTS.md](AGENTS.md) — read it before changing monitoring, status, theming, filter, or API code.
+
+<br>
+
 ## Contributing
 
 > Contributions are welcome. Keep changes focused, tested, and aligned with the existing product direction.
