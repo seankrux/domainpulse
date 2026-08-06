@@ -77,12 +77,15 @@ async function fetchHeadersPinned(
   pinnedIp: string,
   userAgent: string,
 ): Promise<http.IncomingHttpHeaders> {
-  const head = await pinnedRequest(urlString, pinnedIp, userAgent, 'HEAD');
-  if (head.status === 405 || head.status === 501) {
+  // Prefer GET: many CDNs answer HEAD 200 with a stripped header set, while
+  // GET returns the real security headers. Body is discarded.
+  try {
     const get = await pinnedRequest(urlString, pinnedIp, userAgent, 'GET');
     return get.headers;
+  } catch {
+    const head = await pinnedRequest(urlString, pinnedIp, userAgent, 'HEAD');
+    return head.headers;
   }
-  return head.headers;
 }
 
 function gradeHeader(name: string, value: string | undefined, weight: number): { score: number; issue?: string } {

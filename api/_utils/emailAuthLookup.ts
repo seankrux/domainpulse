@@ -77,7 +77,9 @@ export async function getEmailAuthInfo(domain: string): Promise<EmailAuthInfo> {
     COMMON_DKIM_SELECTORS.map(async (sel) => {
       const records = await resolver.resolveTxt(`${sel}._domainkey.${clean}`);
       const flat = flattenTxt(records);
-      const dkim = flat.find((t) => /v=DKIM1/i.test(t) || /\bp=\s*[A-Za-z0-9+/=]+/.test(t));
+      // Require a non-empty public key (p=...). Bare `v=DKIM1; p=` is a
+      // placeholder some domains publish and must not count as present.
+      const dkim = flat.find((t) => /\bp\s*=\s*[A-Za-z0-9+/]+=*/i.test(t) && !/\bp\s*=\s*;/i.test(t) && !/\bp\s*=\s*$/i.test(t.trim()));
       if (dkim) {
         foundSelectors.push(sel);
         dkimRaws.push(dkim);
