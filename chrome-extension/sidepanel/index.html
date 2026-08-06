@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PulseSEO</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <div class="brand-name">PulseSEO</div>
+        <div class="brand-sub" id="scopeLabel">GSC Command Center</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="icon-btn" id="refreshBtn" title="Refresh" aria-label="Refresh">↻</button>
+      <button type="button" class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
+    </div>
+  </header>
+
+  <section class="context" id="contextBar">
+    <div class="url-line" id="pageUrl" title="">—</div>
+    <div class="context-row">
+      <label class="sr-only" for="propertySelect">Property</label>
+      <select id="propertySelect" disabled>
+        <option value="">No property matched</option>
+      </select>
+      <div class="seg" role="group" aria-label="Scope">
+        <button type="button" class="seg-btn active" data-scope="page">Page</button>
+        <button type="button" class="seg-btn" data-scope="domain">Domain</button>
+      </div>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button type="button" class="tab active" role="tab" data-tab="analytics" aria-selected="true">Analytics</button>
+    <button type="button" class="tab" role="tab" data-tab="inspect" aria-selected="false">Inspect</button>
+    <button type="button" class="tab" role="tab" data-tab="actions" aria-selected="false">Actions</button>
+    <button type="button" class="tab" role="tab" data-tab="onpage" aria-selected="false">On-page</button>
+    <button type="button" class="tab" role="tab" data-tab="notes" aria-selected="false">Notes</button>
+  </nav>
+
+  <main>
+    <div id="authGate" class="panel hidden">
+      <div class="empty">
+        <h2>Connect Google Search Console</h2>
+        <p>PulseSEO talks to GSC APIs directly from your browser — analytics, URL Inspection, indexing notifications, and sitemaps.</p>
+        <ol class="steps">
+          <li>Open Settings and paste your OAuth Client ID</li>
+          <li>Sign in with a Google account that owns the property</li>
+          <li>Browse any page on that property</li>
+        </ol>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="signInBtn">Sign in with Google</button>
+          <button type="button" class="btn ghost" id="openOptionsBtn">Open settings</button>
+        </div>
+        <p class="hint" id="authHint"></p>
+      </div>
+    </div>
+
+    <div id="errorBanner" class="banner error hidden" role="alert"></div>
+    <div id="statusBanner" class="banner info hidden" role="status"></div>
+
+    <!-- Analytics -->
+    <section id="panel-analytics" class="panel" role="tabpanel">
+      <div class="range-row">
+        <label for="rangeSelect">Range</label>
+        <select id="rangeSelect">
+          <option value="7">Last 7 days</option>
+          <option value="28" selected>Last 28 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+      <div class="metrics" id="metricsGrid">
+        <div class="metric"><div class="metric-label">Clicks</div><div class="metric-value" data-k="clicks">—</div><div class="metric-delta" data-d="clicks"></div></div>
+        <div class="metric"><div class="metric-label">Impressions</div><div class="metric-value" data-k="impressions">—</div><div class="metric-delta" data-d="impressions"></div></div>
+        <div class="metric"><div class="metric-label">CTR</div><div class="metric-value" data-k="ctr">—</div><div class="metric-delta" data-d="ctr"></div></div>
+        <div class="metric"><div class="metric-label">Avg position</div><div class="metric-value" data-k="position">—</div><div class="metric-delta" data-d="position"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head">Trend</div>
+        <canvas id="chart" width="360" height="120" aria-label="Performance chart"></canvas>
+        <div class="legend">
+          <span class="lg clicks">Clicks</span>
+          <span class="lg impressions">Impressions</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span>Top queries</span>
+          <div class="mini-seg" id="queryFilter">
+            <button type="button" class="mini active" data-qf="all">All</button>
+            <button type="button" class="mini" data-qf="growing">Growing</button>
+            <button type="button" class="mini" data-qf="decaying">Decaying</button>
+            <button type="button" class="mini" data-qf="new">New</button>
+          </div>
+        </div>
+        <div id="queriesTable" class="table"></div>
+      </div>
+      <button type="button" class="btn ghost block" id="openGscPerf">Open in Search Console</button>
+    </section>
+
+    <!-- Inspect -->
+    <section id="panel-inspect" class="panel hidden" role="tabpanel">
+      <div class="card" id="inspectCard">
+        <p class="muted">Run URL Inspection to see Google’s indexed version of this page.</p>
+        <button type="button" class="btn primary" id="inspectBtn">Inspect this URL</button>
+      </div>
+      <div id="inspectResult" class="hidden"></div>
+    </section>
+
+    <!-- Actions -->
+    <section id="panel-actions" class="panel hidden" role="tabpanel">
+      <div class="card">
+        <div class="card-head">Request indexing</div>
+        <p class="muted">
+          Uses the <strong>Indexing API</strong> (<code>URL_UPDATED</code>). Google documents this API for JobPosting / livestream pages; quota and policy apply. For general pages, also open GSC Inspection and use “Request indexing” there.
+        </p>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="indexUpdatedBtn">Notify URL updated</button>
+          <button type="button" class="btn danger" id="indexDeletedBtn">Notify URL deleted</button>
+        </div>
+        <button type="button" class="btn ghost block" id="openGscInspect">Open GSC Inspection (manual request)</button>
+        <button type="button" class="btn ghost block" id="indexingMetaBtn">Check Indexing API status</button>
+        <pre id="indexingOut" class="code hidden"></pre>
+      </div>
+      <div class="card">
+        <div class="card-head">Sitemaps</div>
+        <div id="sitemapsList" class="table muted">Sign in and select a property.</div>
+        <div class="form-row">
+          <input type="url" id="sitemapUrl" placeholder="https://example.com/sitemap.xml" />
+          <button type="button" class="btn primary" id="submitSitemapBtn">Submit</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- On-page -->
+    <section id="panel-onpage" class="panel hidden" role="tabpanel">
+      <button type="button" class="btn primary block" id="auditBtn">Run on-page audit</button>
+      <div id="auditResult"></div>
+    </section>
+
+    <!-- Notes -->
+    <section id="panel-notes" class="panel hidden" role="tabpanel">
+      <div class="card">
+        <div class="card-head">Add annotation</div>
+        <input type="text" id="noteTitle" placeholder="Title (e.g. Rewrote H1 + meta)" />
+        <textarea id="noteBody" rows="3" placeholder="What changed and why…"></textarea>
+        <div class="form-row">
+          <select id="noteScope">
+            <option value="page">This page</option>
+            <option value="property">Whole property</option>
+          </select>
+          <button type="button" class="btn primary" id="saveNoteBtn">Save note</button>
+        </div>
+      </div>
+      <div id="notesList" class="notes"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <button type="button" class="linkish" id="signOutBtn">Sign out</button>
+    <span id="rangeHint" class="muted"></span>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

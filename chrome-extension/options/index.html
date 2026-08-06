@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PulseSEO Settings</title>
+  <link rel="stylesheet" href="../sidepanel/styles.css" />
+  <style>
+    .wrap { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; }
+    h1 { font-size: 24px; margin: 0 0 8px; }
+    .lead { color: var(--muted); margin-bottom: 24px; }
+    .codebox {
+      background: #0a0e13;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      word-break: break-all;
+      user-select: all;
+    }
+    .saved { color: var(--good); margin-top: 8px; min-height: 1.2em; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand" style="margin-bottom: 20px">
+      <span class="brand-mark"></span>
+      <div>
+        <div class="brand-name">PulseSEO</div>
+        <div class="brand-sub">Setup</div>
+      </div>
+    </div>
+
+    <h1>Connect your Google Cloud project</h1>
+    <p class="lead">
+      PulseSEO uses <em>your</em> OAuth Client ID so tokens stay between you and Google.
+      Create a Chrome Extension OAuth client, enable the APIs below, then paste the Client ID.
+    </p>
+
+    <div class="card">
+      <div class="card-head">1. Google Cloud setup</div>
+      <ol class="steps">
+        <li>Open <a href="https://console.cloud.google.com/" target="_blank" rel="noreferrer">Google Cloud Console</a> and create (or pick) a project.</li>
+        <li>Enable <strong>Google Search Console API</strong> and <strong>Indexing API</strong>.</li>
+        <li>APIs &amp; Services → Credentials → Create credentials → <strong>OAuth client ID</strong>.</li>
+        <li>Application type: <strong>Chrome Extension</strong>. Item ID:
+          <div class="codebox" id="extId">loading…</div>
+        </li>
+        <li>Copy the Client ID (ends with <code>.apps.googleusercontent.com</code>).</li>
+        <li>For Indexing API publishes: add your service-account / ensure the Google user owns the GSC property. Owner permission is required for many write actions.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <div class="card-head">2. Authorized redirect URI</div>
+      <p class="muted">If the console asks for a redirect URI (Web application type fallback), use:</p>
+      <div class="codebox" id="redirectUri">loading…</div>
+      <p class="muted" style="margin-top:8px">Scopes requested:</p>
+      <div class="codebox" id="scopes">loading…</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">3. Client ID</div>
+      <input type="text" id="clientId" placeholder="123456789-abcdef.apps.googleusercontent.com" autocomplete="off" />
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="saveBtn">Save Client ID</button>
+      </div>
+      <div class="saved" id="savedMsg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">What PulseSEO can do</div>
+      <ul class="steps">
+        <li><strong>Analytics</strong> — page/domain clicks, impressions, CTR, position, growing/decaying/new queries</li>
+        <li><strong>Inspect</strong> — URL Inspection API (coverage, crawl, canonicals)</li>
+        <li><strong>Actions</strong> — Indexing API notify updated/deleted, open GSC “Request indexing”, submit sitemaps</li>
+        <li><strong>On-page</strong> — live title/meta/H1/canonical/robots/structured-data audit</li>
+        <li><strong>Notes</strong> — local annotations tied to page or property</li>
+      </ul>
+      <p class="muted">
+        Note: Google’s Indexing API is officially scoped to JobPosting / BroadcastEvent pages.
+        PulseSEO also deep-links into Search Console Inspection so you can request indexing for any URL the GSC UI allows.
+      </p>
+    </div>
+  </div>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

@@ -26,6 +26,7 @@
     "test:auto": "./scripts/auto-test.sh",
     "test:devtools": "playwright test tests/devtools-audit.spec.ts",
     "test:unit": "vitest tests/unit/",
+    "test:ext": "node chrome-extension/tests/gsc-helpers.test.mjs",
     "test:watch": "vitest --watch",
     "mcp:start": "node .mcp/auto-test/index.js",
     "qa:crawl": "tsx scripts/qa-crawl.ts"
