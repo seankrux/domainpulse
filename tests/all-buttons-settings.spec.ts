@@ -23,24 +23,9 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
   });
 
   test.describe('Header Components', () => {
-    test('should toggle dark mode', async ({ page }) => {
-      // Initial state - light mode
-      const html = page.locator('html');
-      await html.getAttribute('class');
-
-      // Click dark mode toggle
-      const moonButton = page.locator('button[title="Toggle dark mode"]');
-      await moonButton.click();
-      
-      // Should now be dark mode
-      await page.waitForTimeout(300);
-      const newClass = await html.getAttribute('class');
-      expect(newClass).toContain('dark');
-      
-      // Toggle back
-      const sunButton = page.locator('button[title="Toggle dark mode"]');
-      await sunButton.click();
-      await page.waitForTimeout(300);
+    test('should not show removed dark mode toggle', async ({ page }) => {
+      // Dark mode toggle was removed — app is dark-only per AGENTS.md.
+      await expect(page.getByRole('button', { name: 'Toggle dark mode' })).toHaveCount(0);
     });
 
     test('should open and close settings panel', async ({ page }) => {
@@ -235,7 +220,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     });
 
     test('should open bulk import modal', async ({ page }) => {
-      const bulkButton = page.locator('button[title="Bulk Import"]');
+      const bulkButton = page.getByRole('button', { name: 'Bulk import domains from CSV' });
       await bulkButton.click();
 
       const modal = page.locator('h2:has-text("Bulk Import")');
@@ -247,7 +232,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     });
 
     test('should import domains via bulk import', async ({ page }) => {
-      const bulkButton = page.locator('button[title="Bulk Import"]');
+      const bulkButton = page.getByRole('button', { name: 'Bulk import domains from CSV' });
       await bulkButton.click();
       
       const textarea = page.locator('textarea');
@@ -331,7 +316,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await historyButton.click();
       
       // Verify history modal/chart is visible
-      await expect(page.locator(`h2:has-text("History - ${historyDomain}")`)).toBeVisible();
+      await expect(page.locator(`h2:has-text("Uptime History — ${historyDomain}")`)).toBeVisible();
       
       // Close modal
       await page.locator('button[aria-label="Close"]').last().click();
@@ -448,7 +433,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       
       // Click check selected button. Verify the check fired via the uptime
       // probe request rather than the transient "Checking..." row state.
-      const checkButton = page.locator('button[title="Check Selected"]');
+      const checkButton = page.getByRole('button', { name: 'Check selected domains' });
       const probe = page.waitForRequest(r => r.url().includes('/api/check'), { timeout: 15000 });
       await checkButton.click();
       await probe;
@@ -467,7 +452,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await checkbox.click();
       
       // Click delete button
-      const deleteButton = page.locator('button[title="Remove Selected"]');
+      const deleteButton = page.getByRole('button', { name: 'Remove selected domains' });
       await deleteButton.click();
       
       // Confirm deletion
@@ -490,8 +475,8 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await checkbox.click();
       
       // Hover assign group button to open the CSS hover-only dropdown
-      const assignButton = page.locator('button[title="Assign Group"]');
-      await assignButton.hover();
+      const assignButton = page.getByRole('button', { name: 'Assign group to selected domains' });
+      await assignButton.click();
 
       // dispatchEvent bypasses CSS hover-state dependency and animate-in instability
       await page.locator('button:has-text("Personal")').first().dispatchEvent('click');
@@ -592,7 +577,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
 
   test.describe('Group Management', () => {
     test('should open group manager', async ({ page }) => {
-      const manageButton = page.locator('button[title="Manage Groups"]');
+      const manageButton = page.getByRole('button', { name: 'Manage groups' });
       await manageButton.click();
       
       const modal = page.getByTestId('group-manager-modal');
@@ -605,7 +590,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     test('should create new group', async ({ page }) => {
       const groupName = `Group-${Math.random().toString(36).slice(2, 6)}`;
       
-      const manageButton = page.locator('button[title="Manage Groups"]');
+      const manageButton = page.getByRole('button', { name: 'Manage groups' });
       await manageButton.click();
       
       const modal = page.getByTestId('group-manager-modal');
@@ -637,7 +622,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const editGroup = `EditGroup-${Math.random().toString(36).slice(2, 6)}`;
       
       // Create group first
-      const manageButton = page.locator('button[title="Manage Groups"]');
+      const manageButton = page.getByRole('button', { name: 'Manage groups' });
       await manageButton.click();
       
       const modal = page.getByTestId('group-manager-modal');
@@ -672,7 +657,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const deleteGroup = `DeleteGroup-${Math.random().toString(36).slice(2, 6)}`;
       
       // Create group first
-      const manageButton = page.locator('button[title="Manage Groups"]');
+      const manageButton = page.getByRole('button', { name: 'Manage groups' });
       await manageButton.click();
       
       const modal = page.getByTestId('group-manager-modal');
@@ -726,7 +711,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       await expect(page.locator(`tr:has-text("${exportDomain}")`)).toBeVisible({ timeout: 15000 });
       
       // Click export button
-      const exportButton = page.locator('button[title="Export CSV"]');
+      const exportButton = page.getByRole('button', { name: 'Export domains to CSV' });
       await exportButton.click();
       
       // Should trigger download (can't verify file content in this test)
@@ -799,7 +784,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       page.locator('[aria-label*="Alert"]');
 
       // Click toggle
-      const toggleButton = page.locator('button[aria-expanded]');
+      const toggleButton = page.locator('button[aria-controls="bottom-panel-content"]');
       await toggleButton.click();
       
       // Panel content should expand
@@ -811,7 +796,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
 
     test('should show alerts in bottom panel', async ({ page }) => {
       // Expand panel
-      const toggleButton = page.locator('button[aria-expanded]');
+      const toggleButton = page.locator('button[aria-controls="bottom-panel-content"]');
       await toggleButton.click();
       
       // Should show either alerts or "All systems operational"
@@ -910,7 +895,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       
       if (hasDomains) {
         await headerCheckbox.click();
-        const deleteButton = page.locator('button[title="Remove Selected"]');
+        const deleteButton = page.getByRole('button', { name: 'Remove selected domains' });
         await deleteButton.click();
         await page.locator('button:has-text("Delete")').click();
       }

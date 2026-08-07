@@ -28,8 +28,12 @@ import { CallCheckBadge } from "./CallCheckBadge";
 import { GmbBadge } from "./GmbBadge";
 import { UptimeBadge } from "./UptimeBadge";
 import { HistorySparkline } from "./HistorySparkline";
+import { CanonicalBadge } from "./CanonicalBadge";
 import { TechStackBadge } from "./TechStackBadge";
+import { HealthBadge } from "./HealthBadge";
 import { logger } from "../utils/logger";
+import { latencyColor } from "../theme/statusColors";
+import { formatMonitoringDuration } from "../utils/uptimeStats";
 
 /* ─── Types ──────────────────────────────────────────── */
 
@@ -37,6 +41,8 @@ interface DomainTableProps {
   domains: Domain[];
   selectedIds: Set<string>;
   isFiltered?: boolean;
+  onClearFilters?: () => void;
+  latencyThresholdMs?: number;
   groups?: DomainGroup[];
   onToggleSelect: (id: string) => void;
   onToggleAll: () => void;
@@ -57,15 +63,24 @@ const Skeleton = ({ className = "w-16" }: { className?: string }) => (
 
 /* ─── Empty states ──────────────────────────────────── */
 
-const FilteredEmptyState = () => (
+const FilteredEmptyState: React.FC<{ onClearFilters?: () => void }> = ({ onClearFilters }) => (
   <div className="text-center py-16 glass-card rounded-2xl flex flex-col items-center justify-center">
-    <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center mb-3 text-zinc-500">
-      <Search size={24} />
+    <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center mb-3 text-zinc-400">
+      <Search size={24} aria-hidden="true" />
     </div>
     <h3 className="text-white font-medium text-lg">No matching domains</h3>
     <p className="text-zinc-400 mt-1 max-w-sm mx-auto text-sm">
       Try adjusting your filters to find what you're looking for.
     </p>
+    {onClearFilters && (
+      <button
+        type="button"
+        onClick={onClearFilters}
+        className="mt-4 px-4 py-2 text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors"
+      >
+        Clear all filters
+      </button>
+    )}
   </div>
 );
 
@@ -73,25 +88,18 @@ const EmptyState = () => (
   <div className="text-center py-24 glass-card rounded-3xl border-dashed flex flex-col items-center justify-center relative overflow-hidden group">
     <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
     <div className="w-20 h-20 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 text-emerald-400 transform group-hover:scale-110 transition-transform duration-500 shadow-glow-emerald border border-emerald-500/20">
-      <LayoutDashboard size={32} />
+      <LayoutDashboard size={32} aria-hidden="true" />
     </div>
     <h3 className="text-white font-display font-bold text-xl mb-2">
       Ready to monitor your domains?
     </h3>
-    <p className="text-zinc-400 max-w-sm mx-auto text-sm mb-8 leading-relaxed">
+    <p className="text-zinc-400 max-w-sm mx-auto text-sm mb-4 leading-relaxed">
       Track uptime, latency, SSL status, and domain expiry in one powerful
-      dashboard. Start by adding your first domain above.
+      dashboard. Add a domain above or import a CSV to get started.
     </p>
-    <div className="flex items-center gap-4">
-      <div className="flex -space-x-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="w-8 h-8 rounded-full border-2 border-zinc-900 bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-            {["G", "A", "M"][i - 1]}
-          </div>
-        ))}
-      </div>
-      <p className="text-xs text-zinc-500 font-medium">Trusted by teams worldwide</p>
-    </div>
+    <p className="text-xs text-zinc-500">
+      Tip: use <kbd className="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-400">⌘K</kbd> to search and <kbd className="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-400">⌘Enter</kbd> to check all
+    </p>
   </div>
 );
 
@@ -164,6 +172,8 @@ interface ColVisibility {
   call: boolean;
   gmb: boolean;
   ns: boolean;
+  canonical: boolean;
+  health: boolean;
 }
 
 interface DomainRowProps {
@@ -193,6 +203,7 @@ interface DomainRowProps {
   onAddTag: (id: string, tag: string) => void;
   onRemoveTag: (id: string, tags: string[], tag: string) => void;
   onEditGroup: ((id: string, groupId?: string) => void) | undefined;
+  latencyThresholdMs: number;
 }
 
 const DomainRow: React.FC<DomainRowProps> = ({
@@ -201,7 +212,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
   editingId, editValue, setEditValue,
   onViewDetails, onViewHistory, onCheck, onRemove, onCopy, copiedId,
   editingTagsId, setEditingTagsId, editingGroupId, setEditingGroupId,
-  onAddTag, onRemoveTag, onEditGroup,
+  onAddTag, onRemoveTag, onEditGroup, latencyThresholdMs,
 }) => {
   const isChecking = domain.status === DomainStatus.Checking;
 
@@ -302,6 +313,9 @@ const DomainRow: React.FC<DomainRowProps> = ({
       {/* Status */}
       <td className="p-4 align-middle"><StatusBadge status={domain.status} statusCode={domain.statusCode} /></td>
 
+      {/* Health */}
+      {show.health && <td className="p-4 align-middle"><HealthBadge health={domain.health} onClick={() => onViewDetails?.(domain)} /></td>}
+
       {/* Tech Stack */}
       {show.tech && <td className="p-4 align-middle"><TechStackBadge techStack={domain.techStack} domain={domain.url} onClick={() => onViewDetails?.(domain)} /></td>}
 
@@ -319,6 +333,11 @@ const DomainRow: React.FC<DomainRowProps> = ({
 
       {/* Google Business Profile */}
       {show.gmb && <td className="p-4 align-middle"><GmbBadge gmb={domain.gmb} configured={!!domain.gmbPlaceId} onClick={() => onViewDetails?.(domain)} /></td>}
+
+      {/* Canonical / HTTPS — must match header order (Canonical before Nameservers) */}
+      {show.canonical && <td className="p-4 align-middle hidden xl:table-cell">
+        <CanonicalBadge canonical={domain.canonical} onClick={() => onViewDetails?.(domain)} />
+      </td>}
 
       {/* Nameservers */}
       {show.ns && <td className="p-4 align-middle hidden xl:table-cell">
@@ -349,50 +368,57 @@ const DomainRow: React.FC<DomainRowProps> = ({
         {isChecking ? (
           <Skeleton className="w-12 h-4" />
         ) : domain.latency ? (
-          <span className={domain.latency > 500 ? "text-amber-400" : "text-zinc-300"}>{domain.latency}ms</span>
+          <span className={latencyColor(domain.latency, latencyThresholdMs)} title={domain.latency > latencyThresholdMs ? 'Slow response' : undefined}>{domain.latency}ms</span>
         ) : (
           <span className="text-zinc-600">-</span>
         )}
       </td>
 
-      {/* Last Checked */}
+      {/* Uptime % — must match header order (Uptime → Monitored → History) */}
+      <td className="p-4 align-middle hidden lg:table-cell"><UptimeBadge history={domain.history} /></td>
+
+      {/* Last Checked / Monitoring */}
       <td className="p-4 align-middle text-sm text-zinc-400 hidden md:table-cell">
         {isChecking ? (
           <Skeleton className="w-20 h-4" />
-        ) : domain.lastChecked ? (
-          <span className="flex items-center gap-2">
-            {(() => {
-              const diffMs = Date.now() - domain.lastChecked.getTime();
-              const diffMins = Math.floor(diffMs / 60000);
-              const diffHours = Math.floor(diffMins / 60);
-              const diffDays = Math.floor(diffHours / 24);
-              let label = "Never";
-              if (diffMins < 1) label = "Just now";
-              else if (diffMins < 60) label = `${diffMins}m ago`;
-              else if (diffHours < 24) label = `${diffHours}h ago`;
-              else if (diffDays < 7) label = `${diffDays}d ago`;
-              else label = domain.lastChecked!.toLocaleDateString();
-              return label;
-            })()}
-          </span>
         ) : (
-          <span className="text-zinc-600">Never</span>
+          <div className="flex flex-col gap-0.5">
+            {domain.lastChecked ? (
+              <span title={domain.lastChecked.toLocaleString()}>
+                {(() => {
+                  const diffMs = Date.now() - domain.lastChecked.getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  const diffHours = Math.floor(diffMins / 60);
+                  const diffDays = Math.floor(diffHours / 24);
+                  if (diffMins < 1) return "Just now";
+                  if (diffMins < 60) return `${diffMins}m ago`;
+                  if (diffHours < 24) return `${diffHours}h ago`;
+                  if (diffDays < 7) return `${diffDays}d ago`;
+                  return domain.lastChecked.toLocaleDateString();
+                })()}
+              </span>
+            ) : (
+              <span className="text-zinc-600">Never</span>
+            )}
+            <span className="text-[9px] text-zinc-600" title={`Added ${domain.addedAt.toLocaleDateString()}`}>
+              {formatMonitoringDuration(domain.addedAt)}
+            </span>
+          </div>
         )}
       </td>
 
-      {/* Uptime / History row (2 cells, lg only) */}
+      {/* History sparkline */}
       <td className="p-4 align-middle hidden lg:table-cell"><HistorySparkline history={domain.history} /></td>
-      <td className="p-4 align-middle hidden lg:table-cell"><UptimeBadge history={domain.history} /></td>
 
       {/* Actions */}
       <td className="p-4 align-middle text-right" role="gridcell">
         <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onViewHistory?.(domain)} className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50" title="View history"><History size={16} /></button>
-          <button onClick={() => onCheck(domain.id)} disabled={isChecking} className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50" title="Check status">
+          <button onClick={() => onViewHistory?.(domain)} className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50" title="View history" aria-label="View history"><History size={16} /></button>
+          <button onClick={() => onCheck(domain.id)} disabled={isChecking} className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50" title="Check status" aria-label="Check status">
             <RefreshCw size={16} className={isChecking ? "animate-spin" : ""} />
           </button>
-          <button onClick={() => onStartEdit(domain)} className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50" title="Edit domain"><Edit2 size={16} /></button>
-          <button onClick={() => onRemove(domain.id)} className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50" title="Remove"><Trash2 size={16} /></button>
+          <button onClick={() => onStartEdit(domain)} className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50" title="Edit domain" aria-label="Edit domain"><Edit2 size={16} /></button>
+          <button onClick={() => onRemove(domain.id)} className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50" title="Remove" aria-label="Remove"><Trash2 size={16} /></button>
         </div>
       </td>
     </tr>
@@ -405,6 +431,8 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   domains,
   selectedIds,
   isFiltered = false,
+  onClearFilters,
+  latencyThresholdMs = 500,
   groups = [],
   onToggleSelect,
   onToggleAll,
@@ -456,7 +484,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
   // ── Empty states ────────────────────────────────────
 
   if (domains.length === 0) {
-    return isFiltered ? <FilteredEmptyState /> : <EmptyState />;
+    return isFiltered ? <FilteredEmptyState onClearFilters={onClearFilters} /> : <EmptyState />;
   }
 
   // Only render optional columns when at least one domain actually has that data —
@@ -467,6 +495,8 @@ export const DomainTable: React.FC<DomainTableProps> = ({
     call: domains.some((d) => !!d.callCheck),
     gmb: domains.some((d) => !!d.gmb || !!d.gmbPlaceId),
     ns: domains.some((d) => (d.expiry?.nameServers?.length ?? 0) > 0 || (d.dns?.ns?.length ?? 0) > 0),
+    canonical: domains.some((d) => !!d.canonical && d.canonical.variants.length > 0),
+    health: domains.some((d) => !!d.health),
   };
 
   return (
@@ -478,16 +508,18 @@ export const DomainTable: React.FC<DomainTableProps> = ({
               <th className="px-4 py-3.5 w-12 text-center" role="columnheader"><input ref={headerCheckboxRef} type="checkbox" className="rounded border-zinc-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer transition-all bg-zinc-800" checked={allSelected} onChange={onToggleAll} aria-label="Select all domains" /></th>
               <th className="px-4 py-3.5 pl-2 min-w-[240px]" role="columnheader">Domain</th>
               <th className="px-4 py-3.5 min-w-[110px]" role="columnheader">Status</th>
+              {show.health && <th className="px-4 py-3.5 min-w-[80px]" role="columnheader">Health</th>}
               {show.tech && <th className="px-4 py-3.5 min-w-[120px]" role="columnheader">Tech Stack</th>}
               <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">SSL</th>
               <th className="px-4 py-3.5 min-w-[100px]" role="columnheader">Expiry</th>
               {show.forms && <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Forms</th>}
               {show.call && <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">Call</th>}
               {show.gmb && <th className="px-4 py-3.5 min-w-[90px]" role="columnheader">GMB</th>}
+              {show.canonical && <th className="px-4 py-3.5 hidden xl:table-cell min-w-[100px]" role="columnheader">Canonical</th>}
               {show.ns && <th className="px-4 py-3.5 hidden xl:table-cell min-w-[160px]" role="columnheader">Nameservers</th>}
               <th className="px-4 py-3.5 min-w-[80px]" role="columnheader">Latency</th>
               <th className="px-4 py-3.5 hidden lg:table-cell min-w-[90px]" role="columnheader">Uptime</th>
-              <th className="px-4 py-3.5 hidden md:table-cell min-w-[110px]" role="columnheader">Last Checked</th>
+              <th className="px-4 py-3.5 hidden md:table-cell min-w-[110px]" role="columnheader">Monitored</th>
               <th className="px-4 py-3.5 hidden lg:table-cell min-w-[90px]" role="columnheader">History</th>
               <th className="px-4 py-3.5 text-right min-w-[120px]" role="columnheader">Actions</th>
             </tr>
@@ -521,6 +553,7 @@ export const DomainTable: React.FC<DomainTableProps> = ({
                 onAddTag={addTag}
                 onRemoveTag={removeTag}
                 onEditGroup={onEditGroup}
+                latencyThresholdMs={latencyThresholdMs}
               />
             ))}
           </tbody>

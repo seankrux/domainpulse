@@ -1,0 +1,1 @@
+export { CanonicalBadge } from './CanonicalBadge';

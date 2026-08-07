@@ -49,35 +49,38 @@ export const generateToken = (): { token: string; expiresAt: number } => {
     exp: Math.floor(expiresAt / 1000)
   };
 
-  const token = jwt.sign(payload, effectiveJWTSecret);
+  const token = jwt.sign(payload, effectiveJWTSecret, { algorithm: 'HS256' });
   return { token, expiresAt };
+};
+
+/**
+ * Verify a Bearer token string (shared by Vercel handlers and the dev proxy).
+ */
+export const verifyAuthHeader = (authorization?: string): boolean => {
+  if (!AUTH_ENABLED) {
+    return true;
+  }
+
+  if (!authorization || !authorization.startsWith('Bearer ')) {
+    return false;
+  }
+
+  const token = authorization.split(' ')[1];
+  if (!token) return false;
+
+  try {
+    jwt.verify(token, effectiveJWTSecret, { algorithms: ['HS256'] });
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 /**
  * Verify JWT token from request.
  */
 export const verifyAuth = (req: VercelRequest): boolean => {
-  // Public mode: no password configured → allow (portfolio demo / dev-proxy
-  // parity). Setting VITE_PASSWORD_HASH switches the whole API to require a
-  // valid Bearer token.
-  if (!AUTH_ENABLED) {
-    return true;
-  }
-
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return false;
-  }
-
-  const token = authHeader.split(' ')[1];
-  if (!token) return false;
-
-  try {
-    jwt.verify(token, effectiveJWTSecret);
-    return true;
-  } catch {
-    return false;
-  }
+  return verifyAuthHeader(req.headers.authorization);
 };
 
 /**

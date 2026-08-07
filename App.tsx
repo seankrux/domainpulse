@@ -10,7 +10,7 @@ import { StatsOverview } from './components/StatsOverview';
 import { DomainTable } from './components/DomainTable';
 import { HistoryChart } from './components/HistoryChart';
 import { GroupManager } from './components/GroupManager';
-import { requestNotificationPermission, sendDomainDownNotification, sendDomainUpNotification, playAlertSound } from './services/notificationService';
+import { requestNotificationPermission, sendDomainDownNotification, sendDomainUpNotification, sendNotification, playAlertSound } from './services/notificationService';
 import { validateAndNormalizeUrl } from './services/domainService';
 
 // New Components & Hooks
@@ -64,6 +64,8 @@ const App: React.FC = () => {
   // were state (in the effect's deps) that write would retrigger the effect
   // forever — "Maximum update depth exceeded" the moment notifications are on.
   const previousStatusesRef = useRef<Map<string, DomainStatus>>(new Map());
+  const outageNotifiedRef = useRef<Set<string>>(new Set());
+  const expiryNotifiedRef = useRef<Set<string>>(new Set());
   
   const [sortField, setSortField] = useState<SortField>(() => (localStorage.getItem('domainpulse_sort_field') as SortField) || 'lastChecked');
   const [sortOrder, setSortOrder] = useState<SortOrder>(() => (localStorage.getItem('domainpulse_sort_order') as SortOrder) || 'desc');
@@ -270,24 +272,16 @@ const App: React.FC = () => {
     reader.onload = (event) => {
       const content = event.target?.result as string;
       const parsed = parseCSV(content);
-      const newDomains = parsed.map(p => ({
-        id: generateId(),
-        url: p.url!,
-        status: DomainStatus.Unknown,
-        addedAt: new Date(),
-        history: [],
-        tags: []
-      } as Domain));
-      setDomains(prev => {
-        const existingUrls = new Set(prev.map(d => d.url));
-        const filteredNew = newDomains.filter(d => !existingUrls.has(d.url));
-        return [...filteredNew, ...prev];
-      });
-      showInfo(`Imported ${parsed.length} domains from CSV`);
+      const urls = parsed.map((p) => p.url).filter((u): u is string => Boolean(u));
+      if (urls.length === 0) {
+        showError('No valid URLs found in CSV.');
+        return;
+      }
+      handleBulkImport(urls);
     };
     reader.readAsText(file);
     e.target.value = '';
-  }, [showInfo]);
+  }, [handleBulkImport, showError]);
 
   // CSV Export with error handling
   const handleExportCSV = useCallback(() => {
@@ -300,30 +294,81 @@ const App: React.FC = () => {
     }
   }, [domains, showSuccess, showError]);
 
-  // Notifications
+  // Notifications — skip transient Checking state so down/up alerts fire correctly.
   useEffect(() => {
     if (!settings.enableNotifications) return;
     domains.forEach(domain => {
+      if (domain.status === DomainStatus.Checking) return;
       const prevStatus = previousStatusesRef.current.get(domain.id);
-      if (!prevStatus || prevStatus === domain.status) return;
-      if (domain.status === DomainStatus.Down &&
-          (prevStatus === DomainStatus.Alive || prevStatus === DomainStatus.Unknown)) {
+
+      if (domain.status === DomainStatus.Alive) {
+        outageNotifiedRef.current.delete(domain.id);
+      }
+
+      let consecutiveDowns = 0;
+      for (let i = domain.history.length - 1; i >= 0; i--) {
+        if (domain.history[i]?.status === DomainStatus.Down) consecutiveDowns++;
+        else break;
+      }
+
+      if (domain.status === DomainStatus.Down && consecutiveDowns >= 2 && !outageNotifiedRef.current.has(domain.id)) {
+        outageNotifiedRef.current.add(domain.id);
         if (settings.playSound) playAlertSound();
         sendDomainDownNotification(domain.url, domain.statusCode);
-        showInfo(`${domain.url} is down!`);
+        showError(`${domain.url} is down!`);
       }
+
+      if (!prevStatus || prevStatus === domain.status) return;
       if (domain.status === DomainStatus.Alive && prevStatus === DomainStatus.Down) {
         sendDomainUpNotification(domain.url, domain.latency);
         showSuccess(`${domain.url} is back up!`);
       }
     });
-    const newMap = new Map<string, DomainStatus>();
-    domains.forEach(d => newMap.set(d.id, d.status));
-    // Cap the map size to avoid unbounded growth.
-    previousStatusesRef.current = newMap.size > 100
-      ? new Map(Array.from(newMap.entries()).slice(-100))
+    const newMap = new Map(previousStatusesRef.current);
+    domains.forEach(d => {
+      if (d.status !== DomainStatus.Checking) newMap.set(d.id, d.status);
+    });
+    previousStatusesRef.current = newMap.size > config.monitoring.maxPreviousStatuses
+      ? new Map(Array.from(newMap.entries()).slice(-config.monitoring.maxPreviousStatuses))
       : newMap;
-  }, [domains, settings.enableNotifications, settings.playSound, showInfo, showSuccess]);
+  }, [domains, settings.enableNotifications, settings.playSound, showError, showSuccess]);
+
+  // Proactive SSL / domain-expiry warnings (once per asset per session).
+  useEffect(() => {
+    if (!settings.enableNotifications) return;
+    domains.forEach((domain) => {
+      const sslUrgent = domain.ssl?.status === SSLStatus.Expiring || domain.ssl?.status === SSLStatus.Expired;
+      const domainUrgent = domain.expiry?.status === 'expiring' || domain.expiry?.status === 'expired';
+      if (!sslUrgent && !domainUrgent) return;
+
+      const key = sslUrgent ? `ssl:${domain.id}` : `expiry:${domain.id}`;
+      if (expiryNotifiedRef.current.has(key)) return;
+      expiryNotifiedRef.current.add(key);
+
+      const label = sslUrgent
+        ? `SSL ${domain.ssl?.status === SSLStatus.Expired ? 'expired' : `expires in ${domain.ssl?.daysUntilExpiry ?? '?'}d`}`
+        : `Domain ${domain.expiry?.status === 'expired' ? 'expired' : `expires in ${domain.expiry?.daysUntilExpiry ?? '?'}d`}`;
+
+      void sendNotification({
+        title: 'Expiry warning',
+        body: `${domain.url}: ${label}`,
+      });
+      showInfo(`${domain.url}: ${label}`);
+    });
+  }, [domains, settings.enableNotifications, showInfo]);
+
+  // Auto-refresh on the configured interval (silent background checks).
+  useEffect(() => {
+    if (!settings.autoRefresh) return;
+    const intervalMs = Math.min(
+      Math.max(settings.refreshInterval, config.monitoring.minRefreshInterval),
+      config.monitoring.maxRefreshInterval,
+    );
+    const timer = setInterval(() => {
+      void checkAllDomainsRef.current(true);
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [settings.autoRefresh, settings.refreshInterval]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -390,10 +435,13 @@ const App: React.FC = () => {
 
     const pct = (a: number, b: number) => (b > 0 ? ((a - b) / b) * 100 : 0);
 
+    const prevAliveRate = prevTotal > 0 ? (prevAlive / prevTotal) * 100 : 100;
+    const currAliveRate = currTotal > 0 ? (currAlive / currTotal) * 100 : 100;
+
     return {
       total, alive, down, unknown, avgLatency, uptime,
       trends: {
-        alive:  pct(alive, prevAlive * (prevTotal > 0 ? total / prevTotal : 1)) > 5  ? 'up' : pct(alive, prevAlive * (prevTotal > 0 ? total / prevTotal : 1)) < -5 ? 'down' : 'stable',
+        alive:  pct(currAliveRate, prevAliveRate) > 1  ? 'up' : pct(currAliveRate, prevAliveRate) < -1 ? 'down' : 'stable',
         down:   pct(currDown, prevDown) > 5  ? 'up' : pct(currDown, prevDown) < -5 ? 'down' : 'stable',
         latency: pct(currAvgLat, prevAvgLat) > 10 ? 'up' : pct(currAvgLat, prevAvgLat) < -10 ? 'down' : 'stable',
         uptime: pct(currUptime, prevUptime) > 1  ? 'up' : pct(currUptime, prevUptime) < -1 ? 'down' : 'stable',
@@ -452,7 +500,17 @@ const App: React.FC = () => {
       let comparison = 0;
       switch (sortField) {
         case 'url': comparison = a.url.localeCompare(b.url); break;
-        case 'status': comparison = a.status.localeCompare(b.status); break;
+        case 'status': {
+          const statusOrder: Record<DomainStatus, number> = {
+            [DomainStatus.Down]: 0,
+            [DomainStatus.Error]: 1,
+            [DomainStatus.Checking]: 2,
+            [DomainStatus.Unknown]: 3,
+            [DomainStatus.Alive]: 4,
+          };
+          comparison = (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5);
+          break;
+        }
         case 'latency': comparison = (a.latency || 0) - (b.latency || 0); break;
         case 'lastChecked': comparison = (a.lastChecked?.getTime() || 0) - (b.lastChecked?.getTime() || 0); break;
         case 'ssl': {
@@ -480,6 +538,13 @@ const App: React.FC = () => {
     if (!viewingDetailId) return null;
     return domains.find(d => d.id === viewingDetailId) || null;
   }, [viewingDetailId, domains]);
+
+  const handleClearFilters = useCallback(() => {
+    setFilter('');
+    setStatusFilter('ALL');
+    setSslFilter('ALL');
+    setGroupFilter('ALL');
+  }, []);
 
   const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -573,13 +638,13 @@ const App: React.FC = () => {
         )}
 
         {isCheckingAll && checkProgress.total > 0 && (
-          <div className="mb-6 animate-in fade-in slide-in-from-top-2">
-            <div className="glass-card rounded-xl p-4">
+          <div className="sticky top-16 z-10 mb-6 animate-in fade-in slide-in-from-top-2">
+            <div className="glass-card rounded-xl p-4 border border-emerald-500/20 shadow-lg shadow-emerald-500/5">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-zinc-200">Checking domains...</span>
                 <span className="text-xs font-mono text-zinc-400">{checkProgress.current} / {checkProgress.total}</span>
               </div>
-              <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={checkProgress.current} aria-valuemin={0} aria-valuemax={checkProgress.total}>
                 <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300 shadow-glow-emerald" style={{ width: `${(checkProgress.current / checkProgress.total) * 100}%` }} />
               </div>
             </div>
@@ -613,6 +678,8 @@ const App: React.FC = () => {
               domains={displayDomains}
               groups={groups}
               isFiltered={filter.length > 0 || statusFilter !== 'ALL' || sslFilter !== 'ALL' || groupFilter !== 'ALL'}
+              onClearFilters={handleClearFilters}
+              latencyThresholdMs={settings.latencyThreshold}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
               onToggleAll={handleToggleAll}
@@ -642,10 +709,10 @@ const App: React.FC = () => {
       {/* Bottom Panel - Alerts & Stats (Collapsible) */}
       <BottomPanel domains={domains} stats={stats} onViewDomain={scrollToDomain} />
 
-      <footer id="footer" className="text-center py-8 text-sm text-zinc-500" role="contentinfo">
+      <footer id="footer" className="text-center py-8 text-sm text-zinc-400" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4">
-          <p className="text-zinc-400">Built by Sean G</p>
-          <div className="mt-2 text-xs text-zinc-600">
+          <p>Built by Sean G</p>
+          <div className="mt-2 text-xs text-zinc-500">
             <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘K</kbd> Focus search
             <kbd className="px-2 py-1 bg-zinc-800/80 border border-zinc-700 rounded mx-1 text-zinc-400">⌘Enter</kbd> Check all
           </div>
@@ -667,7 +734,12 @@ const App: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingHistoryId(null)}>
           <div className="bg-zinc-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-zinc-800" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-zinc-100">History - {viewingHistory.url}</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-100">Uptime History — {viewingHistory.url}</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Monitored since {viewingHistory.addedAt.toLocaleDateString()} · {viewingHistory.history.length} checks recorded
+                </p>
+              </div>
               <button onClick={() => setViewingHistoryId(null)} aria-label="Close" className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-200 transition-colors"><X size={20} /></button>
             </div>
             <div className="p-6">

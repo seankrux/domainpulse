@@ -29,7 +29,7 @@ describe('sslService', () => {
 
     it('should return neutral color for UNKNOWN status', () => {
       const result = sslColor(SSLStatus.Unknown);
-      expect(result).toContain('bg-slate');
+      expect(result).toContain('bg-zinc');
     });
   });
 

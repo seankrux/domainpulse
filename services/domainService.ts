@@ -1,8 +1,12 @@
-import { DomainStatus, SSLStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo } from '../types';
+import { DomainStatus, SSLStatus, SSLInfo, DomainExpiry, ServiceConfig, DNSInfo, TechStackInfo, CanonicalCheckInfo, EmailAuthInfo, SecurityHeadersInfo, DomainHealthInfo } from '../types';
 import { checkSSL } from './sslService';
 import { checkDomainExpiry } from './expiryService';
 import { checkDNS } from './dnsService';
 import { detectTechStack } from './techDetectionService';
+import { checkCanonical } from './canonicalService';
+import { checkEmailAuth } from './emailAuthService';
+import { checkSecurityHeaders } from './securityHeadersService';
+import { computeDomainHealth } from '../utils/domainHealth';
 import { logger } from '../utils/logger';
 import { config } from '../lib/config';
 import { getSessionToken } from '../utils/authSession';
@@ -107,11 +111,14 @@ type EnrichmentSettled = [
   PromiseSettledResult<SSLInfo>,
   PromiseSettledResult<DomainExpiry>,
   PromiseSettledResult<DNSInfo>,
-  PromiseSettledResult<TechStackInfo>
+  PromiseSettledResult<TechStackInfo>,
+  PromiseSettledResult<CanonicalCheckInfo>,
+  PromiseSettledResult<EmailAuthInfo>,
+  PromiseSettledResult<SecurityHeadersInfo>
 ];
 
 /**
- * Check domain liveness, then enrich with SSL/expiry/DNS/Tech.
+ * Check domain liveness, then enrich with SSL/expiry/DNS/Tech/canonical/email/headers.
  *
  * INVARIANT (AGENTS.md §1): liveness is the single source of truth. The hard
  * timeout guards ONLY the uptime probe. Enrichment runs afterwards under
@@ -119,7 +126,18 @@ type EnrichmentSettled = [
  * sub-check can never turn an ALIVE domain into Error. `Error` is reachable only
  * when the uptime probe itself fails (auth, network, or timeout).
  */
-export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & { ssl: SSLInfo; expiry?: DomainExpiry; dns?: DNSInfo; techStack?: TechStackInfo }> => {
+export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceConfig): Promise<DomainCheckResult & {
+  ssl?: SSLInfo;
+  expiry?: DomainExpiry;
+  dns?: DNSInfo;
+  techStack?: TechStackInfo;
+  canonical?: CanonicalCheckInfo;
+  emailAuth?: EmailAuthInfo;
+  securityHeaders?: SecurityHeadersInfo;
+  health?: DomainHealthInfo;
+  /** True when enrichment lost the soft timeout race — callers must keep prior enrichment. */
+  enrichmentTimedOut?: boolean;
+}> => {
   const rawTimeout = serviceConfig?.timeout ?? config.timeouts.domainCheck;
   const timeoutMs = Math.min(
     Math.max(rawTimeout, config.timeouts.minProbeTimeout),
@@ -216,22 +234,48 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
       checkSSL(url, serviceConfig),
       checkDomainExpiry(url, serviceConfig),
       checkDNS(url, serviceConfig),
-      detectTechStack(url, serviceConfig)
+      detectTechStack(url, serviceConfig),
+      checkCanonical(url, serviceConfig),
+      checkEmailAuth(url, serviceConfig),
+      checkSecurityHeaders(url, serviceConfig),
     ]) as Promise<EnrichmentSettled>,
     remaining,
     null
   );
 
-  const sslResult: SSLInfo = settled && settled[0].status === 'fulfilled' ? settled[0].value : { status: SSLStatus.Unknown };
-  const expiryResult = settled && settled[1].status === 'fulfilled' ? settled[1].value : { status: 'unknown' as const };
-  const dnsResult = settled && settled[2].status === 'fulfilled' ? settled[2].value : undefined;
-  const techResult = settled && settled[3].status === 'fulfilled' ? settled[3].value : { confidence: 'low' as const };
+  // Soft timeout / total budget exhausted: keep liveness, do NOT wipe prior enrichment.
+  if (!settled) {
+    return { ...domainResult, enrichmentTimedOut: true };
+  }
+
+  const sslResult: SSLInfo = settled[0].status === 'fulfilled' ? settled[0].value : { status: SSLStatus.Unknown };
+  const expiryResult = settled[1].status === 'fulfilled' ? settled[1].value : { status: 'unknown' as const };
+  const dnsResult = settled[2].status === 'fulfilled' ? settled[2].value : undefined;
+  const techResult = settled[3].status === 'fulfilled' ? settled[3].value : { confidence: 'low' as const };
+  const canonicalResult = settled[4].status === 'fulfilled' ? settled[4].value : undefined;
+  const emailAuthResult = settled[5].status === 'fulfilled' ? settled[5].value : undefined;
+  const securityHeadersResult = settled[6].status === 'fulfilled' ? settled[6].value : undefined;
+
+  const dns = dnsResult && !dnsResult.error ? dnsResult : undefined;
+  const emailAuth = emailAuthResult;
+  const securityHeaders = securityHeadersResult;
+  const health = computeDomainHealth({
+    ssl: sslResult,
+    dns,
+    canonical: canonicalResult,
+    emailAuth,
+    securityHeaders,
+  });
 
   return {
     ...domainResult,
     ssl: sslResult,
     expiry: expiryResult.status !== 'unknown' ? expiryResult : undefined,
-    dns: dnsResult && !dnsResult.error ? dnsResult : undefined,
-    techStack: techResult.confidence !== 'low' ? techResult : undefined
+    dns,
+    techStack: techResult.confidence !== 'low' ? techResult : undefined,
+    canonical: canonicalResult,
+    emailAuth,
+    securityHeaders,
+    health,
   };
 };

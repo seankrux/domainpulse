@@ -7,6 +7,8 @@
  *    IPv6 ULA/link-local, *.internal/.local)
  *  - DNS resolution check (every resolved A/AAAA must be public) — stops DNS
  *    rebinding where a public hostname points at a private IP
+ *  - IP pinning: validated addresses are wired into the transport lookup so a
+ *    TTL swap between validation and connect cannot redirect to a private IP
  *  - safe redirect following (each hop re-validated; capped) — stops an open
  *    redirect from bouncing the request to an internal target
  *
@@ -14,6 +16,8 @@
  * the dev proxy, and unit tests.
  */
 import { promises as dns } from 'node:dns';
+import http from 'node:http';
+import https from 'node:https';
 import { isIP } from 'node:net';
 
 const BLOCKED_HOSTNAMES = new Set(['localhost', 'metadata.google.internal', 'metadata']);
@@ -151,7 +155,9 @@ export function validateOutboundUrl(raw: string): { ok: true } | { ok: false; re
  * NXDOMAIN, a real DOWN signal) from an SSRF/scheme rejection (`blocked` /
  * `invalid` — must surface as HTTP 400, never as a domain's DOWN status).
  */
-export type ResolveResult = { ok: true } | { ok: false; reason: string; code: 'unresolvable' | 'blocked' | 'invalid' };
+export type ResolveResult =
+  | { ok: true; addresses: string[] }
+  | { ok: false; reason: string; code: 'unresolvable' | 'blocked' | 'invalid' };
 
 /** Async: literal check + resolve every A/AAAA and ensure all are public. */
 export async function validateOutboundUrlResolved(raw: string): Promise<ResolveResult> {
@@ -163,19 +169,61 @@ export async function validateOutboundUrlResolved(raw: string): Promise<ResolveR
   // Non-canonical numeric forms (127.1, 2130706433, 0177.0.0.1) are not valid
   // per isIP(), so they fall through to dns.lookup, whose getaddrinfo
   // normalises them to the real address — which isBlockedIp then blocks.
-  if (isIP(host) !== 0) return { ok: true };
+  if (isIP(host) !== 0) return { ok: true, addresses: [host] };
   try {
     const records = await dns.lookup(host, { all: true });
     if (records.length === 0) return { ok: false, reason: 'Host did not resolve', code: 'unresolvable' };
+    const addresses: string[] = [];
     for (const r of records) {
       if (isBlockedIp(r.address)) {
         return { ok: false, reason: 'Host resolves to a private/internal address', code: 'blocked' };
       }
+      addresses.push(r.address);
     }
+    return { ok: true, addresses };
   } catch {
     return { ok: false, reason: 'Host did not resolve', code: 'unresolvable' };
   }
-  return { ok: true };
+}
+
+/** Pin a validated address into the transport so DNS rebinding cannot swap targets mid-request. */
+async function pinnedRequest(
+  urlString: string,
+  pinnedIp: string,
+  opts: { method: 'HEAD' | 'GET'; timeoutMs: number; userAgent: string },
+): Promise<{ status: number; headers: http.IncomingHttpHeaders }> {
+  const u = new URL(urlString);
+  const isHttps = u.protocol === 'https:';
+  const transport = isHttps ? https : http;
+  const defaultPort = isHttps ? 443 : 80;
+  const port = u.port ? parseInt(u.port, 10) : defaultPort;
+  const family = pinnedIp.includes(':') ? 6 : 4;
+
+  return new Promise((resolve, reject) => {
+    const req = transport.request({
+      hostname: pinnedIp,
+      port,
+      path: `${u.pathname}${u.search}`,
+      method: opts.method,
+      headers: {
+        Host: u.host,
+        'User-Agent': opts.userAgent,
+      },
+      servername: u.hostname,
+      lookup: (_hostname, _options, callback) => callback(null, pinnedIp, family),
+      timeout: opts.timeoutMs,
+    }, (res) => {
+      res.resume();
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, headers: res.headers }));
+      res.on('error', reject);
+    });
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+    req.end();
+  });
 }
 
 /**
@@ -256,39 +304,33 @@ export async function safeHeadRequest(
     const v = await validateOutboundUrlResolved(current);
     if (!v.ok) return { blocked: true, unresolvable: v.code === 'unresolvable', reason: v.reason, ok: false, status: 0, latency: Date.now() - start };
 
-    const doFetch = async (method: 'HEAD' | 'GET'): Promise<Response> => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), safeTimeoutMs);
-      try {
-        return await fetch(current, {
-          method,
-          redirect: 'manual',
-          signal: controller.signal,
-          headers: { 'User-Agent': userAgent },
-        });
-      } finally {
-        clearTimeout(timer);
-      }
-    };
+    const pinnedIp = v.addresses[0];
+    if (!pinnedIp) {
+      return { blocked: true, unresolvable: true, reason: 'Host did not resolve', ok: false, status: 0, latency: Date.now() - start };
+    }
 
-    let resp: Response;
+    const doRequest = async (method: 'HEAD' | 'GET') =>
+      pinnedRequest(current, pinnedIp, { method, timeoutMs: safeTimeoutMs, userAgent });
+
+    let resp: { status: number; headers: http.IncomingHttpHeaders };
     try {
-      resp = await doFetch('HEAD');
+      resp = await doRequest('HEAD');
       // Some servers reject HEAD outright (405/501) — retry once with GET so a
       // perfectly healthy site isn't reported as DOWN.
       if (resp.status === 405 || resp.status === 501) {
         try {
-          resp = await doFetch('GET');
+          resp = await doRequest('GET');
         } catch {
           // keep the HEAD response if the GET retry fails
         }
       }
     } catch (error) {
-      return { ok: false, status: 0, latency: Date.now() - start, error: error instanceof Error ? error.message : 'fetch failed' };
+      return { ok: false, status: 0, latency: Date.now() - start, error: error instanceof Error ? error.message : 'request failed' };
     }
 
     if (resp.status >= 300 && resp.status < 400) {
-      const loc = resp.headers.get('location');
+      const locHeader = resp.headers.location;
+      const loc = Array.isArray(locHeader) ? locHeader[0] : locHeader;
       if (!loc) return { ok: true, status: resp.status, latency: Date.now() - start };
       try {
         current = new URL(loc, current).toString();
@@ -333,6 +375,130 @@ export function toggleWww(rawUrl: string): string | null {
  *    signal about the domain), NOT as a 400/Error. Only an SSRF/scheme reject
  *    (private address, non-http) returns HTTP 400. See AGENTS.md §1–2.
  */
+export interface RedirectProbeResult {
+  blocked?: boolean;
+  reason?: string;
+  inputUrl: string;
+  finalUrl: string;
+  status: number;
+  reachable: boolean;
+  redirectChain: string[];
+  latency: number;
+}
+
+/**
+ * Follow redirects for a URL and return the full chain. Used by canonical /
+ * HTTPS variant checks — enrichment only, never for liveness. SSRF-safe.
+ */
+export async function probeRedirectChain(
+  rawUrl: string,
+  opts: { timeoutMs?: number; userAgent?: string; maxRedirects?: number } = {},
+): Promise<RedirectProbeResult> {
+  const { timeoutMs = 10000, userAgent = 'DomainPulse/1.0 (Domain Monitor)', maxRedirects = 8 } = opts;
+  const safeTimeoutMs = Math.min(Math.max(timeoutMs, 5000), 30000);
+  const start = Date.now();
+  const chain: string[] = [];
+  let current = rawUrl;
+
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    chain.push(current);
+    const v = await validateOutboundUrlResolved(current);
+    if (!v.ok) {
+      return {
+        blocked: true,
+        reason: v.reason,
+        inputUrl: rawUrl,
+        finalUrl: current,
+        status: 0,
+        reachable: false,
+        redirectChain: chain,
+        latency: Date.now() - start,
+      };
+    }
+
+    const pinnedIp = v.addresses[0];
+    if (!pinnedIp) {
+      return {
+        blocked: true,
+        reason: 'Host did not resolve',
+        inputUrl: rawUrl,
+        finalUrl: current,
+        status: 0,
+        reachable: false,
+        redirectChain: chain,
+        latency: Date.now() - start,
+      };
+    }
+
+    let resp: { status: number; headers: http.IncomingHttpHeaders };
+    try {
+      resp = await pinnedRequest(current, pinnedIp, { method: 'HEAD', timeoutMs: safeTimeoutMs, userAgent });
+      if (resp.status === 405 || resp.status === 501) {
+        try {
+          resp = await pinnedRequest(current, pinnedIp, { method: 'GET', timeoutMs: safeTimeoutMs, userAgent });
+        } catch {
+          // keep HEAD response
+        }
+      }
+    } catch {
+      return {
+        inputUrl: rawUrl,
+        finalUrl: current,
+        status: 0,
+        reachable: false,
+        redirectChain: chain,
+        latency: Date.now() - start,
+      };
+    }
+
+    if (resp.status >= 300 && resp.status < 400) {
+      const locHeader = resp.headers.location;
+      const loc = Array.isArray(locHeader) ? locHeader[0] : locHeader;
+      if (!loc) {
+        return {
+          inputUrl: rawUrl,
+          finalUrl: current,
+          status: resp.status,
+          reachable: isReachableStatus(resp.status),
+          redirectChain: chain,
+          latency: Date.now() - start,
+        };
+      }
+      try {
+        current = new URL(loc, current).toString();
+      } catch {
+        return {
+          inputUrl: rawUrl,
+          finalUrl: current,
+          status: resp.status,
+          reachable: false,
+          redirectChain: chain,
+          latency: Date.now() - start,
+        };
+      }
+      continue;
+    }
+
+    return {
+      inputUrl: rawUrl,
+      finalUrl: current,
+      status: resp.status,
+      reachable: isReachableStatus(resp.status),
+      redirectChain: chain,
+      latency: Date.now() - start,
+    };
+  }
+
+  return {
+    inputUrl: rawUrl,
+    finalUrl: current,
+    status: 0,
+    reachable: false,
+    redirectChain: chain,
+    latency: Date.now() - start,
+  };
+}
+
 export async function probeUptime(
   rawUrl: string,
   opts: { timeoutMs?: number; userAgent?: string } = {},

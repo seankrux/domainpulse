@@ -142,13 +142,9 @@ that was the loophole that let slow SSL/WHOIS calls produce false Error.
 
 1. **Light mode is not implemented.** The app is dark-only: the shell uses
    hardcoded dark classes (`bg-zinc-950`, `text-zinc-100`) with almost no
-   `dark:` variants. The light/dark toggle (`settings.darkMode` →
-   `documentElement.classList` in `App.tsx`) therefore does almost nothing.
-   Building real light mode is a large, app-wide effort. **Decision: leave as-is
-   for now.** Either remove the toggle or do a full themed-colour pass — but only
-   as an explicit, scoped task.
-2. **SSL filter dropdown has no "Unknown" option** (`FilterBar.tsx`), so
-   domains with unknown SSL can't be isolated via that filter.
+   `dark:` variants. The header no longer shows a dark-mode toggle (it was a
+   no-op). Building real light mode is a large, app-wide effort. **Decision:
+   leave as-is for now** unless doing a full scoped theming pass.
 
 ---
 
@@ -222,15 +218,16 @@ that was the loophole that let slow SSL/WHOIS calls produce false Error.
 
 ## Enrichment endpoints — one implementation each
 
-`ssl`, `dns`, `whois`, `gmb`, `tech-detect` each have a Vercel function
+`ssl`, `dns`, `whois`, `gmb`, `tech-detect`, `canonical`, `email-auth`,
+`security-headers` each have a Vercel function
 (`api/*.ts`) AND a dev proxy route (`server/proxy.ts`). The actual lookup logic
-lives ONCE in `api/_utils/{sslLookup,dnsLookup,whoisLookup,gmbLookup,techLookup}.ts`.
+lives ONCE in `api/_utils/{sslLookup,dnsLookup,whoisLookup,gmbLookup,techLookup,canonicalLookup,emailAuthLookup,securityHeadersLookup}.ts`.
 Both sides import it. **Never** reimplement a lookup inline in an endpoint or
 the proxy — extend the shared util so prod and dev can't diverge. The proxy
 must serve every `/api/*` route the frontend services call
-(`check, ssl, dns, whois, gmb, tech-detect`) or that feature breaks in dev.
+(`check, ssl, dns, whois, gmb, tech-detect, canonical, email-auth, security-headers`) or that feature breaks in dev.
 
-All outbound-fetching utils (`check`, `tech-detect`) go through the SSRF guard
+All outbound-fetching utils (`check`, `tech-detect`, `security-headers`) go through the SSRF guard
 (`validateOutboundUrlResolved` / `safeHeadRequest`). Keep it that way.
 
 ---

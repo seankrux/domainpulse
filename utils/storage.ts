@@ -40,6 +40,10 @@ interface StoredSSLInfo {
   validFrom?: string;
   validTo?: string;
   daysUntilExpiry?: number;
+  protocol?: string;
+  cipher?: string;
+  fingerprint256?: string;
+  grade?: string;
 }
 
 interface StoredDomainExpiry {

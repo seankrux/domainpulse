@@ -4,6 +4,40 @@ import { checkDomainWithSSL } from '../services/domainService';
 import { checkGmb } from '../services/gmbService';
 import { logger } from '../utils/logger';
 import { getSessionToken } from '../utils/authSession';
+import { computeDomainHealth } from '../utils/domainHealth';
+
+/** Only overwrite enrichment keys that are present — never wipe prior data with undefined. */
+function enrichmentPatch(
+  result: Awaited<ReturnType<typeof checkDomainWithSSL>>,
+): Partial<Domain> {
+  if (result.enrichmentTimedOut) return {};
+  const patch: Partial<Domain> = {};
+  if (result.ssl !== undefined) patch.ssl = result.ssl;
+  if (result.expiry !== undefined) patch.expiry = result.expiry;
+  if (result.dns !== undefined) patch.dns = result.dns;
+  if (result.techStack !== undefined) patch.techStack = result.techStack;
+  if (result.canonical !== undefined) patch.canonical = result.canonical;
+  if (result.emailAuth !== undefined) patch.emailAuth = result.emailAuth;
+  if (result.securityHeaders !== undefined) patch.securityHeaders = result.securityHeaders;
+  // health is recomputed from the merged domain below — do not copy a partial score.
+  return patch;
+}
+
+function applyCheckResult(domain: Domain, result: Awaited<ReturnType<typeof checkDomainWithSSL>>): Domain {
+  const merged: Domain = {
+    ...domain,
+    status: result.status,
+    statusCode: result.statusCode,
+    latency: result.latency,
+    lastChecked: new Date(),
+    ...enrichmentPatch(result),
+  };
+  if (!result.enrichmentTimedOut) {
+    const health = computeDomainHealth(merged);
+    if (health) merged.health = health;
+  }
+  return merged;
+}
 
 interface MonitoringHookProps {
   domains: Domain[];
@@ -93,18 +127,10 @@ export const useMonitoring = ({
           if (!domainExists) return prev;
           
           return prev.map(d =>
-            d.id === domain.id ? {
-              ...d,
-              status: result.status,
-              statusCode: result.statusCode,
-              latency: result.latency,
-              ssl: result.ssl,
-              expiry: result.expiry,
-              dns: result.dns,
-              lastChecked: new Date()
-            } : d
+            d.id === domain.id ? applyCheckResult(d, result) : d
           );
         });
+        addHistoryRecord(domain.id, result);
         setCheckProgress(prev => ({ ...prev, current: prev.current + 1 }));
       } catch (error) {
         if (error instanceof Error && error.message === 'Unauthorized') {
@@ -141,12 +167,13 @@ export const useMonitoring = ({
     }
 
     // Send to worker
+    setIsCheckingAll(true);
     workerRef.current.postMessage({
       type: 'CHECK_BATCH',
       domains: domainsToProcess,
       config: serviceConfig
     });
-  }, [setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid, setCheckProgress]);
+  }, [setDomains, customUserAgent, checkTimeout, dispatchAuthInvalid, setCheckProgress, addHistoryRecord]);
 
   const checkAllDomains = useCallback(async (silent = false) => {
     if (isCheckingAll) return;
@@ -188,16 +215,7 @@ export const useMonitoring = ({
       };
       const result = await checkDomainWithSSL(url, serviceConfig);
       setDomains(prev => prev.map(d =>
-        d.id === id ? {
-          ...d,
-          status: result.status,
-          statusCode: result.statusCode,
-          latency: result.latency,
-          ssl: result.ssl,
-          expiry: result.expiry,
-          dns: result.dns,
-          lastChecked: new Date()
-        } : d
+        d.id === id ? applyCheckResult(d, result) : d
       ));
       addHistoryRecord(id, result);
       // Refresh GMB snapshot too, when a Place ID is configured for this domain.
@@ -231,6 +249,20 @@ export const useMonitoring = ({
       type: 'module'
     });
 
+    MonitoringWorker.onerror = (event) => {
+      if (!isMounted) return;
+      logger.error('Monitoring worker crashed', event.message ?? event);
+      setIsCheckingAll(false);
+      setCheckProgress({ current: 0, total: 0 });
+    };
+
+    MonitoringWorker.onmessageerror = (event) => {
+      if (!isMounted) return;
+      logger.error('Monitoring worker message error', event);
+      setIsCheckingAll(false);
+      setCheckProgress({ current: 0, total: 0 });
+    };
+
     MonitoringWorker.onmessage = (e) => {
       if (!isMounted || !e?.data || typeof e.data !== 'object' || typeof e.data.type !== 'string') {
         return;
@@ -240,16 +272,7 @@ export const useMonitoring = ({
       if (type === 'DOMAIN_RESULT') {
         setDomains(prev =>
           prev.map(d =>
-            d.id === domainId ? {
-              ...d,
-              status: result.status,
-              statusCode: result.statusCode,
-              latency: result.latency,
-              ssl: result.ssl,
-              expiry: result.expiry,
-              dns: result.dns,
-              lastChecked: new Date()
-            } : d
+            d.id === domainId ? applyCheckResult(d, result) : d
           )
         );
         addHistoryRecordRef.current(domainId, result);

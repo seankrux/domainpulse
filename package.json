@@ -34,15 +34,18 @@
     "@phosphor-icons/react": "^2.1.10",
     "cors": "^2.8.5",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.6.1",
     "geist": "^1.7.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.564.0",
     "marked": "^17.0.2",
     "motion": "^12.40.0",
+    "rdapper": "^0.13.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-is": "^19.2.4",
-    "recharts": "^3.7.0"
+    "recharts": "^3.7.0",
+    "ssl-checker": "^3.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

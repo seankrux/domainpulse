@@ -1,7 +1,7 @@
 import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { DomainStats } from "../types";
-import { CHART_COLORS } from "../theme/statusColors";
+import { CHART_COLORS, uptimeColor } from "../theme/statusColors";
 import {
   Activity,
   AlertCircle,
@@ -105,20 +105,14 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats }) => {
     kpis.push({
       title: "Uptime", value: `${stats.uptime.toFixed(1)}%`,
       icon: Clock,
-      iconColor: stats.uptime >= 99 ? "text-emerald-400" : stats.uptime >= 95 ? "text-amber-400" : "text-red-400",
+      iconColor: uptimeColor(stats.uptime).text,
       trendDir: t?.uptime,
       trendLabel: stats.uptime >= 99.9 ? "99.9% SLA met" : undefined,
     });
   }
 
-  const cols = Math.min(kpis.length, 4);
-  const gridCols = `repeat(${cols}, 1fr)`;
-
   return (
-    <div
-      className="grid gap-6 mb-8"
-      style={{ gridTemplateColumns: gridCols }}
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       {kpis.map((kpi) => (
         <StatCard key={kpi.title} {...kpi} />
       ))}

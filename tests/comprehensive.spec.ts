@@ -107,7 +107,7 @@ test.describe('Comprehensive DomainPulse Tests', () => {
   test('group management should work', async ({ page }) => {
     const groupName = `Group-${Math.random().toString(36).slice(2, 7)}`;
     
-    await page.click('button[title="Manage Groups"]');
+    await page.getByRole('button', { name: 'Manage groups' }).click();
     await page.waitForTimeout(1000); // Wait for modal animation
     
     const modal = page.getByTestId('group-manager-modal');

@@ -14,11 +14,11 @@ export const STATUS_COLORS: Record<DomainStatus, { bg: string; text: string; dot
 
 export function sslColor(status: SSLStatus): string {
   switch (status) {
-    case SSLStatus.Valid:    return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
-    case SSLStatus.Expiring: return 'bg-amber-100  text-amber-800  dark:bg-amber-900/30  dark:text-amber-400';
-    case SSLStatus.Expired:  return 'bg-rose-100   text-rose-800   dark:bg-rose-900/30   dark:text-rose-400';
-    case SSLStatus.Invalid:  return 'bg-red-100    text-red-800    dark:bg-red-900/30    dark:text-red-400';
-    default:                 return 'bg-slate-100  text-slate-800  dark:bg-slate-700      dark:text-slate-400';
+    case SSLStatus.Valid:    return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+    case SSLStatus.Expiring: return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+    case SSLStatus.Expired:  return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+    case SSLStatus.Invalid:  return 'bg-red-500/10 text-red-400 border border-red-500/20';
+    default:                 return 'bg-zinc-800 text-zinc-400 border border-zinc-700';
   }
 }
 
@@ -34,10 +34,10 @@ export function sslLabel(status: SSLStatus): string {
 
 export function expiryColor(status: string): string {
   switch (status) {
-    case 'active':   return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
-    case 'expiring': return 'bg-amber-100  text-amber-800  dark:bg-amber-900/30  dark:text-amber-400';
-    case 'expired':  return 'bg-rose-100   text-rose-800   dark:bg-rose-900/30   dark:text-rose-400';
-    default:         return 'bg-slate-100  text-slate-800  dark:bg-slate-700      dark:text-slate-400';
+    case 'active':   return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+    case 'expiring': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+    case 'expired':  return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+    default:         return 'bg-zinc-800 text-zinc-400 border border-zinc-700';
   }
 }
 
@@ -51,10 +51,10 @@ export function expiryLabel(status: string): string {
 }
 
 // ─── QA check colors (forms + call buttons) ───────────────────
-const QA_GOOD = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
-const QA_BAD = 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400';
-const QA_WARN = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
-const QA_NEUTRAL = 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-400';
+const QA_GOOD = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+const QA_BAD = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+const QA_WARN = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+const QA_NEUTRAL = 'bg-zinc-800 text-zinc-400 border border-zinc-700';
 
 export function formCheckColor(status: FormCheckStatus): string {
   switch (status) {
@@ -133,7 +133,26 @@ export function uptimeColor(pct: number): { text: string; bg: string } {
   return { text: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' };
 }
 
-/** Latency ms → tailwind text colour. */
-export function latencyColor(ms: number): string {
-  return ms > 500 ? 'text-amber-400' : 'text-zinc-300';
+/** Latency ms → tailwind text colour. Uses configurable slow threshold from settings. */
+export function latencyColor(ms: number, slowThresholdMs = 500): string {
+  return ms > slowThresholdMs ? 'text-amber-400' : 'text-zinc-300';
+}
+
+/** Letter grade (email / headers / health) → badge colour classes. */
+export function healthGradeColor(grade: string): string {
+  switch (grade) {
+    case 'A+':
+    case 'A':
+      return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+    case 'B':
+      return 'bg-lime-500/10 text-lime-400 border border-lime-500/20';
+    case 'C':
+      return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+    case 'D':
+      return 'bg-orange-500/10 text-orange-400 border border-orange-500/20';
+    case 'F':
+      return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+    default:
+      return 'bg-zinc-800 text-zinc-400 border border-zinc-700';
+  }
 }
