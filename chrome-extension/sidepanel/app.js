@@ -391,6 +391,10 @@ async function loadContext() {
       setAuthGate(true, err.message);
       return;
     }
+    // Clear boot skeleton so errors are visible (not a blank main).
+    document.body.classList.remove('booting');
+    document.body.removeAttribute('aria-busy');
+    setAuthGate(Boolean(err.code === 'AUTH_EXPIRED' || err.status === 401), '');
     showError(err.message);
   }
 }

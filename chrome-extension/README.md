@@ -26,8 +26,9 @@ Research notes: SEO Gets Anywhere is read-only analytics + annotations against t
 3. [Google Cloud Console](https://console.cloud.google.com/):
    - Enable **Google Search Console API** (and optionally **Indexing API**).
    - OAuth consent screen → Testing → add yourself as test user → add scopes `webmasters` + `indexing`.
-   - Create OAuth client type **Chrome Extension** with that Item ID *(no redirect URI needed)*.
-   - Fallback only: Web application client must authorize exactly `https://<EXTENSION_ID>.chromiumapp.org/`.
+   - Create OAuth client type **Web application** and authorize redirect URI  
+     `https://<EXTENSION_ID>.chromiumapp.org/` (trailing slash required).  
+     Do **not** use a “Chrome Extension” client — that path is for `getAuthToken`, not `launchWebAuthFlow`.
 4. Extension **Options** → paste Client ID → Save → Test sign-in.
 5. Open the side panel on an `http(s)` page you own in Search Console.
 

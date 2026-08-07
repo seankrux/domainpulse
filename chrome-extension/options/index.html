@@ -30,7 +30,8 @@
     <h1>Connect your Google Cloud project</h1>
     <p class="lead">
       PulseSEO uses <em>your</em> OAuth Client ID. Tokens stay between you and Google.
-      Prefer a <strong>Chrome Extension</strong> OAuth client bound to this Item ID.
+      Sign-in uses <code>launchWebAuthFlow</code>, so create a <strong>Web application</strong> client
+      with the redirect URI below (not a Chrome Extension client — those are for <code>getAuthToken</code>).
     </p>
 
     <div class="card">
@@ -39,14 +40,12 @@
         <li>Open <a href="https://console.cloud.google.com/" target="_blank" rel="noreferrer">Google Cloud Console</a>.</li>
         <li>Enable <strong>Google Search Console API</strong> and (optional) <strong>Indexing API</strong>.</li>
         <li>Configure the <strong>OAuth consent screen</strong> (External + Testing). Add your Google account as a test user. Add scopes <code>webmasters</code> and <code>indexing</code>.</li>
-        <li>Credentials → Create → <strong>OAuth client ID</strong> → Application type <strong>Chrome Extension</strong>. Item ID:</li>
+        <li>Credentials → Create → <strong>OAuth client ID</strong> → Application type <strong>Web application</strong>.</li>
+        <li>Under <strong>Authorized redirect URIs</strong>, add exactly (trailing slash required):</li>
       </ol>
-      <div class="codebox" id="extId">loading…</div>
-      <p class="muted" style="margin-top:8px">
-        Chrome Extension clients do <em>not</em> need a redirect URI. Only if you create a
-        <strong>Web application</strong> client instead, authorize exactly:
-      </p>
       <div class="codebox" id="redirectUri">loading…</div>
+      <p class="muted" style="margin-top:8px">Your unpacked extension ID (for reference):</p>
+      <div class="codebox" id="extId">loading…</div>
       <p class="muted" style="margin-top:8px">Scopes requested:</p>
       <div class="codebox" id="scopes">loading…</div>
     </div>
