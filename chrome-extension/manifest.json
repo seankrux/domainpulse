@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PulseSEO — GSC Command Center",
   "short_name": "PulseSEO",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "GSC analytics, URL Inspection, indexing helpers, sitemap/WebSub, bulk inspect, on-page audit — side panel, no SaaS middleman.",
   "permissions": [
     "storage",

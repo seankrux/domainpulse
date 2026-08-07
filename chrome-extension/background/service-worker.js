@@ -69,9 +69,34 @@ async function openAllowedUrl(url) {
   await chrome.tabs.create({ url: u.href });
 }
 
+function isHttpUrl(url) {
+  return Boolean(url && /^https?:/i.test(url));
+}
+
+function isRestrictedUrl(url) {
+  return Boolean(
+    url &&
+      /^(chrome|chrome-extension|devtools|edge|about|brave|opera):/i.test(url)
+  );
+}
+
+/**
+ * Prefer the active http(s) tab. If the active tab is chrome-extension://
+ * (side panel opened as a page) or chrome://, fall back to another http(s)
+ * tab in the current window.
+ */
 async function getActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab;
+  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (active && isHttpUrl(active.url)) return active;
+
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  const httpTabs = tabs.filter((t) => isHttpUrl(t.url));
+  if (httpTabs.length) {
+    // Prefer most recently accessed http tab
+    httpTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+    return httpTabs[0];
+  }
+  return active || null;
 }
 
 async function ensureToken(interactive = true) {
@@ -157,27 +182,56 @@ function pageBelongsToProperty(pageUrl, siteUrl) {
 
 async function resolveContext() {
   const tab = await getActiveTab();
-  if (!tab?.url || !/^https?:/i.test(tab.url)) {
+  const token = await ensureToken(false);
+
+  if (!tab?.url || !isHttpUrl(tab.url)) {
+    const reason = isRestrictedUrl(tab?.url)
+      ? 'Switch to an http(s) page (not chrome:// or the extension page) to analyze.'
+      : 'Open an http(s) page to analyze.';
     return {
       tab,
       pageUrl: null,
       property: null,
       sites: [],
-      error: 'Open an http(s) page to analyze.',
+      needsAuth: !token,
+      error: reason,
+      signedIn: Boolean(token),
     };
   }
+
   const pageUrl = normalizePageUrl(tab.url);
-  const token = await ensureToken(false);
   if (!token) {
-    return { tab, pageUrl, property: null, sites: [], needsAuth: true };
+    return {
+      tab,
+      pageUrl,
+      property: null,
+      sites: [],
+      needsAuth: true,
+      signedIn: false,
+    };
   }
   try {
     const sites = await listSites(token);
     const property = matchProperty(pageUrl, sites);
-    return { tab, pageUrl, property, sites, token };
+    return {
+      tab,
+      pageUrl,
+      property,
+      sites,
+      token,
+      signedIn: true,
+      needsAuth: false,
+    };
   } catch (err) {
     if (err.code === 'AUTH_EXPIRED' || err.status === 401) {
-      return { tab, pageUrl, property: null, sites: [], needsAuth: true };
+      return {
+        tab,
+        pageUrl,
+        property: null,
+        sites: [],
+        needsAuth: true,
+        signedIn: false,
+      };
     }
     throw err;
   }
@@ -248,6 +302,7 @@ async function handleMessage(message, sender) {
         property: ctx.property,
         sites: ctx.sites,
         needsAuth: Boolean(ctx.needsAuth),
+        signedIn: Boolean(ctx.signedIn),
         error: ctx.error,
         tabTitle: ctx.tab?.title,
         tabId: ctx.tab?.id,

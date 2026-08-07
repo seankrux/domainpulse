@@ -363,21 +363,21 @@ async function loadContext() {
     $('#scopeLabel').textContent = ctx.tabTitle || 'GSC Command Center';
     renderQuota(ctx.quota);
 
-    if (ctx.error && !ctx.pageUrl) {
-      setAuthGate(false);
-      resetResults();
-      showError(ctx.error);
-      return;
-    }
-
+    // Always honor auth first — never show "Sign out" / analytics while unsigned-in.
     if (ctx.needsAuth) {
-      setAuthGate(true, 'Sign in to load analytics for this page.');
+      setAuthGate(true, ctx.error || 'Sign in to load analytics for this page.');
       return;
     }
 
     setAuthGate(false);
     fillProperties(state.sites, ctx.property?.siteUrl || null);
     resetResults();
+
+    if (ctx.error && !ctx.pageUrl) {
+      showError(ctx.error);
+      return;
+    }
+
     if (!state.siteUrl) {
       showError(
         'No auto-matched property for this URL (URL-prefix properties do not cover www↔apex). Pick a matching property, or switch Scope to Domain.'
@@ -394,7 +394,11 @@ async function loadContext() {
     // Clear boot skeleton so errors are visible (not a blank main).
     document.body.classList.remove('booting');
     document.body.removeAttribute('aria-busy');
-    setAuthGate(Boolean(err.code === 'AUTH_EXPIRED' || err.status === 401), '');
+    if (err.code === 'AUTH_EXPIRED' || err.status === 401) {
+      setAuthGate(true, err.message);
+      return;
+    }
+    setAuthGate(false);
     showError(err.message);
   }
 }
