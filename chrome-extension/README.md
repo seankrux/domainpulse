@@ -63,7 +63,8 @@ Property matching: longest URL-prefix (same origin + path) → then `sc-domain:`
 ## Develop / test
 
 ```bash
-npm run test:ext   # pure helper tests (matchProperty, dates, deltas, client id)
+npm run test:ext        # pure helper tests (matchProperty, dates, deltas, client id)
+npm run test:ext:live   # load unpacked in Playwright Chromium and dry-run UI
 ```
 
 No build step — load the folder as unpacked.
