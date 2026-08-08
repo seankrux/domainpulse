@@ -48,6 +48,8 @@ Full-featured domain monitoring dashboard that tracks uptime, SSL certificate st
 
 > **Notifications** — Browser, Slack, and Discord webhook support
 
+> **PulseSEO Chrome extension** — Side-panel GSC analytics, URL Inspection, indexing helpers, bulk monitor (`chrome-extension/`; [docs + screenshots](chrome-extension/README.md))
+
 > **Sound Alerts** — Web Audio API notifications
 
 > **CSV Import/Export** — Bulk domain management
