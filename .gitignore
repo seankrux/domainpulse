@@ -45,6 +45,7 @@ gha-creds-*.json
 # Debug artifacts
 *.png
 !chrome-extension/icons/*.png
+!chrome-extension/docs/**/*.png
 gui_test.py
 debug_gui.py
 inspect_*.py

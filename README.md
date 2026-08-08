@@ -150,6 +150,7 @@ node -e "const crypto = require('crypto'); const salt = crypto.randomBytes(16).t
 | `npm run type-check` | TypeScript type checking |
 | `npm run test` | Vitest unit tests |
 | `npm run test:ext` | PulseSEO Chrome extension helper tests |
+| `npm run test:ext:live` | PulseSEO live Chromium dry-run (Playwright) |
 | `npm run test:gui` | Playwright E2E tests |
 
 <br>
