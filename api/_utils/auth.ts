@@ -7,10 +7,12 @@ const AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
 // Auth is OPT-IN. It is enforced only when a password hash is configured
 // (VITE_PASSWORD_HASH). With no hash the app runs as a public demo — matching
 // the dev proxy (`server/proxy.ts`, which allows all when no hash is set) and
-// the AuthGuard "skip authentication" stub. Without this, the stub front-end
-// sends no token while the API demanded one → every domain returned 401 and
-// showed Error even when ALIVE. See AGENTS.md §7.
+// AuthGuard (which skips the login portal when /api/auth-status says
+// authRequired:false). See AGENTS.md §7.
 const AUTH_ENABLED = Boolean(AUTH_PASSWORD_HASH);
+
+/** Whether this deployment requires a password (mirrors `/api/auth-status`). */
+export const isAuthEnabled = (): boolean => AUTH_ENABLED;
 
 // JWT_SECRET is only used to sign/verify session tokens, which only happens when
 // auth is enabled. Requiring it in public mode would crash every request for a

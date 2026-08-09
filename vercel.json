@@ -7,6 +7,7 @@
   "framework": "vite",
   "rewrites": [
     { "source": "/api/login", "destination": "/api/login.ts" },
+    { "source": "/api/auth-status", "destination": "/api/auth-status.ts" },
     { "source": "/api/check", "destination": "/api/check.ts" },
     { "source": "/api/ssl", "destination": "/api/ssl.ts" },
     { "source": "/api/whois", "destination": "/api/whois.ts" },

@@ -10,7 +10,7 @@ test.describe('DomainPulse Dashboard', () => {
     // Handle Login if present
     const passwordInput = page.locator('input[id="password"]');
     if (await passwordInput.isVisible()) {
-      await passwordInput.fill('testpassword');
+      await passwordInput.fill(process.env.DP_E2E_PASSWORD || '1111');
       await page.getByRole('button', { name: /sign in/i }).click();
       await page.waitForSelector('[data-testid="header-title"]');
     }

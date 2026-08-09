@@ -13,7 +13,7 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
     // Robust Login
     const passwordInput = page.locator('#password');
     if (await passwordInput.isVisible()) {
-      await passwordInput.fill('testpassword');
+      await passwordInput.fill(process.env.DP_E2E_PASSWORD || '1111');
       await page.click('button:has-text("Sign In")');
       await page.waitForSelector('[data-testid="header-title"]', { timeout: 15000 });
     }

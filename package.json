@@ -28,7 +28,8 @@
     "test:unit": "vitest tests/unit/",
     "test:watch": "vitest --watch",
     "mcp:start": "node .mcp/auto-test/index.js",
-    "qa:crawl": "tsx scripts/qa-crawl.ts"
+    "qa:crawl": "tsx scripts/qa-crawl.ts",
+    "auth:hash": "node scripts/hash-password.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
