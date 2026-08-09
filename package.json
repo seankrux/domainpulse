@@ -63,7 +63,7 @@
     "@types/react-dom": "^19.0.0",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.62.1",
-    "@vercel/node": "^5.8.17",
+    "@vercel/node": "^5.8.23",
     "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "^4.1.8",
     "autoprefixer": "^10.5.2",
