@@ -2,12 +2,10 @@ name: Set production auth env
 
 # One-shot: writes VITE_PASSWORD_HASH + JWT_SECRET to the Vercel project
 # so the app lock gate activates on the subdomain. Safe to re-run.
+# Manual only — the stored VERCEL_TOKEN may be rotated; run this after confirming
+# the secret is valid, or set env vars in the Vercel dashboard instead.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/set-auth-env.yml'
 
 jobs:
   set-env:
