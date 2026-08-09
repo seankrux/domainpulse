@@ -1,6 +1,6 @@
 name: Set production auth env
 
-# One-shot: writes VITE_PASSWORD_HASH + JWT_SECRET to the Vercel project
+# One-shot: writes PASSWORD_HASH + JWT_SECRET to the Vercel project
 # so the app lock gate activates on the subdomain. Safe to re-run.
 # Manual only — the stored VERCEL_TOKEN may be rotated; run this after confirming
 # the secret is valid, or set env vars in the Vercel dashboard instead.
@@ -48,7 +48,7 @@ jobs:
           }
 
           for envname in production preview; do
-            upsert VITE_PASSWORD_HASH "$HASH_LINE" "$envname"
+            upsert PASSWORD_HASH "$HASH_LINE" "$envname"
             upsert JWT_SECRET "$JWT_LINE" "$envname"
           done
 

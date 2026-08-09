@@ -2,11 +2,12 @@ import { VercelRequest } from '@vercel/node';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
-const AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
+// Prefer server-only PASSWORD_HASH (not shipped to the Vite client bundle).
+// VITE_PASSWORD_HASH remains supported for backwards compatibility.
+const AUTH_PASSWORD_HASH = process.env.PASSWORD_HASH || process.env.VITE_PASSWORD_HASH || '';
 
-// Auth is OPT-IN. It is enforced only when a password hash is configured
-// (VITE_PASSWORD_HASH). With no hash the app runs as a public demo — matching
-// the dev proxy (`server/proxy.ts`, which allows all when no hash is set) and
+// Auth is OPT-IN. It is enforced only when a password hash is configured.
+// With no hash the app runs as a public demo — matching the dev proxy and
 // AuthGuard (which skips the login portal when /api/auth-status says
 // authRequired:false). See AGENTS.md §7.
 const AUTH_ENABLED = Boolean(AUTH_PASSWORD_HASH);

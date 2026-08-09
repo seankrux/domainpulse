@@ -108,13 +108,16 @@ Contract:
 
 ## 7. Auth is opt-in — public when no password is configured
 
-**Auth is opt-in.** When `VITE_PASSWORD_HASH` is unset the API allows
+**Auth is opt-in.** When no password hash is configured the API allows
 unauthenticated requests and `AuthGuard` skips the login portal (public demo).
 When the hash **is** set, the API requires a Bearer JWT and `AuthGuard` shows
 the lock/login gate until `POST /api/login` succeeds.
 
-- `verifyAuth` (`api/_utils/auth.ts`) returns `true` when `VITE_PASSWORD_HASH`
-  is unset (public/demo mode), and only requires a valid Bearer token when it
+- Password hash env: prefer server-only `PASSWORD_HASH` (`hash:salt`). Legacy
+  `VITE_PASSWORD_HASH` still works. Avoid `VITE_` so the hash is not eligible
+  for the client bundle.
+- `verifyAuth` (`api/_utils/auth.ts`) returns `true` when no hash is set
+  (public/demo mode), and only requires a valid Bearer token when a hash
   IS set. This mirrors the dev proxy (`server/proxy.ts`) — prod and dev must agree.
 - `AuthGuard` asks `GET /api/auth-status` (`{ authRequired }`): `false` →
   render the dashboard; `true` → show `LoginPage` (lock UI) until authenticated.

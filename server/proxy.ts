@@ -27,7 +27,7 @@ try {
 const app = express();
 const PORT = process.env.PROXY_PORT || 3001;
 
-let AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
+let AUTH_PASSWORD_HASH = process.env.PASSWORD_HASH || process.env.VITE_PASSWORD_HASH || '';
 const ALLOW_INITIAL_LOGIN = process.env.VITE_ALLOW_INITIAL_LOGIN === 'true';
 
 // CORS allowlist: the proxy makes outbound requests on the caller's behalf,
