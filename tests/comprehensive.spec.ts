@@ -8,13 +8,14 @@ test.describe('Comprehensive DomainPulse Tests', () => {
     // Robust Login Sequence
     const passwordInput = page.locator('#password');
     if (await passwordInput.count() > 0) {
-      await passwordInput.fill('testpassword');
+      const password = process.env.DP_E2E_PASSWORD || '1111';
+      await passwordInput.fill(password);
       await page.click('button:has-text("Sign In")');
       
       // Check for error message
       const errorText = page.locator('text=Invalid password');
       if (await errorText.isVisible()) {
-        throw new Error("LOGIN FAILED: 'testpassword' was rejected. Check VITE_PASSWORD_HASH in .env.local.");
+        throw new Error(`LOGIN FAILED: '${password}' was rejected. Check VITE_PASSWORD_HASH in .env.local.`);
       }
     }
     

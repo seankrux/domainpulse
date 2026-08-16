@@ -27,7 +27,7 @@ try {
 const app = express();
 const PORT = process.env.PROXY_PORT || 3001;
 
-let AUTH_PASSWORD_HASH = process.env.VITE_PASSWORD_HASH || '';
+let AUTH_PASSWORD_HASH = process.env.PASSWORD_HASH || process.env.VITE_PASSWORD_HASH || '';
 const ALLOW_INITIAL_LOGIN = process.env.VITE_ALLOW_INITIAL_LOGIN === 'true';
 
 // CORS allowlist: the proxy makes outbound requests on the caller's behalf,
@@ -68,6 +68,14 @@ const verifyToken = (req: express.Request, res: express.Response, next: express.
   }
   next();
 };
+
+// Whether this instance is password-protected. Mirrors api/auth-status.ts —
+// the AuthGuard shows the login portal only when this returns true
+// (AGENTS.md §7). Reads the live variable so dev bootstrap (first login sets
+// the password) is reflected immediately.
+app.get('/api/auth-status', (_req, res) => {
+  res.json({ authRequired: Boolean(AUTH_PASSWORD_HASH) });
+});
 
 // Auth Endpoint
 app.post('/api/login', async (req, res) => {
@@ -207,6 +215,56 @@ app.get('/api/canonical', verifyToken, async (req, res) => {
       issues: [e instanceof Error ? e.message : 'Unknown error'],
       httpsEnforced: false,
       wwwConsistent: false,
+    });
+  }
+});
+
+app.get('/api/email-auth', verifyToken, async (req, res) => {
+  const domain = req.query.domain as string;
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+
+  const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
+  const cleanDomain = domain.replace(/^https?:\/\//, '').split('/')[0]!.toLowerCase();
+  if (isBlockedHost(cleanDomain)) {
+    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
+  }
+
+  try {
+    const { getEmailAuthInfo } = await import('../api/_utils/emailAuthLookup');
+    res.json(await getEmailAuthInfo(cleanDomain));
+  } catch (e) {
+    res.status(200).json({
+      grade: 'F',
+      spf: { present: false },
+      dkim: { present: false },
+      dmarc: { present: false },
+      issues: [e instanceof Error ? e.message : 'Unknown error'],
+    });
+  }
+});
+
+app.get('/api/security-headers', verifyToken, async (req, res) => {
+  const domain = req.query.domain as string;
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+
+  const { isBlockedHost } = await import('../api/_utils/ssrfGuard');
+  const cleanDomain = domain.replace(/^https?:\/\//, '').split('/')[0]!.toLowerCase();
+  if (isBlockedHost(cleanDomain)) {
+    return res.status(400).json({ error: 'Blocked: private/internal host not allowed' });
+  }
+
+  const userAgent = (req.query.ua as string) || 'DomainPulse/1.0 (Domain Monitor)';
+
+  try {
+    const { getSecurityHeadersInfo } = await import('../api/_utils/securityHeadersLookup');
+    res.json(await getSecurityHeadersInfo(cleanDomain, { userAgent }));
+  } catch (e) {
+    res.status(200).json({
+      grade: 'F',
+      score: 0,
+      maxScore: 100,
+      headers: [],
+      issues: [e instanceof Error ? e.message : 'Unknown error'],
     });
   }
 });

@@ -1,0 +1,56 @@
+name: Set production auth env
+
+# One-shot: writes PASSWORD_HASH + JWT_SECRET to the Vercel project
+# so the app lock gate activates on the subdomain. Safe to re-run.
+# Manual only — the stored VERCEL_TOKEN may be rotated; run this after confirming
+# the secret is valid, or set env vars in the Vercel dashboard instead.
+on:
+  workflow_dispatch:
+
+jobs:
+  set-env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Upsert auth env vars
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ] || [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "Missing Vercel secrets (VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID)"
+            exit 1
+          fi
+
+          mkdir -p .vercel
+          cat > .vercel/project.json <<EOF
+          {"orgId":"$VERCEL_ORG_ID","projectId":"$VERCEL_PROJECT_ID"}
+          EOF
+
+          # Password plaintext: 1111 (requested for the preview gate)
+          # Derive PBKDF2 hash:salt the same way api/login.ts verifies.
+          HASH_LINE="$(node -e "
+            const c = require('crypto');
+            const salt = c.randomBytes(16).toString('hex');
+            const hash = c.pbkdf2Sync('1111', salt, 100000, 32, 'sha256').toString('hex');
+            process.stdout.write(hash + ':' + salt);
+          ")"
+          JWT_LINE="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")"
+
+          upsert() {
+            local key="$1" value="$2" envname="$3"
+            vercel env rm "$key" "$envname" --token "$VERCEL_TOKEN" --yes 2>/dev/null || true
+            printf '%s' "$value" | vercel env add "$key" "$envname" --token "$VERCEL_TOKEN" --yes
+          }
+
+          for envname in production preview; do
+            upsert PASSWORD_HASH "$HASH_LINE" "$envname"
+            upsert JWT_SECRET "$JWT_LINE" "$envname"
+          done
+
+          echo "Auth env vars set for production + preview (password 1111)."
+          vercel env ls --token "$VERCEL_TOKEN" | head -40

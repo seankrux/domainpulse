@@ -108,22 +108,27 @@ Contract:
 
 ## 7. Auth is opt-in — public when no password is configured
 
-**The front end runs login-less (`AuthGuard` is a "skip authentication" stub),
-so it sends NO token. The API must therefore allow unauthenticated requests
-UNLESS a password is configured.**
+**Auth is opt-in.** When no password hash is configured the API allows
+unauthenticated requests and `AuthGuard` skips the login portal (public demo).
+When the hash **is** set, the API requires a Bearer JWT and `AuthGuard` shows
+the lock/login gate until `POST /api/login` succeeds.
 
-- `verifyAuth` (`api/_utils/auth.ts`) returns `true` when `VITE_PASSWORD_HASH`
-  is unset (public/demo mode), and only requires a valid Bearer token when it
-  IS set. This mirrors the dev proxy (`server/proxy.ts`, `verifyToken` calls
-  `next()` when no hash) — prod and dev must agree.
+- Password hash env: prefer server-only `PASSWORD_HASH` (`hash:salt`). Legacy
+  `VITE_PASSWORD_HASH` still works. Avoid `VITE_` so the hash is not eligible
+  for the client bundle.
+- `verifyAuth` (`api/_utils/auth.ts`) returns `true` when no hash is set
+  (public/demo mode), and only requires a valid Bearer token when a hash
+  IS set. This mirrors the dev proxy (`server/proxy.ts`) — prod and dev must agree.
+- `AuthGuard` asks `GET /api/auth-status` (`{ authRequired }`): `false` →
+  render the dashboard; `true` → show `LoginPage` (lock UI) until authenticated.
+  `/api/auth-status` exists on both Vercel (`api/auth-status.ts`) and the proxy.
+  `AuthGuard` **fails open** to public mode if the status probe errors; a
+  protected API still 401s → `auth-invalid` → re-probe → login page.
 - `JWT_SECRET` is required **only when auth is enabled** (`VITE_PASSWORD_HASH`
   set) in production. Don't reinstate an unconditional "deny all / throw in
-  production when unconfigured" — combined with the AuthGuard stub it returned
-  `401` for every domain → ALIVE domains showed Error (the exact bug report).
-- To run locked-down: set `VITE_PASSWORD_HASH` (+ `JWT_SECRET`) AND restore a
-  real `AuthGuard`/login so the front end actually obtains a token. The token
-  must flow through `getSessionToken()` (see §5).
-- Locked in by `tests/unit/auth.test.ts`.
+  production when unconfigured".
+- The session token must flow through `getSessionToken()` (see §5).
+- Locked in by `tests/unit/auth.test.ts` and `tests/unit/AuthGuard.test.tsx`.
 
 ## 6. Timeout guards liveness only — never enrichment
 
@@ -218,15 +223,16 @@ that was the loophole that let slow SSL/WHOIS calls produce false Error.
 
 ## Enrichment endpoints — one implementation each
 
-`ssl`, `dns`, `whois`, `gmb`, `tech-detect` each have a Vercel function
+`ssl`, `dns`, `whois`, `gmb`, `tech-detect`, `canonical`, `email-auth`,
+`security-headers` each have a Vercel function
 (`api/*.ts`) AND a dev proxy route (`server/proxy.ts`). The actual lookup logic
-lives ONCE in `api/_utils/{sslLookup,dnsLookup,whoisLookup,gmbLookup,techLookup}.ts`.
+lives ONCE in `api/_utils/{sslLookup,dnsLookup,whoisLookup,gmbLookup,techLookup,canonicalLookup,emailAuthLookup,securityHeadersLookup}.ts`.
 Both sides import it. **Never** reimplement a lookup inline in an endpoint or
 the proxy — extend the shared util so prod and dev can't diverge. The proxy
 must serve every `/api/*` route the frontend services call
-(`check, ssl, dns, whois, gmb, tech-detect`) or that feature breaks in dev.
+(`check, ssl, dns, whois, gmb, tech-detect, canonical, email-auth, security-headers, auth-status, login`) or that feature breaks in dev.
 
-All outbound-fetching utils (`check`, `tech-detect`) go through the SSRF guard
+All outbound-fetching utils (`check`, `tech-detect`, `security-headers`) go through the SSRF guard
 (`validateOutboundUrlResolved` / `safeHeadRequest`). Keep it that way.
 
 ---

@@ -43,7 +43,7 @@ test.describe('Chrome DevTools Audit', () => {
     // Handle Login
     const passwordInput = page.locator('#password');
     if (await passwordInput.isVisible()) {
-      await passwordInput.fill('testpassword');
+      await passwordInput.fill(process.env.DP_E2E_PASSWORD || '1111');
       await page.click('button[type="submit"]');
       await page.waitForSelector('[data-testid="header-title"]', { timeout: 15000 });
     }

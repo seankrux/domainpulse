@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { X, Shield, Calendar, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3, MapPin, Star, Phone, RefreshCw, ArrowRight, AlertTriangle } from 'lucide-react';
+import { X, Shield, Calendar, Server, Hash, Activity, Clock, ExternalLink, Info, CheckCircle, AlertCircle, Link2, Code, ShoppingCart, BarChart3, MapPin, Star, Phone, RefreshCw, ArrowRight, AlertTriangle, Mail, Lock } from 'lucide-react';
 import { Domain, DomainStatus, SSLStatus, GmbStatus } from '../../types';
-import { sslColor, sslLabel, expiryColor, expiryLabel, gmbColor, gmbLabel, STATUS_COLORS } from '../../theme/statusColors';
+import { sslColor, sslLabel, expiryColor, expiryLabel, gmbColor, gmbLabel, STATUS_COLORS, healthGradeColor } from '../../theme/statusColors';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getTechStackColor } from '../../components/TechStackBadge';
 import { HistoryChart } from '../HistoryChart';
@@ -227,6 +227,36 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             )}
           </section>
 
+          {/* Domain Health */}
+          {domain.health && (
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Activity className="text-emerald-400" size={18} />
+                <h3 className="font-bold text-white">Domain Health</h3>
+                <span className={`text-[10px] font-bold uppercase tracking-tight px-2 py-0.5 rounded border ${healthGradeColor(domain.health.grade)}`}>
+                  {domain.health.grade}
+                </span>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-zinc-800 flex justify-between items-center text-sm">
+                  <span className="text-zinc-400">Composite score</span>
+                  <span className="font-mono text-zinc-200">{domain.health.score}/{domain.health.maxScore}</span>
+                </div>
+                <div className="p-4 space-y-2">
+                  {domain.health.factors.map((f) => (
+                    <div key={f.name} className="flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-zinc-300 font-medium">{f.name}</span>
+                        {f.note && <span className="text-zinc-500 ml-2">{f.note}</span>}
+                      </div>
+                      <span className="font-mono text-zinc-400">{f.score}/{f.max}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* SSL Information */}
           <section>
             <div className="flex items-center gap-2 mb-4">
@@ -260,6 +290,32 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                     <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Days Remaining</p>
                     <p className="font-medium text-zinc-200">{domain.ssl.daysUntilExpiry ?? '—'}</p>
                   </div>
+                  {domain.ssl.protocol && (
+                    <div>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Protocol</p>
+                      <p className="font-medium text-zinc-200 font-mono text-xs">{domain.ssl.protocol}</p>
+                    </div>
+                  )}
+                  {domain.ssl.cipher && (
+                    <div>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Cipher</p>
+                      <p className="font-medium text-zinc-200 font-mono text-xs break-all">{domain.ssl.cipher}</p>
+                    </div>
+                  )}
+                  {domain.ssl.fingerprint256 && (
+                    <div className="sm:col-span-2">
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Fingerprint (SHA-256)</p>
+                      <p className="font-medium text-zinc-400 font-mono text-[10px] break-all">{domain.ssl.fingerprint256}</p>
+                    </div>
+                  )}
+                  {domain.ssl.grade && (
+                    <div>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">TLS Grade</p>
+                      <span className={`text-[10px] font-bold uppercase tracking-tight px-2 py-0.5 rounded border ${healthGradeColor(domain.ssl.grade)}`}>
+                        {domain.ssl.grade}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -514,6 +570,22 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                       </div>
                     </div>
 
+                    {/* AAAA Records */}
+                    <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-800">
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase mb-3 tracking-widest">AAAA Records (IPv6)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {domain.dns.aaaa && domain.dns.aaaa.length > 0 ? (
+                          domain.dns.aaaa.map((ip, i) => (
+                            <span key={i} className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-slate-300 shadow-sm">
+                              {ip}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-zinc-500 italic">No AAAA records found</span>
+                        )}
+                      </div>
+                    </div>
+
                     {/* MX Records */}
                     <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-800">
                       <p className="text-[10px] font-bold text-zinc-500 uppercase mb-3 tracking-widest">Mail Servers (MX)</p>
@@ -530,6 +602,33 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
                         )}
                       </div>
                     </div>
+
+                    {/* CAA Records */}
+                    {domain.dns.caa && domain.dns.caa.length > 0 && (
+                      <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-800">
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase mb-3 tracking-widest">CAA Records</p>
+                        <div className="space-y-1.5">
+                          {domain.dns.caa.map((c, i) => (
+                            <div key={i} className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-[10px] font-mono text-zinc-400 break-all">
+                              {c.raw}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SOA */}
+                    {domain.dns.soa && (
+                      <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-800">
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase mb-3 tracking-widest">SOA</p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div><span className="text-zinc-500">Primary NS</span><p className="font-mono text-zinc-300">{domain.dns.soa.nsname}</p></div>
+                          <div><span className="text-zinc-500">Hostmaster</span><p className="font-mono text-zinc-300">{domain.dns.soa.hostmaster}</p></div>
+                          <div><span className="text-zinc-500">Serial</span><p className="font-mono text-zinc-300">{domain.dns.soa.serial}</p></div>
+                          <div><span className="text-zinc-500">TTL / Refresh</span><p className="font-mono text-zinc-300">{domain.dns.soa.minttl} / {domain.dns.soa.refresh}</p></div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* CNAME Records */}
                     {domain.dns.cname && domain.dns.cname.length > 0 && (
@@ -562,6 +661,126 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({ domain, on
             ) : (
               <div className="text-center py-6 bg-zinc-800/30 rounded-xl border border-dashed border-zinc-800">
                 <p className="text-sm text-zinc-500">DNS lookup hasn't been performed yet.</p>
+              </div>
+            )}
+          </section>
+
+          {/* Email Authentication */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Mail className="text-emerald-400" size={18} />
+              <h3 className="font-bold text-white">Email Authentication</h3>
+              {domain.emailAuth && (
+                <span className={`text-[10px] font-bold uppercase tracking-tight px-2 py-0.5 rounded border ${healthGradeColor(domain.emailAuth.grade)}`}>
+                  {domain.emailAuth.grade}
+                </span>
+              )}
+            </div>
+            {domain.emailAuth ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-zinc-800/50 p-3 rounded-xl border border-zinc-800">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase">SPF</span>
+                      <span className={domain.emailAuth.spf.present ? 'text-emerald-400 text-xs font-bold' : 'text-rose-400 text-xs font-bold'}>
+                        {domain.emailAuth.spf.present ? 'Present' : 'Missing'}
+                      </span>
+                    </div>
+                    {domain.emailAuth.spf.detail && (
+                      <p className="text-[10px] font-mono text-zinc-400 break-all line-clamp-3">{domain.emailAuth.spf.detail}</p>
+                    )}
+                  </div>
+                  <div className="bg-zinc-800/50 p-3 rounded-xl border border-zinc-800">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase">DKIM</span>
+                      <span className={domain.emailAuth.dkim.present ? 'text-emerald-400 text-xs font-bold' : 'text-rose-400 text-xs font-bold'}>
+                        {domain.emailAuth.dkim.present ? 'Present' : 'Missing'}
+                      </span>
+                    </div>
+                    {domain.emailAuth.dkim.detail && (
+                      <p className="text-[10px] font-mono text-zinc-400 break-all line-clamp-3">{domain.emailAuth.dkim.detail}</p>
+                    )}
+                    {domain.emailAuth.dkim.selectors && domain.emailAuth.dkim.selectors.length > 0 && (
+                      <p className="text-[10px] text-zinc-500 mt-1">selectors: {domain.emailAuth.dkim.selectors.join(', ')}</p>
+                    )}
+                  </div>
+                  <div className="bg-zinc-800/50 p-3 rounded-xl border border-zinc-800">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase">DMARC</span>
+                      <span className={domain.emailAuth.dmarc.present ? 'text-emerald-400 text-xs font-bold' : 'text-rose-400 text-xs font-bold'}>
+                        {domain.emailAuth.dmarc.present ? 'Present' : 'Missing'}
+                      </span>
+                    </div>
+                    {domain.emailAuth.dmarc.detail && (
+                      <p className="text-[10px] font-mono text-zinc-400 break-all line-clamp-3">{domain.emailAuth.dmarc.detail}</p>
+                    )}
+                    {domain.emailAuth.dmarc.policy && (
+                      <p className="text-[10px] text-zinc-500 mt-1">policy: {domain.emailAuth.dmarc.policy}</p>
+                    )}
+                  </div>
+                </div>
+                {domain.emailAuth.issues.length > 0 && (
+                  <ul className="space-y-1">
+                    {domain.emailAuth.issues.map((issue, i) => (
+                      <li key={i} className="text-xs text-amber-400/90 flex gap-2">
+                        <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                        {issue}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-zinc-800/30 rounded-xl border border-dashed border-zinc-800">
+                <p className="text-sm text-zinc-500">Email authentication check hasn't run yet.</p>
+              </div>
+            )}
+          </section>
+
+          {/* Security Headers */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Lock className="text-emerald-400" size={18} />
+              <h3 className="font-bold text-white">Security Headers</h3>
+              {domain.securityHeaders && (
+                <span className={`text-[10px] font-bold uppercase tracking-tight px-2 py-0.5 rounded border ${healthGradeColor(domain.securityHeaders.grade)}`}>
+                  {domain.securityHeaders.grade}
+                </span>
+              )}
+            </div>
+            {domain.securityHeaders ? (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-zinc-800 flex justify-between items-center text-sm">
+                  <span className="text-zinc-400">Score</span>
+                  <span className="font-mono text-zinc-200">{domain.securityHeaders.score}/{domain.securityHeaders.maxScore}</span>
+                </div>
+                <div className="divide-y divide-zinc-800">
+                  {domain.securityHeaders.headers.map((h) => (
+                    <div key={h.name} className="px-4 py-2.5 flex items-start justify-between gap-3 text-xs">
+                      <div className="min-w-0">
+                        <p className="font-medium text-zinc-200">{h.name}</p>
+                        {h.value && <p className="font-mono text-zinc-500 break-all mt-0.5 line-clamp-2">{h.value}</p>}
+                      </div>
+                      <span className={h.present ? 'text-emerald-400 font-bold shrink-0' : 'text-rose-400 font-bold shrink-0'}>
+                        {h.present ? `+${h.score}` : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {domain.securityHeaders.issues.length > 0 && (
+                  <ul className="px-4 py-3 space-y-1 border-t border-zinc-800">
+                    {domain.securityHeaders.issues.map((issue, i) => (
+                      <li key={i} className="text-xs text-amber-400/90 flex gap-2">
+                        <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                        {issue}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-zinc-800/30 rounded-xl border border-dashed border-zinc-800">
+                <p className="text-sm text-zinc-500">Security headers check hasn't run yet.</p>
               </div>
             )}
           </section>

@@ -28,7 +28,8 @@
     "test:unit": "vitest tests/unit/",
     "test:watch": "vitest --watch",
     "mcp:start": "node .mcp/auto-test/index.js",
-    "qa:crawl": "tsx scripts/qa-crawl.ts"
+    "qa:crawl": "tsx scripts/qa-crawl.ts",
+    "auth:hash": "node scripts/hash-password.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -40,10 +41,12 @@
     "lucide-react": "^0.564.0",
     "marked": "^17.0.2",
     "motion": "^12.40.0",
+    "rdapper": "^0.13.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-is": "^19.2.4",
-    "recharts": "^3.7.0"
+    "recharts": "^3.7.0",
+    "ssl-checker": "^3.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

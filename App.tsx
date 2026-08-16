@@ -71,7 +71,7 @@ const App: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>(() => (localStorage.getItem('domainpulse_sort_order') as SortOrder) || 'desc');
 
   const { showSuccess, showError, showInfo } = useNotification();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { announce, Announcer } = useAnnounce();
 
@@ -603,6 +603,7 @@ const App: React.FC = () => {
         showSettings={showSettings}
         setShowSettings={setShowSettings}
         logout={logout}
+        isAuthenticated={isAuthenticated}
       />
 
       <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 bg-dot-pattern">
