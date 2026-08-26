@@ -19,10 +19,15 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          PREVIEW_GATE_PASSWORD: ${{ secrets.PREVIEW_GATE_PASSWORD }}
         run: |
           set -euo pipefail
           if [ -z "${VERCEL_TOKEN:-}" ] || [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
             echo "Missing Vercel secrets (VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID)"
+            exit 1
+          fi
+          if [ -z "${PREVIEW_GATE_PASSWORD:-}" ]; then
+            echo "Missing PREVIEW_GATE_PASSWORD secret"
             exit 1
           fi
 
@@ -31,12 +36,12 @@ jobs:
           {"orgId":"$VERCEL_ORG_ID","projectId":"$VERCEL_PROJECT_ID"}
           EOF
 
-          # Password plaintext: 1111 (requested for the preview gate)
+          # Password comes from repo secret PREVIEW_GATE_PASSWORD. Never hardcode it.
           # Derive PBKDF2 hash:salt the same way api/login.ts verifies.
           HASH_LINE="$(node -e "
             const c = require('crypto');
             const salt = c.randomBytes(16).toString('hex');
-            const hash = c.pbkdf2Sync('1111', salt, 100000, 32, 'sha256').toString('hex');
+            const hash = c.pbkdf2Sync(process.env.PREVIEW_GATE_PASSWORD, salt, 100000, 32, 'sha256').toString('hex');
             process.stdout.write(hash + ':' + salt);
           ")"
           JWT_LINE="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")"
@@ -52,5 +57,5 @@ jobs:
             upsert JWT_SECRET "$JWT_LINE" "$envname"
           done
 
-          echo "Auth env vars set for production + preview (password 1111)."
+          echo "Auth env vars set for production + preview."
           vercel env ls --token "$VERCEL_TOKEN" | head -40
