@@ -1,6 +1,7 @@
 import type { ServiceConfig } from '../types';
 import { logger } from '../utils/logger.js';
 import { getSessionToken } from '../utils/authSession.js';
+import { fetchWithRetry } from './apiClient.js';
 
 export interface TechStack {
   cms?: string;
@@ -113,13 +114,13 @@ export const detectTechStack = async (url: string, config?: ServiceConfig): Prom
 
     for (const endpoint of endpoints) {
       try {
-        const response = await fetch(endpoint, {
+        const response = await fetchWithRetry(endpoint, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
             'Authorization': token ? `Bearer ${token}` : ''
           }
-        });
+        }, { deadline: config?.deadline });
 
         if (response.status === 401) {
           throw new Error('Unauthorized');

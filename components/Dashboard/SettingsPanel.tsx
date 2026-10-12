@@ -2,6 +2,7 @@ import React from 'react';
 import { Settings, X, RefreshCw, Trash2, Plus, Bell, Link } from 'lucide-react';
 import { AppSettings } from '../../utils/storage';
 import { WebhookConfig } from '../../types';
+import { generateId } from '../../utils/id';
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -66,7 +67,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     }
 
     const webhook: WebhookConfig = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateId(),
       name: newWebhook.name,
       url: newWebhook.url,
       type: newWebhook.type,

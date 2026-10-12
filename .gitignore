@@ -65,3 +65,9 @@ reports/
 *.timestamp-*.mjs
 
 .claude/
+
+# Test coverage output
+coverage/
+
+# Agent-local state/memory
+.openhands/

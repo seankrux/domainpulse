@@ -106,6 +106,44 @@ Contract:
 - Locked in by `tests/unit/authSession.test.ts` and
   `tests/unit/checkDomainWithSSL.test.ts`.
 
+---
+
+## 8. Rate limiting — bulk checks share one budget; the client must back off
+
+Every `/api/*` endpoint shares ONE per-IP request budget
+(`lib/config.ts → rateLimit`). A single domain check fans out to ~8 calls
+(`/api/check` + ssl/whois/dns/tech-detect/canonical/email-auth/security-headers),
+so a bulk run legitimately makes thousands of calls per window.
+
+Contract:
+- **Client 429 handling is mandatory, not optional.** `services/apiClient.ts →
+  fetchWithRetry` retries `429` honouring `Retry-After` with capped exponential
+  backoff, and never sleeps past the `deadline` in `ServiceConfig`. Every service
+  that calls an API endpoint goes through it. **Never** bare-`fetch` an endpoint
+  and treat the result as truth without handling `429` — a `429` on
+  `/api/check` used to surface an ALIVE domain as Error, and a `429` on an
+  enrichment call silently degraded it to defaults.
+- The probe's `deadline` (`checkDomainWithSSL`) is passed down to enrichment via
+  `ServiceConfig.deadline` so a backoff can't overrun the check budget and
+  re-introduce the slow-check → Error bug (§6).
+- The budget is deliberately generous (`maxRequests`) because it guards against
+  abuse, not normal monitoring. Keep the worker's concurrency modest
+  (`services/monitoring.worker.ts` chunk size + inter-chunk delay).
+- Locked in by `tests/unit/apiClient.test.ts`.
+
+---
+
+## 9. Untrusted rendered HTML must be sanitized
+
+`markdownToHtml` (`lib/content.ts`) is the single choke point for rendered
+markdown → HTML, and it runs `DOMPurify.sanitize` before the result reaches
+`dangerouslySetInnerHTML` (`components/ContentRenderer.tsx`). Markdown often
+comes from someone other than the operator, so raw `<script>`/`onerror=`
+must never become executable. **Do not** render `marked.parse(...)` output
+straight into the DOM. Locked in by `tests/unit/contentSanitize.test.ts`.
+
+---
+
 ## 7. Auth is opt-in — public when no password is configured
 
 **Auth is opt-in.** When no password hash is configured the API allows
@@ -143,6 +181,27 @@ that was the loophole that let slow SSL/WHOIS calls produce false Error.
 
 ---
 
+## 10. Dev/prod route parity is guarded by a test
+
+`tests/unit/routeParity.test.ts` statically checks that the `/api/*` routes the
+frontend services call are served by **both** the dev proxy (`server/proxy.ts`)
+and a Vercel function (`api/*.ts`), that the two route sets are identical, and
+that every outbound endpoint delegates to its single `api/_utils/*` lookup util.
+Adding a frontend call to a new endpoint without adding the proxy + `api/` route
+(or reimplementing a lookup inline) now fails CI. Extend that map when you add an
+endpoint.
+
+---
+
+## Filtering/sorting is a tested pure module
+
+`App.tsx` delegates `displayDomains` to `utils/domainFilters.ts →
+filterAndSortDomains()`. Keep the filtering keys (status, ssl.status, groupId,
+lowercased url) and the zero-indexed sort maps (`??`, never `||`) intact — the
+`??`-vs-`||` zero-index regression is locked in by `tests/unit/domainFilters.test.ts`.
+
+---
+
 ## Known gaps (intentionally not fixed yet — don't "fix" silently)
 
 1. **Light mode is not implemented.** The app is dark-only: the shell uses
@@ -150,6 +209,56 @@ that was the loophole that let slow SSL/WHOIS calls produce false Error.
    `dark:` variants. The header no longer shows a dark-mode toggle (it was a
    no-op). Building real light mode is a large, app-wide effort. **Decision:
    leave as-is for now** unless doing a full scoped theming pass.
+
+2. **Node-side QA alerting is not wired.** `scripts/qa-crawl.ts` exits non-zero
+   on a failing crawl but does not dispatch Slack/Discord/email alerts (its
+   `TODO`), and `qa/delivery/index.ts` has unimplemented delivery verifiers — both
+   are **blocked on credentials** (a Node alert channel / provider keys), not on
+   code. **Decision:** leave the explicit hooks; enable once secrets exist.
+
+---
+
+## Fix log (2026-10-12, round 2) — test guards for parity, filtering, monitoring
+
+- Added `tests/unit/routeParity.test.ts` (§10): the dev proxy and Vercel
+  functions must expose the same `/api/*` routes the frontend calls, and each
+  outbound endpoint must delegate to its shared `api/_utils/*` util. Closes the
+  "no automated route-parity check" gap.
+- Extracted `utils/domainFilters.ts` (pure `filterAndSortDomains`) from
+  `App.tsx → displayDomains`; `tests/unit/domainFilters.test.ts` locks in the
+  zero-indexed `??`-not-`||` ordering contract (§4) across every sort field.
+- `tests/unit/useMonitoring.test.tsx`: covers the empty-batch
+  `isCheckingAll`-stranding guard, token propagation (§5), enrichment-timeout
+  preservation, history trimming and the auth-invalid dispatch.
+- `tests/unit/contentLoader.test.ts`: frontmatter parsing, post date-sorting and
+  graceful degradation of `lib/content.ts`.
+- Accessibility: `App.tsx` now actually calls `useAnnounce().announce()` for
+  add / bulk-import / domain-down (assertive) / domain-up, so the live region
+  (`<Announcer/>`) announces real events instead of being rendered dead. Removed
+  the two misleading `eslint-disable no-unused-vars` comments on the (in fact
+  used) `useAnnounce` import + destructure.
+- Coverage floors raised to 56% statements/lines/functions, 46% branches
+- Full suite 205 tests / 25 files; `tsc` clean; lint error-free; both builds green.
+
+---
+
+## Fix log (2026-10-12) — rate-limit-aware client, XSS sanitize, validation, ids
+
+- **429 handling (new §8):** `services/apiClient.ts → fetchWithRetry` retries
+  `429` with `Retry-After`/backoff bounded by the check `deadline`; wired into
+  `domainService` + the eight enrichment services. Raised the shared budget
+  (`lib/config.ts`) and made the worker's concurrency gentler. A `429` no longer
+  reports an ALIVE domain as Error. Tests: `tests/unit/apiClient.test.ts`.
+- **XSS (new §9):** `markdownToHtml` now runs `DOMPurify.sanitize` before the
+  HTML reaches `dangerouslySetInnerHTML`. Tests: `tests/unit/contentSanitize.test.ts`.
+- **Input validation:** `validateAndNormalizeUrl` parses the host out before
+  applying scheme/`@`/`..`/NUL checks, so a path containing `@` or `..` is no
+  longer false-rejected while host-position injections still are.
+- **Ids:** `utils/id.ts → generateId()` (`crypto.randomUUID`) replaces four
+  copies of the collision-prone, deprecated `Math.random().toString(36).substr(2,9)`.
+- **Tests/CI:** SSRF guard coverage 60%→75% (isBlockedIp boundaries,
+  `probeRedirectChain`); coverage `thresholds` added to `vitest.config.ts`.
+- Tests: `ssrf.test.ts`, `domainService.test.ts` extended.
 
 ---
 

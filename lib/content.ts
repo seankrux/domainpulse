@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { logger } from '../utils/logger';
 
 /**
@@ -166,9 +167,16 @@ function parseMarkdownContent(content: string): string {
 }
 
 /**
- * Convert markdown to HTML using 'marked' library
+ * Convert markdown to HTML using 'marked' library.
+ *
+ * The result is sanitised with DOMPurify before it reaches
+ * `dangerouslySetInnerHTML` (components/ContentRenderer.tsx). Markdown content
+ * can be authored by others, so raw HTML/`<script>`/`onerror=` in a document
+ * must never become executable — this is the single choke point that prevents
+ * stored XSS regardless of where the content came from.
  */
 export function markdownToHtml(markdown: string): string {
   if (!markdown) return '';
-  return marked.parse(markdown) as string;
+  const rawHtml = marked.parse(markdown) as string;
+  return DOMPurify.sanitize(rawHtml);
 }

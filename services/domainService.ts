@@ -10,6 +10,7 @@ import { computeDomainHealth } from '../utils/domainHealth';
 import { logger } from '../utils/logger';
 import { config } from '../lib/config';
 import { getSessionToken } from '../utils/authSession';
+import { fetchWithRetry } from './apiClient';
 
 const DEFAULT_PROXY_URL = config.proxy.defaultUrl;
 
@@ -20,54 +21,54 @@ export interface DomainCheckResult {
 }
 
 /**
- * Validate and normalize URL input.
- * Prevents protocol injection, XSS, and malicious URLs.
+ * Validate and normalize a domain the user typed into the monitor.
+ *
+ * The monitor tracks bare domains (paths are discarded), so this accepts:
+ *   google.com, http://google.com, sub.domain.co.uk, example.com/some/path
+ * and rejects non-http(s) schemes plus classic injection forms
+ * (`real-host@evil-host`, NUL/newline encodings, `..` in the host).
+ *
+ * Parsing the host out first (rather than substring-scanning the whole input)
+ * avoids false negatives such as `example.com/a..b` or a path containing `@`,
+ * which the old whole-string blocklist wrongly rejected. Deeper network-level
+ * validation (SSRF, DNS) is the server's job — see api/_utils/ssrfGuard.ts.
  */
 export const validateAndNormalizeUrl = (input: string): { valid: boolean; url?: string; error?: string } => {
   const trimmed = input.trim();
-  
+
   if (!trimmed) {
     return { valid: false, error: 'URL is required' };
   }
-  
-  // Check for dangerous patterns
-  const dangerousPatterns = [
-    'javascript:',
-    'data:',
-    'vbscript:',
-    'file:',
-    'ftp:',
-    '@',
-    '..',
-    '%00',
-    '%0a',
-    '%0d'
-  ];
-  
-  const lowerInput = trimmed.toLowerCase();
-  for (const pattern of dangerousPatterns) {
-    if (lowerInput.includes(pattern)) {
-      return { valid: false, error: 'Invalid URL format' };
-    }
+
+  // Reject any explicit scheme other than http/https (javascript:, data:,
+  // vbscript:, file:, ftp:, ...). A bare "google.com" has no scheme and passes.
+  const schemeMatch = /^([a-z][a-z0-9+.-]*):/i.exec(trimmed);
+  if (schemeMatch && !/^https?$/i.test(schemeMatch[1] ?? '')) {
+    return { valid: false, error: 'Invalid URL format' };
   }
-  
-  // Remove any leading protocols for normalization
-  let normalized = trimmed.replace(/^https?:\/\//i, '');
-  
-  // Validate domain format (simple but effective)
-  const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}(\/[^\s]*)?$/;
-  
-  if (!domainRegex.test(normalized)) {
+
+  // Strip an optional http(s):// prefix, then isolate the host (drop any
+  // path, query, or fragment — the monitor only tracks the domain).
+  const withoutScheme = trimmed.replace(/^https?:\/\//i, '');
+  const host = withoutScheme.split(/[/?#]/)[0] ?? '';
+
+  // A bare domain never carries userinfo; `host@other-host` is an injection.
+  if (host.includes('@')) {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+
+  // NUL/newline smuggling and empty labels ("..") are never valid in a host.
+  if (/\.\./.test(host) || /%00|%0a|%0d/i.test(host)) {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+
+  const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+
+  if (!domainRegex.test(host)) {
     return { valid: false, error: 'Please enter a valid domain name (e.g., google.com)' };
   }
-  
-  // Remove trailing slashes and convert to lowercase
-  normalized = normalized.replace(/\/$/, '').toLowerCase();
-  
-  // Extract just the domain part (no paths for monitoring)
-  const domainOnly = normalized.split('/')[0];
-  
-  return { valid: true, url: domainOnly };
+
+  return { valid: true, url: host.toLowerCase() };
 };
 
 /**
@@ -174,13 +175,20 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
 
     for (const endpoint of apiEndpoints) {
       try {
-        const response = await fetch(`${endpoint}?url=${encodeURIComponent(targetUrl)}&ua=${encodeURIComponent(userAgent)}&timeout=${timeoutMs}`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-          }
-        });
+        // Retries a 429 (honouring Retry-After) instead of reporting a
+        // rate-limited liveness probe as Error. Bounded by the same deadline
+        // the hard timeout uses, so it can never overrun the check budget.
+        const response = await fetchWithRetry(
+          `${endpoint}?url=${encodeURIComponent(targetUrl)}&ua=${encodeURIComponent(userAgent)}&timeout=${timeoutMs}`,
+          {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': token ? `Bearer ${token}` : ''
+            }
+          },
+          { deadline, label: `check ${targetUrl}` }
+        );
 
         if (response.status === 401) {
           logger.warn(`Auth failed for endpoint ${endpoint} for ${url}`);
@@ -229,15 +237,18 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
   // within timeoutMs. If liveness used the whole budget, enrichment degrades to
   // defaults immediately — the domain still reports its true ALIVE/DOWN status.
   const remaining = Math.max(0, deadline - Date.now());
+  // Enrichment shares the liveness deadline so a rate-limit backoff inside a
+  // sub-check can't push past the check budget either.
+  const enrichmentConfig: ServiceConfig = { ...serviceConfig, deadline };
   const settled = await raceToDefault<EnrichmentSettled | null>(
     Promise.allSettled([
-      checkSSL(url, serviceConfig),
-      checkDomainExpiry(url, serviceConfig),
-      checkDNS(url, serviceConfig),
-      detectTechStack(url, serviceConfig),
-      checkCanonical(url, serviceConfig),
-      checkEmailAuth(url, serviceConfig),
-      checkSecurityHeaders(url, serviceConfig),
+      checkSSL(url, enrichmentConfig),
+      checkDomainExpiry(url, enrichmentConfig),
+      checkDNS(url, enrichmentConfig),
+      detectTechStack(url, enrichmentConfig),
+      checkCanonical(url, enrichmentConfig),
+      checkEmailAuth(url, enrichmentConfig),
+      checkSecurityHeaders(url, enrichmentConfig),
     ]) as Promise<EnrichmentSettled>,
     remaining,
     null

@@ -1,6 +1,7 @@
 import { DomainExpiry, ServiceConfig } from '../types';
 import { logger } from '../utils/logger';
 import { getSessionToken } from '../utils/authSession';
+import { fetchWithRetry } from './apiClient';
 
 interface WhoisApiResponse {
   expiryDate?: string;
@@ -40,13 +41,13 @@ export const checkDomainExpiry = async (domain: string, config?: ServiceConfig):
 
     for (const endpoint of endpoints) {
       try {
-        const response = await fetch(endpoint, {
+        const response = await fetchWithRetry(endpoint, {
           method: 'GET',
           headers: { 
             'Accept': 'application/json',
             'Authorization': token ? `Bearer ${token}` : ''
           }
-        });
+        }, { deadline: config?.deadline });
 
         if (response.status === 401) {
           throw new Error('Unauthorized');
