@@ -1,0 +1,134 @@
+name: Dependabot Auto-Merge
+
+# Merges Dependabot pull requests automatically once the test workflows pass.
+#
+# Why `workflow_run` and not `pull_request`: a workflow triggered by a Dependabot
+# PR gets a READ-ONLY GITHUB_TOKEN (GitHub withholds write permissions from
+# Dependabot runs on `pull_request`), so it cannot merge. `workflow_run` runs in
+# the base-repo context with the normal permissions granted below, which is what
+# lets us merge. It fires once after each listed test workflow completes, so
+# every run re-checks the *current* head before merging.
+on:
+  workflow_run:
+    workflows: ["Automated Tests", "CI"]
+    types: [completed]
+
+# Least privilege: read the repo, write the merge (contents:write) and the PR
+# metadata / check results (pull-requests:write, checks:write).
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
+
+# One merge check per PR head — a newer commit cancels the stale run.
+concurrency:
+  group: dependabot-automerge-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    # Only the upstream test workflows, only on success, and only if they ran for
+    # a PR (a workflow_run can also come from a plain push to main).
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.pull_requests[0] != null
+    steps:
+      - name: Resolve the Dependabot PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          # The exact commit the passing tests ran against. We only merge if the
+          # PR head still matches this — a push between the test run and now must
+          # not be merged on stale results.
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          pr="$(gh api "repos/$REPO/pulls/$PR_NUMBER")"
+          author="$(jq -r '.user.login' <<<"$pr")"
+          state="$(jq -r '.state' <<<"$pr")"
+          merged="$(jq -r '.merged' <<<"$pr")"
+          head_sha="$(jq -r '.head.sha' <<<"$pr")"
+          base_ref="$(jq -r '.base.ref' <<<"$pr")"
+
+          echo "PR #$PR_NUMBER by $author: state=$state merged=$merged head=$head_sha base=$base_ref"
+
+          # Only Dependabot-authored PRs.
+          case "$author" in
+            dependabot[bot] | dependabot) ;;
+            *) echo "Not a Dependabot PR ($author) — skipping."; exit 0 ;;
+          esac
+
+          if [ "$state" != "open" ] || [ "$merged" = "true" ]; then
+            echo "PR is not open (or already merged) — nothing to do."; exit 0
+          fi
+
+          # Never auto-merge into anything but the default branch.
+          if [ "$base_ref" != "main" ]; then
+            echo "Base is '$base_ref', not 'main' — skipping."; exit 0
+          fi
+
+          # Stale-run guard: the PR head must equal the commit that was tested.
+          if [ "$head_sha" != "$TESTED_SHA" ]; then
+            echo "PR head ($head_sha) != tested commit ($TESTED_SHA) — skipping (stale run)."; exit 0
+          fi
+
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "should_merge=true" >> "$GITHUB_OUTPUT"
+
+      - name: Approve and enable auto-merge
+        if: steps.pr.outputs.should_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          SHA: ${{ steps.pr.outputs.head_sha }}
+        run: |
+          set -uo pipefail
+
+          # Approve so a "require approving review" branch protection rule is
+          # satisfied. `|| true`: re-approving is not an error.
+          gh pr review "$PR_NUMBER" --repo "$REPO" --approve \
+            --body "Automatically approving Dependabot update — tests passed." || true
+
+          # Prefer GitHub's native auto-merge: it merges (squash) only once ALL
+          # required checks and branch-protection rules are satisfied, and waits
+          # for any other test workflow that is still running. This is disabled on
+          # some repos (allow_auto_merge=false), hence the fallback below.
+          if gh pr merge "$PR_NUMBER" --repo "$REPO" --squash --auto; then
+            echo "Auto-merge armed for PR #$PR_NUMBER."
+            exit 0
+          fi
+
+          echo "::notice::Auto-merge unavailable on this repo — checking checks directly."
+
+          # Fallback: merge only when every check run on the tested commit has
+          # completed successfully. Inspecting check-runs for the exact SHA is
+          # unambiguous even when the repo defines no required checks.
+          if ! checks="$(gh api "repos/$REPO/commits/$SHA/check-runs?per_page=100")"; then
+            echo "Could not fetch check runs for $SHA — refusing to merge."; exit 0
+          fi
+          total="$(jq '.check_runs | length' <<<"$checks")"
+          pending="$(jq '[.check_runs[] | select(.status != "completed")] | length' <<<"$checks")"
+          failing="$(jq '[.check_runs[]
+            | select(.status == "completed")
+            | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")]
+            | length' <<<"$checks")"
+
+          echo "check runs on $SHA: total=$total pending=$pending failing=$failing"
+
+          if [ "$total" -eq 0 ]; then
+            echo "No check runs found on the head commit — refusing to merge."; exit 0
+          fi
+          if [ "$pending" -ne 0 ] || [ "$failing" -ne 0 ]; then
+            echo "Not all checks are green yet — leaving PR open (a later workflow_run will retry)."
+            exit 0
+          fi
+
+          gh pr merge "$PR_NUMBER" --repo "$REPO" --squash
+          echo "Merged PR #$PR_NUMBER (squash)."
