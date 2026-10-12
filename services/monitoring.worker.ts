@@ -34,7 +34,12 @@ self.onmessage = async (e: MessageEvent) => {
       timeout: currentTimeout
     };
 
-    const chunkSize = 5;
+    // Concurrency is deliberately low: each domain fans out to several API
+    // calls that share one per-IP budget. Retries on 429 are handled inside the
+    // services (fetchWithRetry), but staying under the budget is cheaper than
+    // backing off, so keep a modest window and a short pause between windows.
+    const chunkSize = 3;
+    const interChunkDelayMs = 250;
 
     for (let i = 0; i < domainsToProcess.length; i += chunkSize) {
       const chunk = domainsToProcess.slice(i, i + chunkSize);
@@ -56,6 +61,10 @@ self.onmessage = async (e: MessageEvent) => {
           });
         }
       }));
+
+      if (i + chunkSize < domainsToProcess.length && interChunkDelayMs > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, interChunkDelayMs));
+      }
     }
 
     self.postMessage({ type: 'BATCH_COMPLETE' });

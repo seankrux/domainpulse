@@ -337,5 +337,11 @@ export interface ServiceConfig {
   authToken?: string;
   userAgent?: string;
   timeout?: number;
+  /**
+   * Absolute ms-epoch budget passed by `checkDomainWithSSL`. When set, the
+   * auth/retry paths never sleep past it, so a 429 backoff cannot overrun the
+   * liveness deadline and re-introduce the slow-check → Error bug.
+   */
+  deadline?: number;
 }
 

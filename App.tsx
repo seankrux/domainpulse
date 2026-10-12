@@ -24,13 +24,11 @@ import { DomainDetailModal } from './components/Dashboard/DomainDetailModal';
 import { ConfirmModal } from './components/Dashboard/ConfirmModal';
 import { SkipLinks } from './components/Accessibility';
 import { BottomPanel } from './components/BottomPanel';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useAnnounce } from './components/Accessibility';
 import { logger } from './utils/logger';
 import { loadQaResults, mergeQaResults } from './utils/qaResults';
-
-// Simple UUID generator
-const generateId = () => Math.random().toString(36).substr(2, 9);
+import { generateId } from './utils/id';
+import { filterAndSortDomains } from './utils/domainFilters';
 
 const App: React.FC = () => {
   const domainsLoadFailedRef = useRef(false);
@@ -72,7 +70,6 @@ const App: React.FC = () => {
 
   const { showSuccess, showError, showInfo } = useNotification();
   const { logout, isAuthenticated } = useAuth();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { announce, Announcer } = useAnnounce();
 
   // Monitoring Hook
@@ -172,8 +169,9 @@ const App: React.FC = () => {
     setDomains(prev => [newDomain, ...prev]);
     setNewDomainUrl('');
     showSuccess(`Added ${normalized} to monitoring`);
+    announce(`Added ${normalized} to monitoring`);
     void checkSingleDomain(newDomain.id, normalized);
-  }, [domains, checkSingleDomain, showSuccess]);
+  }, [domains, checkSingleDomain, showSuccess, announce]);
 
   const handleBulkImport = useCallback((newUrls: string[]) => {
     const existingUrls = new Set(domains.map(d => d.url));
@@ -216,6 +214,7 @@ const App: React.FC = () => {
     if (validNewDomains.length > 0) {
       setDomains(prev => [...validNewDomains, ...prev]);
       showSuccess(`Successfully imported ${validNewDomains.length} domains`);
+      announce(`Imported ${validNewDomains.length} domains`);
       void checkBatch(validNewDomains);
     }
 
@@ -226,7 +225,7 @@ const App: React.FC = () => {
     if (errorCount > 0 || duplicateCount > 0) {
       showInfo(`Imported with ${duplicateCount} duplicates and ${errorCount} invalid URLs skipped.`);
     }
-  }, [domains, checkBatch, showSuccess, showInfo]);
+  }, [domains, checkBatch, showSuccess, showInfo, announce]);
 
   const removeDomain = useCallback((id: string) => {
     setDomains(prev => prev.filter(d => d.id !== id));
@@ -316,12 +315,14 @@ const App: React.FC = () => {
         if (settings.playSound) playAlertSound();
         sendDomainDownNotification(domain.url, domain.statusCode);
         showError(`${domain.url} is down!`);
+        announce(`${domain.url} is down`, 'assertive');
       }
 
       if (!prevStatus || prevStatus === domain.status) return;
       if (domain.status === DomainStatus.Alive && prevStatus === DomainStatus.Down) {
         sendDomainUpNotification(domain.url, domain.latency);
         showSuccess(`${domain.url} is back up!`);
+        announce(`${domain.url} is back up`);
       }
     });
     const newMap = new Map(previousStatusesRef.current);
@@ -331,7 +332,7 @@ const App: React.FC = () => {
     previousStatusesRef.current = newMap.size > config.monitoring.maxPreviousStatuses
       ? new Map(Array.from(newMap.entries()).slice(-config.monitoring.maxPreviousStatuses))
       : newMap;
-  }, [domains, settings.enableNotifications, settings.playSound, showError, showSuccess]);
+  }, [domains, settings.enableNotifications, settings.playSound, showError, showSuccess, announce]);
 
   // Proactive SSL / domain-expiry warnings (once per asset per session).
   useEffect(() => {
@@ -486,48 +487,16 @@ const App: React.FC = () => {
   }, [domains, groups]);
 
   // Filtering and Sorting
-  const displayDomains = useMemo(() => {
-    const normalizedFilter = filter.trim().toLowerCase();
-    const filtered = domains.filter(d => {
-      const matchesSearch = d.url.toLowerCase().includes(normalizedFilter);
-      const matchesStatus = statusFilter === 'ALL' || d.status === statusFilter;
-      const matchesSSL = sslFilter === 'ALL' || d.ssl?.status === sslFilter;
-      const matchesGroup = groupFilter === 'ALL' || d.groupId === groupFilter;
-      return matchesSearch && matchesStatus && matchesSSL && matchesGroup;
-    });
-
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      switch (sortField) {
-        case 'url': comparison = a.url.localeCompare(b.url); break;
-        case 'status': {
-          const statusOrder: Record<DomainStatus, number> = {
-            [DomainStatus.Down]: 0,
-            [DomainStatus.Error]: 1,
-            [DomainStatus.Checking]: 2,
-            [DomainStatus.Unknown]: 3,
-            [DomainStatus.Alive]: 4,
-          };
-          comparison = (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5);
-          break;
-        }
-        case 'latency': comparison = (a.latency || 0) - (b.latency || 0); break;
-        case 'lastChecked': comparison = (a.lastChecked?.getTime() || 0) - (b.lastChecked?.getTime() || 0); break;
-        case 'ssl': {
-          const sslOrder = { [SSLStatus.Valid]: 0, [SSLStatus.Expiring]: 1, [SSLStatus.Expired]: 2, [SSLStatus.Invalid]: 3, [SSLStatus.Unknown]: 4 };
-          comparison = (sslOrder[a.ssl?.status || SSLStatus.Unknown] ?? 4) - (sslOrder[b.ssl?.status || SSLStatus.Unknown] ?? 4);
-          break;
-        }
-        case 'expiry': {
-          const expiryOrder = { active: 0, expiring: 1, expired: 2, unknown: 3 };
-          comparison = (expiryOrder[a.expiry?.status || 'unknown'] ?? 3) - (expiryOrder[b.expiry?.status || 'unknown'] ?? 3);
-          break;
-        }
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-    return filtered;
-  }, [domains, filter, statusFilter, sslFilter, groupFilter, sortField, sortOrder]);
+  const displayDomains = useMemo(
+    () =>
+      filterAndSortDomains(
+        domains,
+        { search: filter, status: statusFilter, ssl: sslFilter, groupId: groupFilter },
+        sortField,
+        sortOrder,
+      ),
+    [domains, filter, statusFilter, sslFilter, groupFilter, sortField, sortOrder],
+  );
 
   const viewingHistory = useMemo(() => {
     if (!viewingHistoryId) return null;

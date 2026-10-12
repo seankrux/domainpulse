@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isBlockedHost, validateOutboundUrl, isBlockedIp, validateOutboundUrlResolved, isReachableStatus, toCheckResult, toggleWww, probeUptime } from '../../api/_utils/ssrfGuard';
+import { isBlockedHost, validateOutboundUrl, isBlockedIp, validateOutboundUrlResolved, isReachableStatus, toCheckResult, toggleWww, probeUptime, probeRedirectChain } from '../../api/_utils/ssrfGuard';
 
 describe('ssrfGuard.toCheckResult (shared liveness mapping)', () => {
   it('maps a reachable probe to ALIVE with its status/latency', () => {
@@ -59,6 +59,38 @@ describe('ssrfGuard.isBlockedIp', () => {
     for (const ip of ['::ffff:7f00:1', '0:0:0:0:0:0:0:1', '0:0:0:0:0:ffff:127.0.0.1', '::127.0.0.1']) {
       expect(isBlockedIp(ip), ip).toBe(true);
     }
+  });
+
+  it('covers range boundaries exactly (off-by-one guard)', () => {
+    // 172.15/172.32 are public — only 172.16–172.31 is private.
+    expect(isBlockedIp('172.15.255.255')).toBe(false);
+    expect(isBlockedIp('172.16.0.0')).toBe(true);
+    expect(isBlockedIp('172.31.255.255')).toBe(true);
+    expect(isBlockedIp('172.32.0.0')).toBe(false);
+    // CGNAT is 100.64.0.0/10 → 100.64–100.127 only.
+    expect(isBlockedIp('100.63.255.255')).toBe(false);
+    expect(isBlockedIp('100.64.0.0')).toBe(true);
+    expect(isBlockedIp('100.127.255.255')).toBe(true);
+    expect(isBlockedIp('100.128.0.0')).toBe(false);
+    // Multicast/reserved starts at 224.
+    expect(isBlockedIp('223.255.255.255')).toBe(false);
+    expect(isBlockedIp('224.0.0.0')).toBe(true);
+    // 0.0.0.0/8 "this host" only — 1.x is public.
+    expect(isBlockedIp('0.0.0.0')).toBe(true);
+    expect(isBlockedIp('0.255.255.255')).toBe(true);
+    expect(isBlockedIp('1.0.0.0')).toBe(false);
+  });
+
+  it('blocks bracketed and zone-tagged forms of dangerous addresses', () => {
+    expect(isBlockedIp('[::1]')).toBe(true);
+    expect(isBlockedIp('fe80::1%eth0')).toBe(true);
+    expect(isBlockedIp('::')).toBe(true);       // unspecified
+    expect(isBlockedIp('::ffff:10.0.0.1')).toBe(true);
+  });
+
+  it('does not block non-IP hostnames passed to the IP check', () => {
+    expect(isBlockedIp('example.com')).toBe(false);
+    expect(isBlockedIp('github.com')).toBe(false);
   });
 });
 
@@ -123,6 +155,32 @@ describe('ssrfGuard.probeUptime (canonicalisation + liveness mapping)', () => {
     const { httpStatus, body } = await probeUptime('http://127.0.0.1/', { timeoutMs: 5000 });
     expect(httpStatus).toBe(400);
     expect((body as { error: string }).error).toBe('Blocked');
+  });
+});
+
+describe('ssrfGuard.probeRedirectChain (canonical enrichment, SSRF-safe)', () => {
+  it('blocks a private target and reports it as unreachable', async () => {
+    const r = await probeRedirectChain('http://127.0.0.1/', { timeoutMs: 5000 });
+    expect(r.blocked).toBe(true);
+    expect(r.reachable).toBe(false);
+    expect(r.status).toBe(0);
+    // The attempted hop is still recorded so callers can explain the failure.
+    expect(r.redirectChain).toEqual(['http://127.0.0.1/']);
+  });
+
+  it('reports a non-resolving host as blocked/unreachable', async () => {
+    const r = await probeRedirectChain('https://nonexistent-domain-xyz-abc.example', { timeoutMs: 5000 });
+    expect(r.blocked).toBe(true);
+    expect(r.reachable).toBe(false);
+  });
+
+  it('follows a real redirect chain to a public host', async () => {
+    const r = await probeRedirectChain('https://github.com/', { timeoutMs: 10000 });
+    if (r.blocked) return; // offline environment — SSRF block is the asserted path above
+    expect(r.reachable).toBe(true);
+    expect(r.status).toBeGreaterThan(0);
+    expect(r.inputUrl).toBe('https://github.com/');
+    expect(r.redirectChain.length).toBeGreaterThan(0);
   });
 });
 
