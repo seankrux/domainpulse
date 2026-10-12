@@ -10,15 +10,18 @@ name: Dependabot Auto-Merge
 # every run re-checks the *current* head before merging.
 on:
   workflow_run:
-    workflows: ["Automated Tests", "CI"]
+    # Every workflow that gates a PR's tests. Names must match each `name:`
+    # exactly (including emoji). The job below only merges when *all* check runs
+    # on the head commit are green, so listing one extra is harmless.
+    workflows: ["Automated Tests", "🧪 GUI Tests", "CI"]
     types: [completed]
 
-# Least privilege: read the repo, write the merge (contents:write) and the PR
-# metadata / check results (pull-requests:write, checks:write).
+# Least privilege: write the merge (contents:write) and PR metadata/approval
+# (pull-requests:write); read check runs to verify they are green (checks:read).
 permissions:
   contents: write
   pull-requests: write
-  checks: write
+  checks: read
 
 # One merge check per PR head — a newer commit cancels the stale run.
 concurrency:
