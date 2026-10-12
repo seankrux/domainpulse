@@ -96,6 +96,10 @@ jobs:
 
           # Approve so a "require approving review" branch protection rule is
           # satisfied. `|| true`: re-approving is not an error.
+          # Caveat: an approval by GITHUB_TOKEN does NOT satisfy GitHub's
+          # "require approval from someone other than the author" rule. If that
+          # rule is ever enabled, replace this with a GitHub App / PAT and gate
+          # the workflow instead.
           gh pr review "$PR_NUMBER" --repo "$REPO" --approve \
             --body "Automatically approving Dependabot update — tests passed." || true
 
