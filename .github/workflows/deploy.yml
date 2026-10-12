@@ -11,7 +11,31 @@ on:
       - master
 
 jobs:
+  # Secrets are not available in a job-level `if`, so probe them in a tiny job
+  # whose output the deploy job gates on. Keeps pushes to main green when the
+  # Vercel secrets are not configured, instead of red-Xing with an opaque
+  # "invalid token" error. Add the secrets to re-enable production deploys.
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Vercel secrets are not configured — skipping production deploy."
+          fi
+
   deploy:
+    needs: preflight
+    if: needs.preflight.outputs.configured == 'true'
     runs-on: ubuntu-latest
     environment:
       name: production
