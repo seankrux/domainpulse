@@ -133,5 +133,11 @@ jobs:
             exit 0
           fi
 
-          gh pr merge "$PR_NUMBER" --repo "$REPO" --squash
-          echo "Merged PR #$PR_NUMBER (squash)."
+          # Best effort: if the merge cannot complete (transient conflict while
+          # Dependabot rebases, or a pending rule), log it rather than failing the
+          # run — a later workflow_run will retry.
+          if gh pr merge "$PR_NUMBER" --repo "$REPO" --squash; then
+            echo "Merged PR #$PR_NUMBER (squash)."
+          else
+            echo "::notice::Merge rejected for PR #$PR_NUMBER (conflict or pending rule) — leaving open."
+          fi
