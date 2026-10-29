@@ -2,6 +2,7 @@ import { SSLStatus, SSLInfo, ServiceConfig } from '../types';
 import { logger } from '../utils/logger';
 import { config } from '../lib/config';
 import { getSessionToken } from '../utils/authSession';
+import { fetchWithRetry } from './apiClient';
 
 interface SslApiResponse {
   valid: boolean;
@@ -47,13 +48,13 @@ export const checkSSL = async (url: string, config?: ServiceConfig): Promise<SSL
 
     for (const endpoint of endpoints) {
       try {
-        const response = await fetch(endpoint, {
+        const response = await fetchWithRetry(endpoint, {
           method: 'GET',
           headers: { 
             'Accept': 'application/json',
             'Authorization': token ? `Bearer ${token}` : ''
           }
-        });
+        }, { deadline: config?.deadline });
 
         if (response.status === 401) {
           throw new Error('Unauthorized');

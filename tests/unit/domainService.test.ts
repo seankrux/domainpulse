@@ -110,6 +110,34 @@ describe('domainService', () => {
         error: 'Please enter a valid domain name (e.g., google.com)'
       });
     });
+
+    it('strips paths/queries/fragments to the bare domain', () => {
+      expect(validateAndNormalizeUrl('example.com/some/path?q=1#frag')).toEqual({
+        valid: true,
+        url: 'example.com'
+      });
+      expect(validateAndNormalizeUrl('http://example.com/path')).toEqual({
+        valid: true,
+        url: 'example.com'
+      });
+    });
+
+    it('does not false-reject a path containing @ or .. (only the host matters)', () => {
+      // Regression: the old whole-string blocklist rejected these outright.
+      expect(validateAndNormalizeUrl('example.com/user@example.com')).toEqual({
+        valid: true,
+        url: 'example.com'
+      });
+      expect(validateAndNormalizeUrl('example.com/a..b/c')).toEqual({
+        valid: true,
+        url: 'example.com'
+      });
+    });
+
+    it('still rejects @ / .. in the host position', () => {
+      expect(validateAndNormalizeUrl('http://real.com@evil.com').valid).toBe(false);
+      expect(validateAndNormalizeUrl('evil..com').valid).toBe(false);
+    });
   });
 
   describe('normalizeUrl', () => {

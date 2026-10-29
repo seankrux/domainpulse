@@ -1,6 +1,7 @@
 import { ServiceConfig, CanonicalCheckInfo } from '../types';
 import { logger } from '../utils/logger';
 import { getSessionToken } from '../utils/authSession';
+import { fetchWithRetry } from './apiClient';
 
 const DEFAULT_PROXY_URL = 'http://localhost:3001';
 
@@ -28,13 +29,13 @@ export const checkCanonical = async (domain: string, config?: ServiceConfig): Pr
 
     for (const endpoint of endpoints) {
       try {
-        const response = await fetch(endpoint, {
+        const response = await fetchWithRetry(endpoint, {
           method: 'GET',
           headers: {
             Accept: 'application/json',
             Authorization: token ? `Bearer ${token}` : '',
           },
-        });
+        }, { deadline: config?.deadline });
 
         if (response.status === 401) {
           throw new Error('Unauthorized');

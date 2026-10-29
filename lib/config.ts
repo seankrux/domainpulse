@@ -17,7 +17,13 @@ export const config = {
 
   // Rate limiting
   rateLimit: {
-    maxRequests: 100,        // Maximum requests per window
+    // One domain check fans out to ~8 API calls (check + ssl/whois/dns/tech/
+    // canonical/email-auth/security-headers), so a monitored list legitimately
+    // needs thousands of calls per window. The limit guards against abuse, not
+    // normal bulk monitoring — keep it well above a realistic check burst, or
+    // the dashboard rate-limits itself (see services/apiClient.ts for the
+    // client-side 429 backoff that backstops this).
+    maxRequests: 600,        // Maximum requests per window
     windowMs: 60000,         // Time window in milliseconds (1 minute)
   },
 

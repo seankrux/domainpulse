@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DomainGroup } from '../types';
 import { X, Plus, Trash2, Edit2, Check, Palette, Save } from 'lucide-react';
+import { generateId } from '../utils/id';
 
 // Predefined color palette
 const COLOR_PALETTE: string[] = [
@@ -46,7 +47,7 @@ export const GroupManager: React.FC<GroupManagerProps> = ({
     if (!newGroupName.trim()) return;
     
     const newGroup: DomainGroup = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateId(),
       name: newGroupName.trim(),
       color: newGroupColor ?? '#6366f1' // Default indigo
     };
