@@ -84,7 +84,7 @@ DomainPulse routes domain checks through a single authenticated API surface: Ver
 | Authentication & Security | PBKDF2, JWT, CORS controls, rate limiting | Password protection and guarded API access |
 | Client Persistence | `localStorage`, `sessionStorage` | Domain lists, settings, history, and authenticated session state |
 | Testing & Quality | Vitest, Testing Library, Playwright, ESLint | Unit coverage, UI verification, end-to-end tests, and code quality checks |
-| Deployment | Vercel, `vercel.json` rewrites | Serverless production deployment and API routing |
+| Deployment | Personal Cloudflare Workers + static assets | Marketing, dashboard and all API routes; protected Tokyo TLS helper |
 
 <br>
 
@@ -164,7 +164,7 @@ Two React apps built from a single codebase:
 
 > **Local dev** — Vite proxies `/api/*` to Express on port 3001
 
-> **Production** — Vercel serverless functions via `vercel.json` rewrites
+> **Production** — Personal Cloudflare Worker: `/` is the marketing site, `/app` is the monitoring dashboard, and `/api/*` uses the shared handlers.
 
 <br>
 
@@ -172,7 +172,9 @@ Two React apps built from a single codebase:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_PASSWORD_HASH` | Yes | PBKDF2 `hash:salt` for auth |
+| `PASSWORD_HASH` | No | Server-only PBKDF2 `hash:salt`; unset keeps the existing public mode |
+| `JWT_SECRET` | When password gate is enabled | Server-only signing secret for the existing JWT sessions |
+| `SSL_ORIGIN_TOKEN` | Yes | Server-only credential for the protected certificate-probe origin |
 | `ALLOWED_ORIGINS` | No | CORS origins (comma-separated) |
 
 <br>
@@ -194,3 +196,13 @@ Two React apps built from a single codebase:
 <div align="center">
   <sub>Built by <a href="https://www.seanguillermo.com"><strong>Sean G</strong></a></sub>
 </div>
+
+## Cloudflare release
+
+The Worker is `seankrux-domainpulse` in Sean's personal account `7a7a08127b6d6744c838413b4473ecf1`: https://seankrux-domainpulse.seanllms.workers.dev. `npm run build:cloudflare` builds both applications and a curated assets directory. The Cloudflare workflow tests PRs and deploys `main`; its `CLOUDFLARE_API_TOKEN` is a repository secret. Vercel Git deployments are disabled, its old deploy workflows are removed, and the Vercel project is retained.
+
+Workers HTTP calls retain private-address/DNS validation and manual redirects, using [public-only fetch routing](https://developers.cloudflare.com/workers/configuration/compatibility-flags/#global-fetch-strictly-public). DNS enrichment uses DNS-over-HTTPS with the existing record shapes. The [Workers HTTPS runtime](https://developers.cloudflare.com/workers/runtime-apis/nodejs/https/) does not expose the peer socket, so certificate metrics use the existing pinned Node TLS lookup in a protected, loopback-only Tokyo service behind the personal Cloudflare tunnel. Its origin bearer credential is configured in Worker secrets and the private systemd environment; it is absent from frontend assets.
+
+The release workflow publishes the compiled TLS helper plus its source commit and SHA-256 digest as the `domainpulse-origin` artifact. The Tokyo updater accepts an artifact only from successful Cloudflare CI for the exact current `main` SHA, validates its digest, installs it atomically, restarts the origin, and checks real certificate data. A five-minute systemd timer handles subsequent releases; failed verification restores the previous bundle. Services `domainpulse-origin.service` and `domainpulse-origin-tunnel.service` use automatic restart and start at boot. No application data is stored by this helper.
+
+Authentication remains opt-in. The server-only `PASSWORD_HASH`/`JWT_SECRET` pair can be applied through the manual Cloudflare auth workflow when those repository secrets are configured; migration does not invent a user password. An unset Google Places key retains the existing `UNKNOWN` GMB enrichment state. Domain lists and history retain the existing browser-storage behavior.

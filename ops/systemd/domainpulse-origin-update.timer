@@ -1,0 +1,10 @@
+[Unit]
+Description=Keep the protected DomainPulse TLS origin aligned with successful main CI
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=domainpulse-origin-update.service
+
+[Install]
+WantedBy=timers.target

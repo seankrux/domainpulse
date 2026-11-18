@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { VercelRequest } from '@vercel/node';
+import type { ApiRequest } from '../../api/_utils/httpTypes';
 
 const makeReq = (authHeader?: string) =>
-  ({ headers: authHeader ? { authorization: authHeader } : {} }) as unknown as VercelRequest;
+  ({ headers: authHeader ? { authorization: authHeader } : {} }) as unknown as ApiRequest;
 
 /**
  * Auth is OPT-IN (AGENTS.md §7): public when no password is configured, enforced

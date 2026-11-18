@@ -3,7 +3,7 @@
  *
  * Dependency-free (only the global `fetch`) so it can be reused by the Vercel
  * handler, the local dev proxy, and unit tests without pulling in serverless
- * middleware (auth/rate-limit/@vercel/node).
+ * middleware (auth/rate-limit/HTTP adapter).
  */
 
 const PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';

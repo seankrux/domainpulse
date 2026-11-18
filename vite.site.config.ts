@@ -40,6 +40,7 @@ export default defineConfig({
   build: {
     outDir: 'dist-site',
     rollupOptions: {
+      input: path.resolve(__dirname, "site.html"),
       output: {
         manualChunks: (id) => {
           if (id.includes('react') && !id.includes('recharts')) return 'vendor';

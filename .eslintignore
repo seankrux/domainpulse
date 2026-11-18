@@ -6,3 +6,9 @@ venv/
 .automation-clipboard/
 playwright-report/
 test-results/
+
+.wrangler/
+.cloudflare-assets/
+.cloudflare-origin/
+
+.cloudflare-fixture/

@@ -1,10 +1,9 @@
 /**
  * Shared rate limiting utility for API endpoints.
  * 
- * Production: Uses Vercel KV for distributed rate limiting (requires @vercel/kv)
- * Development: Falls back to in-memory storage
+ * Production/development: Uses the shared per-instance request budget
+ * State expires at the configured window and resets on instance cold start.
  * 
- * @see https://vercel.com/docs/storage/vercel-kv
  */
 
 interface RateLimitRecord {
@@ -22,35 +21,13 @@ const defaultConfig: RateLimitConfig = {
   windowMs: 60000 // 1 minute
 };
 
-// Try to import Vercel KV for production use
-let hasKV = false;
-
-// Dynamic import function for @vercel/kv (optional dependency)
-const getVercelKV = async (): Promise<any | undefined> => {
-  try {
-    if (typeof process === 'undefined' || process.env?.KV_URL === undefined) {
-      return undefined;
-    }
-    // Use dynamic import to avoid bundling @vercel/kv if not used
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const kv = await import(/* webpackIgnore: true */ '@vercel/kv' as any);
-    hasKV = true;
-    return kv.default || kv;
-  } catch {
-    // @vercel/kv not installed or KV_URL not configured
-    hasKV = false;
-    return undefined;
-  }
-};
-
-// In-memory store (development only, resets on cold start)
+// Shared instance budget (resets on cold start)
 const requestCounts = new Map<string, RateLimitRecord>();
 
 /**
  * Check if request is within rate limit.
  *
- * In production with KV_URL configured, uses Vercel KV for distributed rate limiting.
- * In development or without KV, uses in-memory storage (resets on cold start).
+ * Uses in-memory storage shared by all endpoints in an instance (resets on cold start).
  *
  * @param ip - Client IP address
  * @param config - Rate limit configuration
@@ -58,23 +35,6 @@ const requestCounts = new Map<string, RateLimitRecord>();
  */
 export const checkRateLimit = async (ip: string, config: RateLimitConfig = defaultConfig): Promise<boolean> => {
   const now = Date.now();
-
-  // Use Vercel KV in production if available
-  if (process.env.KV_URL !== undefined) {
-    const kv = await getVercelKV();
-    if (kv && hasKV) {
-      const key = `ratelimit:${ip}`;
-      const current = await kv.incr(key);
-
-      if (current === 1) {
-        // First request, set expiry
-        await kv.expire(key, Math.ceil(config.windowMs / 1000));
-        return true;
-      }
-
-      return current <= config.maxRequests;
-    }
-  }
 
   // Fallback to in-memory (development or no KV)
   const record = requestCounts.get(ip);
@@ -103,32 +63,13 @@ export const checkRateLimit = async (ip: string, config: RateLimitConfig = defau
 
 /**
  * Get rate limit headers for response.
- * Note: In production with KV, this is an approximation since we don't fetch current count.
+ * Reflects the current shared instance budget.
  * @param ip - Client IP address
  * @param config - Rate limit configuration
  * @returns Headers to include in response
  */
 export const getRateLimitHeaders = async (ip: string, config: RateLimitConfig = defaultConfig): Promise<Record<string, string>> => {
   const now = Date.now();
-
-  // With Vercel KV, provide approximate headers
-  if (process.env.KV_URL !== undefined) {
-    const kv = await getVercelKV();
-    if (kv && hasKV) {
-      const key = `ratelimit:${ip}`;
-      const ttl = await kv.ttl(key);
-      // Reflect actual consumption instead of the previous no-op ternary
-      // (both arms returned maxRequests, so Remaining never decreased).
-      const used = Number(await kv.get(key)) || 0;
-      const remaining = Math.max(0, config.maxRequests - used);
-
-      return {
-        'X-RateLimit-Limit': String(config.maxRequests),
-        'X-RateLimit-Remaining': String(remaining),
-        'X-RateLimit-Reset': String(ttl > 0 ? now + (ttl * 1000) : now + config.windowMs)
-      };
-    }
-  }
 
   // In-memory fallback
   const record = requestCounts.get(ip);

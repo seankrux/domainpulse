@@ -1,4 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { ApiRequest, ApiResponse } from './_utils/httpTypes.js';
 import { verifyAuth, getCorsHeaders } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
 import { lookupGmb } from './_utils/gmbLookup.js';
@@ -15,7 +15,7 @@ import { config } from '../lib/config.js';
  * descriptive error so the UI degrades gracefully (same pattern as SSL/WHOIS).
  */
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
   };

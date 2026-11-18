@@ -5,6 +5,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import { validateOutboundUrlResolved } from './ssrfGuard.js';
+import { isWorkerRuntime, workerRequest } from './workerTransport.js';
 import type { LetterGrade, SecurityHeaderEntry, SecurityHeadersInfo } from '../../types.js';
 
 const CHECKED: { name: string; header: string; weight: number; recommend: string }[] = [
@@ -37,6 +38,9 @@ function pinnedRequest(
   userAgent: string,
   method: 'HEAD' | 'GET',
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders }> {
+  if (isWorkerRuntime()) {
+    return workerRequest(urlString, { method, timeoutMs: 10000, userAgent });
+  }
   const parsed = new URL(urlString);
   const isHttps = parsed.protocol === 'https:';
   const transport = isHttps ? https : http;

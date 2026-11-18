@@ -1,4 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { ApiRequest, ApiResponse } from './_utils/httpTypes.js';
 import { getCorsHeaders, isAuthEnabled } from './_utils/auth.js';
 
 /**
@@ -10,7 +10,7 @@ import { getCorsHeaders, isAuthEnabled } from './_utils/auth.js';
  * password is set (AGENTS.md §7). Mirrored by the dev proxy route in
  * server/proxy.ts — keep the two in agreement.
  */
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default function handler(req: ApiRequest, res: ApiResponse) {
   const corsHeaders = getCorsHeaders(req.headers.origin);
   Object.entries(corsHeaders).forEach(([key, value]) => {
     res.setHeader(key, value);

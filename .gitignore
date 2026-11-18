@@ -71,3 +71,12 @@ coverage/
 
 # Agent-local state/memory
 .openhands/
+
+.wrangler/
+.cloudflare-assets/
+.cloudflare-origin/
+.dev.vars*
+
+.cloudflare-fixture/
+
+__pycache__/

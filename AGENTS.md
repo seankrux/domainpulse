@@ -371,3 +371,7 @@ README "Available Commands" table — use those. Non-obvious caveats only:
   (Vitest, jsdom) need no browser. `npm run test:gui` (Playwright) needs a
   browser first: `npx playwright install chromium` (not part of the update
   script). Playwright auto-starts its own servers via `webServer`.
+
+## Cloudflare production transport
+
+Cloudflare Workers serves the marketing site at `/` and the monitoring dashboard at `/app`, plus the same eleven API handlers used by local development. Route parity includes `cf-worker.ts`. Worker HTTP requests keep per-hop DNS/private-address validation and manual redirects, then use native fetch with `global_fetch_strictly_public`; the runtime only reaches the public Internet and cannot bypass origin security. Local Node requests retain pinned DNS transport. Direct peer-certificate inspection runs in a protected, loopback-only Tokyo helper behind the personal account tunnel; it validates and pins public destinations with the same lookup utility. Its bearer secret stays in Worker secrets and the private systemd environment. Auth remains opt-in and public/protected modes keep the existing semantics. The shared 600-request instance budget remains active without Vercel KV.

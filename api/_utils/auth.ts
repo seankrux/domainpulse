@@ -1,4 +1,4 @@
-import { VercelRequest } from '@vercel/node';
+import type { ApiRequest } from './httpTypes.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
@@ -82,7 +82,7 @@ export const verifyAuthHeader = (authorization?: string): boolean => {
 /**
  * Verify JWT token from request.
  */
-export const verifyAuth = (req: VercelRequest): boolean => {
+export const verifyAuth = (req: ApiRequest): boolean => {
   return verifyAuthHeader(req.headers.authorization);
 };
 

@@ -1,8 +1,22 @@
-name = "domainpulse"
-compatibility_date = "2025-01-01"
+name = "seankrux-domainpulse"
+account_id = "7a7a08127b6d6744c838413b4473ecf1"
+main = "cf-worker.ts"
+compatibility_date = "2026-11-18"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+workers_dev = true
 
-[build]
-command = "bash scripts/cf-build.sh"
+[vars]
+NODE_ENV = "production"
+DOMAINPULSE_WORKER = "true"
+SSL_ORIGIN_URL = "https://domainpulse-origin.seanguillermo.com"
+ALLOWED_ORIGINS = "https://seankrux-domainpulse.seanllms.workers.dev"
+
+[secrets]
+required = ["SSL_ORIGIN_TOKEN"]
 
 [assets]
-directory = "./dist"
+directory = "./.cloudflare-assets"
+binding = "ASSETS"
+html_handling = "none"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/app", "/app/*"]

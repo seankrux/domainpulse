@@ -2,7 +2,7 @@
  * Email authentication lookup — SPF / DKIM / DMARC from public DNS.
  * Enrichment only; never affects liveness.
  */
-import * as dns from 'dns';
+import { publicResolver } from './publicDns.js';
 import type { EmailAuthInfo, LetterGrade } from '../../types.js';
 
 const COMMON_DKIM_SELECTORS = [
@@ -44,8 +44,7 @@ function gradeFromScores(spf: boolean, dkim: boolean, dmarc: boolean, policy?: s
 
 export async function getEmailAuthInfo(domain: string): Promise<EmailAuthInfo> {
   const clean = domain.replace(/^https?:\/\//, '').split('/')[0]!.toLowerCase();
-  const resolver = new dns.promises.Resolver();
-  resolver.setServers(['8.8.8.8', '1.1.1.1']);
+  const resolver = publicResolver();
 
   const issues: string[] = [];
 
