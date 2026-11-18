@@ -28,14 +28,9 @@ jobs:
       - run: npx wrangler deploy --config wrangler.redirect.toml --dry-run
       - name: Publish TLS origin artifact
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: domainpulse-origin
-          path: |
-            .cloudflare-origin/server.cjs
-            .cloudflare-origin/release.json
-          include-hidden-files: true
-          retention-days: 30
+        run: python3 ops/artifact_store.py publish --root .cloudflare-origin --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --group tls-origin
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Deploy to personal Cloudflare
         if: github.event_name != 'pull_request'
         run: |
