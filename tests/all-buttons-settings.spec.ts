@@ -425,10 +425,12 @@ test.describe('DomainPulse - Complete GUI Test Suite', () => {
       const input = page.locator('input[placeholder*="Enter domain to monitor"]');
       await input.fill(checkDomain);
       await page.locator('button:has-text("Track")').click();
-      await expect(page.locator(`tr:has-text("${checkDomain}")`)).toBeVisible({ timeout: 15000 });
+      const row = page.locator(`tr:has-text("${checkDomain}")`);
+      await expect(row).toBeVisible({ timeout: 15000 });
+      await expect(row.getByRole('button', { name: 'Check status', exact: true })).toBeEnabled({ timeout: 30000 });
       
       // Select domain
-      const checkbox = page.locator(`tr:has-text("${checkDomain}") input[type="checkbox"]`);
+      const checkbox = row.locator('input[type="checkbox"]');
       await checkbox.click();
       
       // Click check selected button. Verify the check fired via the uptime
