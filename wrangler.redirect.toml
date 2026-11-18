@@ -1,0 +1,5 @@
+name = "seankrux-domainpulse-redirect"
+account_id = "7a7a08127b6d6744c838413b4473ecf1"
+main = "cloudflare/redirect-worker.ts"
+compatibility_date = "2026-11-18"
+routes = [{ pattern = "domainpulse.seanguillermo.com", custom_domain = true }]

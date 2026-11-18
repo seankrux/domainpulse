@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install only the origin artifact built by successful CI for the exact main SHA."""
 import fcntl,hashlib,json,os,pathlib,shutil,subprocess,tempfile,urllib.request,urllib.error
+import artifact_store
 
 REPO='seankrux/domainpulse'
 STATE=pathlib.Path('/root/.local/state/vercel-to-cf/domainpulse')
@@ -38,7 +39,7 @@ def update_locked():
     if run is None:
         print(json.dumps({'status':'awaiting_successful_main_ci','commit':main_sha}));return
     with tempfile.TemporaryDirectory(prefix='origin-artifact-',dir=STATE) as temp:
-        gh('run','download',str(run['databaseId']),'--repo',REPO,'--name','domainpulse-origin','--dir',temp)
+        artifact_store.download(temp,REPO,main_sha,run['databaseId'],'tls-origin')
         artifact=pathlib.Path(temp);bundle=artifact/'server.cjs';manifest=json.loads((artifact/'release.json').read_text())
         assert manifest.get('commit')==main_sha,'Artifact SHA differs from current main'
         assert manifest.get('sha256')==hash_file(bundle),'Origin artifact digest mismatch'

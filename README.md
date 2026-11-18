@@ -11,7 +11,7 @@
 
   <br><br>
 
-  <a href="https://seankrux-domainpulse.seanllms.workers.dev/app"><strong>Live Demo &rarr;</strong></a>
+  <a href="https://www.domainpulse.seanguillermo.com/app"><strong>Live Demo &rarr;</strong></a>
 
   [Cloudflare deployment workflow](https://github.com/seankrux/domainpulse/actions/workflows/cloudflare.yml)
 </div>
@@ -203,8 +203,10 @@ The Worker is `seankrux-domainpulse` in Sean's personal account `7a7a08127b6d674
 
 Workers HTTP calls retain private-address/DNS validation and manual redirects, using [public-only fetch routing](https://developers.cloudflare.com/workers/configuration/compatibility-flags/#global-fetch-strictly-public). DNS enrichment uses DNS-over-HTTPS with the existing record shapes. The [Workers HTTPS runtime](https://developers.cloudflare.com/workers/runtime-apis/nodejs/https/) does not expose the peer socket, so certificate metrics use the existing pinned Node TLS lookup in a protected, loopback-only Tokyo service behind the personal Cloudflare tunnel. Its origin bearer credential is configured in Worker secrets and the private systemd environment; it is absent from frontend assets.
 
-The release workflow publishes the compiled TLS helper plus its source commit and SHA-256 digest as the `domainpulse-origin` artifact. The Tokyo updater accepts an artifact only from successful Cloudflare CI for the exact current `main` SHA, validates its digest, installs it atomically, restarts the origin, and checks real certificate data. A five-minute systemd timer handles subsequent releases; failed verification restores the previous bundle. Services `domainpulse-origin.service` and `domainpulse-origin-tunnel.service` use automatic restart and start at boot. No application data is stored by this helper.
+The release workflow publishes the compiled TLS helper plus its source commit and SHA-256 digest in the private personal Cloudflare KV artifact store, keyed by repository, exact source commit and CI run ID. Its archive and every contained file are checked with SHA-256; each compressed value is capped below KV's size limit. The Tokyo updater accepts an artifact only from successful Cloudflare CI for the exact current `main` SHA, validates its source/run identity and digests, installs it atomically, restarts the origin, and checks real certificate data. A five-minute systemd timer handles subsequent releases; failed verification restores the previous bundle. Services `domainpulse-origin.service` and `domainpulse-origin-tunnel.service` use automatic restart and start at boot. No application data is stored by this helper.
 
 Authentication remains opt-in. The server-only `PASSWORD_HASH`/`JWT_SECRET` pair can be applied through the manual Cloudflare auth workflow when those repository secrets are configured; migration does not invent a user password. An unset Google Places key retains the existing `UNKNOWN` GMB enrichment state. Domain lists and history retain the existing browser-storage behavior.
 
 The former native Cloudflare build connection for legacy Worker `domainpulse` is removed after a recorded failed build; the Worker itself is retained; GitHub Actions is the sole deploy pipeline for `seankrux-domainpulse`. CI supports the repository's isolated ephemeral `CLOUDFLARE_RUNNER` setting and excludes external-fork PRs from that host.
+
+Production custom domains are persisted in the Wrangler configurations. `www.domainpulse.seanguillermo.com` serves the application, and the separate `seankrux-domainpulse-redirect` Worker preserves the original `308` redirect from `domainpulse.seanguillermo.com`, including paths and queries. The application retains asset-first routing; the redirect does not invoke the application for static asset requests. Both production origins and the workers.dev preview origin are explicitly allowed by the API. Cloudflare Custom Domains manage DNS and the multi-level hostname certificate without a separate certificate subscription.
