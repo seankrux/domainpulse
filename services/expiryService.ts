@@ -33,7 +33,7 @@ export const checkDomainExpiry = async (domain: string, config?: ServiceConfig):
   }
 
   try {
-    // Try Vercel API first, then proxy
+    // Try same-origin API first, then proxy
     const endpoints = [
       `/api/whois?domain=${encodeURIComponent(cleanDomain)}`,
       `${proxyUrl}/api/whois?domain=${encodeURIComponent(cleanDomain)}`

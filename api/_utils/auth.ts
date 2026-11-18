@@ -57,7 +57,7 @@ export const generateToken = (): { token: string; expiresAt: number } => {
 };
 
 /**
- * Verify a Bearer token string (shared by Vercel handlers and the dev proxy).
+ * Verify a Bearer token string (shared by Worker handlers and the dev proxy).
  */
 export const verifyAuthHeader = (authorization?: string): boolean => {
   if (!AUTH_ENABLED) {

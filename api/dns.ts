@@ -21,7 +21,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return res.status(200).end();
   }
 
-  // Rate limiting (async for Vercel KV support)
+  // Rate limiting (shared per-instance budget)
   const ip = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
   const isRateLimited = await checkRateLimit(ip, { maxRequests: config.rateLimit.maxRequests, windowMs: config.rateLimit.windowMs });
   if (!isRateLimited) {

@@ -1,7 +1,7 @@
 /**
  * Pure Google Business Profile (GMB) lookup via the Google Places API.
  *
- * Dependency-free (only the global `fetch`) so it can be reused by the Vercel
+ * Dependency-free (only the global `fetch`) so it can be reused by the Worker
  * handler, the local dev proxy, and unit tests without pulling in serverless
  * middleware (auth/rate-limit/HTTP adapter).
  */

@@ -40,7 +40,7 @@ export const checkSSL = async (url: string, config?: ServiceConfig): Promise<SSL
 
   try {
     // Try to get SSL info via our API proxy
-    // Try Vercel endpoint first, then proxy
+    // Try same-origin API endpoint first, then proxy
     const endpoints = [
       `/api/ssl?domain=${encodeURIComponent(domain)}`,
       `${proxyUrl}/api/ssl?domain=${encodeURIComponent(domain)}`

@@ -12,7 +12,7 @@
  *  - safe redirect following (each hop re-validated; capped) — stops an open
  *    redirect from bouncing the request to an internal target
  *
- * Node-only (uses node:dns + global fetch). Shared by the Vercel functions,
+ * Uses DNS validation plus the pinned Node or public-only Worker transport. Shared by the Worker handlers,
  * the dev proxy, and unit tests.
  */
 import { promises as dns } from 'node:dns';
@@ -264,7 +264,7 @@ export interface SafeHeadResult {
   error?: string;
 }
 
-/** Wire shape returned by the `/api/check` endpoint (Vercel fn + dev proxy). */
+/** Wire shape returned by the `/api/check` endpoint (Worker handler + dev proxy). */
 export interface CheckResult {
   status: 'ALIVE' | 'DOWN' | 'ERROR';
   statusCode: number;
@@ -276,7 +276,7 @@ export interface CheckResult {
  * Map a {@link SafeHeadResult} to the public `/api/check` response shape.
  *
  * SINGLE SOURCE OF TRUTH for how a probe result becomes ALIVE/DOWN. Both the
- * Vercel function (`api/check.ts`) and the dev proxy (`server/proxy.ts`) MUST
+ * Worker handler (`api/check.ts`) and the dev proxy (`server/proxy.ts`) MUST
  * use this so the two environments can never disagree. Liveness is `r.ok`,
  * which is driven by {@link isReachableStatus} — see AGENTS.md §1–2.
  *
@@ -380,7 +380,7 @@ export function toggleWww(rawUrl: string): string | null {
 
 /**
  * Uptime probe with www↔apex canonicalisation — the single source of truth for
- * `/api/check` (Vercel fn + dev proxy). Returns a ready-to-send HTTP status +
+ * `/api/check` (Worker handler + dev proxy). Returns a ready-to-send HTTP status +
  * body so both endpoints behave identically.
  *
  * Behaviour:

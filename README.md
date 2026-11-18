@@ -11,9 +11,9 @@
 
   <br><br>
 
-  <a href="https://domainpulse.vercel.app"><strong>Live Demo &rarr;</strong></a>
+  <a href="https://seankrux-domainpulse.seanllms.workers.dev/app"><strong>Live Demo &rarr;</strong></a>
 
-  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/seankrux/domainpulse)
+  [Cloudflare deployment workflow](https://github.com/seankrux/domainpulse/actions/workflows/cloudflare.yml)
 </div>
 
 ---
@@ -60,7 +60,7 @@ Full-featured domain monitoring dashboard that tracks uptime, SSL certificate st
 
 ## How It Works
 
-DomainPulse routes domain checks through a single authenticated API surface: Vercel serverless functions in production and an Express proxy during local development. Each monitoring pass follows a layered pipeline so the UI stays responsive while the app collects richer domain intelligence.
+DomainPulse routes domain checks through a single API surface with optional server-side password protection: Cloudflare Workers in production and an Express proxy during local development. Each monitoring pass follows a layered pipeline so the UI stays responsive while the app collects richer domain intelligence.
 
 1. **Normalize and queue domains** — User input is validated, normalized to a clean domain, and queued for checking by the monitoring hook or Web Worker batch runner.
 2. **Measure uptime first** — `/api/check` performs a fast `HEAD` request against the target domain to determine availability, status code, and latency.
@@ -79,8 +79,8 @@ DomainPulse routes domain checks through a single authenticated API surface: Ver
 | Data Visualization | Recharts | Latency and status history charts |
 | Icons & UI Assets | Lucide React | Lightweight iconography across the product |
 | Monitoring Engine | Web Workers, Fetch API, Web Audio API | Background checks, responsive UI updates, and audible alerts |
-| API Layer | Express (dev proxy), Vercel Serverless (prod) | Unified monitoring endpoints for uptime, DNS, WHOIS, and SSL checks |
-| Network & Domain Intelligence | Node `https`, `tls`, `dns` | Certificate inspection, DNS resolution, and domain reachability checks |
+| API Layer | Express (dev proxy), Cloudflare Workers (prod) | Unified monitoring endpoints for uptime, DNS, WHOIS, and SSL checks |
+| Network & Domain Intelligence | Public-only edge Fetch, DNS-over-HTTPS, protected Node TLS origin | Certificate inspection, DNS resolution, and domain reachability checks |
 | Authentication & Security | PBKDF2, JWT, CORS controls, rate limiting | Password protection and guarded API access |
 | Client Persistence | `localStorage`, `sessionStorage` | Domain lists, settings, history, and authenticated session state |
 | Testing & Quality | Vitest, Testing Library, Playwright, ESLint | Unit coverage, UI verification, end-to-end tests, and code quality checks |
