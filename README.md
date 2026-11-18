@@ -207,4 +207,4 @@ The release workflow publishes the compiled TLS helper plus its source commit an
 
 Authentication remains opt-in. The server-only `PASSWORD_HASH`/`JWT_SECRET` pair can be applied through the manual Cloudflare auth workflow when those repository secrets are configured; migration does not invent a user password. An unset Google Places key retains the existing `UNKNOWN` GMB enrichment state. Domain lists and history retain the existing browser-storage behavior.
 
-The former native Cloudflare build triggers for legacy Worker `domainpulse` are retained with all branches excluded; GitHub Actions is the sole deploy pipeline for `seankrux-domainpulse`. CI supports the repository's isolated ephemeral `CLOUDFLARE_RUNNER` setting and excludes external-fork PRs from that host.
+The former native Cloudflare build connection for legacy Worker `domainpulse` is removed after a recorded failed build; the Worker itself is retained; GitHub Actions is the sole deploy pipeline for `seankrux-domainpulse`. CI supports the repository's isolated ephemeral `CLOUDFLARE_RUNNER` setting and excludes external-fork PRs from that host.
