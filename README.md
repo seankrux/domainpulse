@@ -11,7 +11,7 @@
 
   <br><br>
 
-  <a href="https://seankrux-domainpulse.seanllms.workers.dev/app"><strong>Live Demo &rarr;</strong></a>
+  <a href="https://www.domainpulse.seanguillermo.com/app"><strong>Live Demo &rarr;</strong></a>
 
   [Cloudflare deployment workflow](https://github.com/seankrux/domainpulse/actions/workflows/cloudflare.yml)
 </div>
@@ -208,3 +208,5 @@ The release workflow publishes the compiled TLS helper plus its source commit an
 Authentication remains opt-in. The server-only `PASSWORD_HASH`/`JWT_SECRET` pair can be applied through the manual Cloudflare auth workflow when those repository secrets are configured; migration does not invent a user password. An unset Google Places key retains the existing `UNKNOWN` GMB enrichment state. Domain lists and history retain the existing browser-storage behavior.
 
 The former native Cloudflare build connection for legacy Worker `domainpulse` is removed after a recorded failed build; the Worker itself is retained; GitHub Actions is the sole deploy pipeline for `seankrux-domainpulse`. CI supports the repository's isolated ephemeral `CLOUDFLARE_RUNNER` setting and excludes external-fork PRs from that host.
+
+Production custom domains are persisted in the Wrangler configurations. `www.domainpulse.seanguillermo.com` serves the application, and the separate `seankrux-domainpulse-redirect` Worker preserves the original `308` redirect from `domainpulse.seanguillermo.com`, including paths and queries. The application retains asset-first routing; the redirect does not invoke the application for static asset requests. Both production origins and the workers.dev preview origin are explicitly allowed by the API. Cloudflare Custom Domains manage DNS and the multi-level hostname certificate without a separate certificate subscription.

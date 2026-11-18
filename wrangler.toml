@@ -4,12 +4,13 @@ main = "cf-worker.ts"
 compatibility_date = "2026-11-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 workers_dev = true
+routes = [{ pattern = "www.domainpulse.seanguillermo.com", custom_domain = true }]
 
 [vars]
 NODE_ENV = "production"
 DOMAINPULSE_WORKER = "true"
 SSL_ORIGIN_URL = "https://domainpulse-origin.seanguillermo.com"
-ALLOWED_ORIGINS = "https://seankrux-domainpulse.seanllms.workers.dev"
+ALLOWED_ORIGINS = "https://seankrux-domainpulse.seanllms.workers.dev,https://www.domainpulse.seanguillermo.com,https://domainpulse.seanguillermo.com"
 
 [secrets]
 required = ["SSL_ORIGIN_TOKEN"]

@@ -3,9 +3,9 @@ import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
 
 const env = {
   ...process.env,
-  VITE_SITE_URL: process.env.VITE_SITE_URL || 'https://seankrux-domainpulse.seanllms.workers.dev',
-  VITE_APP_URL: process.env.VITE_APP_URL || 'https://seankrux-domainpulse.seanllms.workers.dev/app',
-  VITE_PROXY_URL: process.env.VITE_PROXY_URL || 'https://seankrux-domainpulse.seanllms.workers.dev',
+  VITE_SITE_URL: process.env.VITE_SITE_URL || 'https://www.domainpulse.seanguillermo.com',
+  VITE_APP_URL: process.env.VITE_APP_URL || 'https://www.domainpulse.seanguillermo.com/app',
+  VITE_PROXY_URL: process.env.VITE_PROXY_URL || 'https://www.domainpulse.seanguillermo.com',
 };
 delete env.VITE_PASSWORD_HASH;
 const result = spawnSync('npm', ['run', 'build:all'], { stdio: 'inherit', env });
