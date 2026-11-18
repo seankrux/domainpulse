@@ -5,10 +5,7 @@ name: 🚀 Deploy to Vercel
 # it on pull_request too caused redundant deploys (doubling toward the Vercel
 # free-tier rate limit) and a failing PR check.
 on:
-  push:
-    branches:
-      - main
-      - master
+  workflow_dispatch:
 
 jobs:
   # Secrets are not available in a job-level `if`, so probe them in a tiny job
