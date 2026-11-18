@@ -29,7 +29,11 @@
     "test:watch": "vitest --watch",
     "mcp:start": "node .mcp/auto-test/index.js",
     "qa:crawl": "tsx scripts/qa-crawl.ts",
-    "auth:hash": "node scripts/hash-password.mjs"
+    "auth:hash": "node scripts/hash-password.mjs",
+    "build:cloudflare": "node scripts/build-cloudflare.mjs",
+    "deploy:cloudflare": "npm run build:cloudflare && wrangler deploy",
+    "build:origin": "node scripts/build-origin.mjs",
+    "cf-typegen": "wrangler types .wrangler/worker-env.d.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -64,7 +68,6 @@
     "@types/react-dom": "^19.0.0",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.62.1",
-    "@vercel/node": "^5.8.17",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.12",
     "autoprefixer": "^10.5.2",
@@ -79,7 +82,9 @@
     "tsx": "^4.19.0",
     "typescript": "~5.8.2",
     "vite": "^8.0.0",
-    "vitest": "^4.1.12"
+    "vitest": "^4.1.12",
+    "wrangler": "^4.164.0",
+    "esbuild": "0.28.2"
   },
   "overrides": {
     "minimatch@^10": "^11.0.1",

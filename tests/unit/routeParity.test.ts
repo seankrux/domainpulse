@@ -57,6 +57,12 @@ function vercelRoutes(): Set<string> {
 }
 
 describe('dev/prod route parity', () => {
+  it('the Cloudflare Worker exposes the same APIs as the Node handlers', () => {
+    const src = read('cf-worker.ts');
+    const worker = new Set([...src.matchAll(/'(\/api\/[a-z][a-z-]*)'\s*:/g)].map((match) => match[1]));
+    expect([...worker].sort()).toEqual([...vercelRoutes()].sort());
+  });
+
   it('the dev proxy serves every endpoint the frontend calls', () => {
     const missing = [...frontendEndpoints()].filter((e) => !proxyRoutes().has(e));
     expect(missing, `proxy is missing: ${missing.join(', ')}`).toEqual([]);

@@ -51,7 +51,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Rate limit all /api routes (CodeQL-recognized + dev/prod parity with Vercel fns).
+// Rate limit all /api routes (CodeQL-recognized + dev/prod parity with Worker handlers).
 const apiRateLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.maxRequests,

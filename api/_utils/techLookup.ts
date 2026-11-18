@@ -9,6 +9,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import { validateOutboundUrlResolved } from './ssrfGuard.js';
+import { isWorkerRuntime, workerRequest } from './workerTransport.js';
 import { parseTechFromHTML } from '../../services/techDetectionService.js';
 
 const MAX_BODY_BYTES = 512 * 1024;
@@ -18,6 +19,9 @@ function pinnedGet(
   urlString: string,
   pinnedIp: string,
 ): Promise<{ status: number; body: string; headers: Record<string, string>; location?: string }> {
+  if (isWorkerRuntime()) {
+    return workerRequest(urlString, { method: 'GET', timeoutMs: 10000, userAgent: 'DomainPulse/1.0 (Domain Monitor)', maxBodyBytes: MAX_BODY_BYTES });
+  }
   const parsed = new URL(urlString);
   const isHttps = parsed.protocol === 'https:';
   const transport = isHttps ? https : http;

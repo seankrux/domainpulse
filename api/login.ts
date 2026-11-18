@@ -1,4 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { ApiRequest, ApiResponse } from './_utils/httpTypes.js';
 import crypto from 'crypto';
 import { getCorsHeaders, isAuthBootstrapAllowed, generateToken } from './_utils/auth.js';
 
@@ -6,7 +6,7 @@ let AUTH_PASSWORD_HASH = process.env.PASSWORD_HASH || process.env.VITE_PASSWORD_
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SESSION_TTL_MINUTES = Number(process.env.VITE_AUTH_SESSION_TTL_MINUTES || 720); // 12h
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);
@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { password } = req.body;
 
-  if (!password) {
+  if (typeof password !== 'string' || !password) {
     setHeaders(corsHeaders);
     return res.status(400).json({ error: 'Password is required' });
   }

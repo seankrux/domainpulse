@@ -1,0 +1,28 @@
+name: Configure Cloudflare password gate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  configure:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ vars.CLOUDFLARE_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps
+      - name: Set server-only password hash and JWT signing secret
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 7a7a08127b6d6744c838413b4473ecf1
+          PASSWORD_HASH: ${{ secrets.PASSWORD_HASH }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          node --input-type=module <<'JS'
+          import { execFileSync } from 'node:child_process';
+          const { PASSWORD_HASH, JWT_SECRET } = process.env;
+          if (!PASSWORD_HASH || !JWT_SECRET || JWT_SECRET.length < 32) throw new Error('Configure PASSWORD_HASH and JWT_SECRET repository secrets first');
+          execFileSync('npx', ['wrangler', 'secret', 'bulk'], { input: JSON.stringify({ PASSWORD_HASH, JWT_SECRET }), stdio: ['pipe', 'inherit', 'inherit'] });
+          JS

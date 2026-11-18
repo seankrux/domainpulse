@@ -1,0 +1,21 @@
+[Unit]
+Description=DomainPulse personal Cloudflare origin tunnel
+Wants=network-online.target domainpulse-origin.service
+After=network-online.target domainpulse-origin.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+DynamicUser=true
+LoadCredential=tunnel-token:/root/.local/state/vercel-to-cf/domainpulse/tunnel-token
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate tunnel run --token-file %d/tunnel-token
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

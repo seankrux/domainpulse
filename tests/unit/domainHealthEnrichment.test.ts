@@ -2,6 +2,36 @@ import { describe, it, expect, vi } from 'vitest';
 import { computeDomainHealth } from '../../utils/domainHealth';
 import { SSLStatus } from '../../types';
 
+vi.mock('../../api/_utils/publicDns.js', () => ({
+  publicResolver: () => ({
+    resolve4: async () => ['93.184.215.14'],
+    resolve6: async () => ['2606:2800:220:1:248:1893:25c8:1946'],
+    resolveNs: async () => ['ns1.example.test'],
+    resolveCname: async () => [],
+    resolveMx: async () => [{ priority: 10, exchange: 'mail.example.test' }],
+    resolveCaa: async () => [{ critical: 0, issue: 'ca.example.test' }],
+    resolveSoa: async () => ({ nsname: 'ns1.example.test', hostmaster: 'hostmaster.example.test', serial: 1, refresh: 3600, retry: 600, expire: 86400, minttl: 300 }),
+    resolveTxt: async (host: string) => host.startsWith('_dmarc.')
+      ? [['v=DMARC1; p=reject']]
+      : host.startsWith('google._domainkey.')
+        ? [['v=DKIM1; p=cHVibGljLWtleQ==']]
+        : host.includes('._domainkey.') ? [] : [['v=spf1 -all']],
+  }),
+}));
+
+vi.mock('rdapper', () => ({
+  lookupDomain: vi.fn().mockResolvedValue({
+    ok: true,
+    record: {
+      isRegistered: true,
+      creationDate: '2000-01-01T00:00:00.000Z',
+      expirationDate: '2030-01-01T00:00:00.000Z',
+      registrar: { name: 'Fixture Registrar' },
+      nameservers: [{ host: 'ns1.example.test' }],
+    },
+  }),
+}));
+
 describe('computeDomainHealth', () => {
   it('returns undefined when no enrichment signals exist', () => {
     expect(computeDomainHealth({})).toBeUndefined();
@@ -57,15 +87,18 @@ describe('computeDomainHealth', () => {
 });
 
 describe('emailAuthLookup grading helpers', () => {
-  it('exports getEmailAuthInfo and returns a structured result shape', async () => {
+  it('grades deterministic public DNS records and returns the structured result', async () => {
     const { getEmailAuthInfo } = await import('../../api/_utils/emailAuthLookup');
-    // Use a domain with known public DNS; network may be flaky — assert shape only when it resolves.
     const result = await getEmailAuthInfo('example.com');
     expect(result).toHaveProperty('grade');
     expect(result).toHaveProperty('spf');
     expect(result).toHaveProperty('dkim');
     expect(result).toHaveProperty('dmarc');
-    expect(Array.isArray(result.issues)).toBe(true);
+    expect(result.grade).toBe('A');
+    expect(result.spf.present).toBe(true);
+    expect(result.dkim.selectors).toEqual(['google']);
+    expect(result.dmarc.policy).toBe('reject');
+    expect(result.issues).toEqual([]);
   });
 });
 
@@ -88,21 +121,19 @@ describe('dnsLookup expanded records', () => {
     expect(result).toHaveProperty('caa');
     expect(Array.isArray(result.aaaa)).toBe(true);
     expect(Array.isArray(result.caa)).toBe(true);
-    // example.com has SOA
     expect(result.soa).toBeDefined();
     expect(result.soa?.nsname).toBeTruthy();
   });
 });
 
 describe('whoisLookup RDAP preference', () => {
-  it('maps RDAP-backed example.com without throwing', async () => {
+  it('maps a successful RDAP record without a network dependency', async () => {
     const { getWhoisInfo } = await import('../../api/_utils/whoisLookup');
     const result = await getWhoisInfo('example.com');
-    // Prefer RDAP; either source is fine as long as we get registration data.
     expect(result.error).toBeUndefined();
-    expect(result.registrar || result.expiryDate || result.nameServers).toBeTruthy();
+    expect(result.source).toBe('rdap');
+    expect(result.registrar).toBe('Fixture Registrar');
+    expect(result.expiryDate).toBe('2030-01-01T00:00:00.000Z');
+    expect(result.nameServers).toEqual(['ns1.example.test']);
   });
 });
-
-// Keep vi import used if we add mocks later
-void vi;

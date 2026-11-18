@@ -1,11 +1,11 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { ApiRequest, ApiResponse } from './_utils/httpTypes.js';
 import { getCorsHeaders, verifyAuth } from './_utils/auth.js';
 import { checkRateLimit, getRateLimitHeaders } from './_utils/rateLimit.js';
 import { isBlockedHost } from './_utils/ssrfGuard.js';
 import { getEmailAuthInfo } from './_utils/emailAuthLookup.js';
 import { config } from '../lib/config.js';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   const setHeaders = (headers: Record<string, string>) => {
     Object.entries(headers).forEach(([key, value]) => {
       res.setHeader(key, value);

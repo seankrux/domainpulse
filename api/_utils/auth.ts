@@ -1,4 +1,4 @@
-import { VercelRequest } from '@vercel/node';
+import type { ApiRequest } from './httpTypes.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
@@ -57,7 +57,7 @@ export const generateToken = (): { token: string; expiresAt: number } => {
 };
 
 /**
- * Verify a Bearer token string (shared by Vercel handlers and the dev proxy).
+ * Verify a Bearer token string (shared by Worker handlers and the dev proxy).
  */
 export const verifyAuthHeader = (authorization?: string): boolean => {
   if (!AUTH_ENABLED) {
@@ -82,7 +82,7 @@ export const verifyAuthHeader = (authorization?: string): boolean => {
 /**
  * Verify JWT token from request.
  */
-export const verifyAuth = (req: VercelRequest): boolean => {
+export const verifyAuth = (req: ApiRequest): boolean => {
   return verifyAuthHeader(req.headers.authorization);
 };
 

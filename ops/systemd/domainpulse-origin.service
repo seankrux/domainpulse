@@ -1,0 +1,21 @@
+[Unit]
+Description=DomainPulse protected TLS certificate origin
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+DynamicUser=true
+EnvironmentFile=/root/.local/state/vercel-to-cf/domainpulse/origin.env
+ExecStart=/usr/bin/node /opt/domainpulse-origin/server.cjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

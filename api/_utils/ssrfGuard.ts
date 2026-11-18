@@ -12,13 +12,14 @@
  *  - safe redirect following (each hop re-validated; capped) — stops an open
  *    redirect from bouncing the request to an internal target
  *
- * Node-only (uses node:dns + global fetch). Shared by the Vercel functions,
+ * Uses DNS validation plus the pinned Node or public-only Worker transport. Shared by the Worker handlers,
  * the dev proxy, and unit tests.
  */
 import { promises as dns } from 'node:dns';
 import http from 'node:http';
 import https from 'node:https';
 import { isIP } from 'node:net';
+import { isWorkerRuntime, workerRequest } from './workerTransport.js';
 
 const BLOCKED_HOSTNAMES = new Set(['localhost', 'metadata.google.internal', 'metadata']);
 
@@ -171,7 +172,18 @@ export async function validateOutboundUrlResolved(raw: string): Promise<ResolveR
   // normalises them to the real address — which isBlockedIp then blocks.
   if (isIP(host) !== 0) return { ok: true, addresses: [host] };
   try {
-    const records = await dns.lookup(host, { all: true });
+    const records = process.env.DOMAINPULSE_DNS_OVER_HTTPS === 'true'
+      ? await Promise.all(['A', 'AAAA'].map(async (type) => {
+          const response = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(host)}&type=${type}`, {
+            headers: { Accept: 'application/dns-json' }, signal: AbortSignal.timeout(8000),
+          });
+          if (!response.ok) throw new Error('Public DNS lookup failed');
+          const data = await response.json() as { Status: number; Answer?: { type: number; data: string }[] };
+          if (data.Status !== 0 && data.Status !== 3) throw new Error('Public DNS lookup failed');
+          return (data.Answer ?? []).filter((answer) => answer.type === (type === 'A' ? 1 : 28))
+            .map((answer) => ({ address: answer.data, family: type === 'A' ? 4 : 6 }));
+        })).then((answers) => answers.flat())
+      : await dns.lookup(host, { all: true });
     if (records.length === 0) return { ok: false, reason: 'Host did not resolve', code: 'unresolvable' };
     const addresses: string[] = [];
     for (const r of records) {
@@ -192,6 +204,11 @@ async function pinnedRequest(
   pinnedIp: string,
   opts: { method: 'HEAD' | 'GET'; timeoutMs: number; userAgent: string },
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders }> {
+  if (isWorkerRuntime()) {
+    // Workers fetch only reaches the public Internet (global_fetch_strictly_public).
+    // DNS/private-host checks and manual redirect validation remain in the caller.
+    return workerRequest(urlString, { method: opts.method, timeoutMs: opts.timeoutMs, userAgent: opts.userAgent });
+  }
   const u = new URL(urlString);
   const isHttps = u.protocol === 'https:';
   const transport = isHttps ? https : http;
@@ -247,7 +264,7 @@ export interface SafeHeadResult {
   error?: string;
 }
 
-/** Wire shape returned by the `/api/check` endpoint (Vercel fn + dev proxy). */
+/** Wire shape returned by the `/api/check` endpoint (Worker handler + dev proxy). */
 export interface CheckResult {
   status: 'ALIVE' | 'DOWN' | 'ERROR';
   statusCode: number;
@@ -259,7 +276,7 @@ export interface CheckResult {
  * Map a {@link SafeHeadResult} to the public `/api/check` response shape.
  *
  * SINGLE SOURCE OF TRUTH for how a probe result becomes ALIVE/DOWN. Both the
- * Vercel function (`api/check.ts`) and the dev proxy (`server/proxy.ts`) MUST
+ * Worker handler (`api/check.ts`) and the dev proxy (`server/proxy.ts`) MUST
  * use this so the two environments can never disagree. Liveness is `r.ok`,
  * which is driven by {@link isReachableStatus} — see AGENTS.md §1–2.
  *
@@ -363,7 +380,7 @@ export function toggleWww(rawUrl: string): string | null {
 
 /**
  * Uptime probe with www↔apex canonicalisation — the single source of truth for
- * `/api/check` (Vercel fn + dev proxy). Returns a ready-to-send HTTP status +
+ * `/api/check` (Worker handler + dev proxy). Returns a ready-to-send HTTP status +
  * body so both endpoints behave identically.
  *
  * Behaviour:

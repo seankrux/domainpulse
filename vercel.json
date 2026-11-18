@@ -6,19 +6,58 @@
   "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/login", "destination": "/api/login.ts" },
-    { "source": "/api/auth-status", "destination": "/api/auth-status.ts" },
-    { "source": "/api/check", "destination": "/api/check.ts" },
-    { "source": "/api/ssl", "destination": "/api/ssl.ts" },
-    { "source": "/api/whois", "destination": "/api/whois.ts" },
-    { "source": "/api/dns", "destination": "/api/dns.ts" },
-    { "source": "/api/gmb", "destination": "/api/gmb.ts" },
-    { "source": "/api/tech-detect", "destination": "/api/tech-detect.ts" },
-    { "source": "/api/canonical", "destination": "/api/canonical.ts" },
-    { "source": "/api/email-auth", "destination": "/api/email-auth.ts" },
-    { "source": "/api/security-headers", "destination": "/api/security-headers.ts" },
-    { "source": "/content/:path*", "destination": "/content/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/login",
+      "destination": "/api/login.ts"
+    },
+    {
+      "source": "/api/auth-status",
+      "destination": "/api/auth-status.ts"
+    },
+    {
+      "source": "/api/check",
+      "destination": "/api/check.ts"
+    },
+    {
+      "source": "/api/ssl",
+      "destination": "/api/ssl.ts"
+    },
+    {
+      "source": "/api/whois",
+      "destination": "/api/whois.ts"
+    },
+    {
+      "source": "/api/dns",
+      "destination": "/api/dns.ts"
+    },
+    {
+      "source": "/api/gmb",
+      "destination": "/api/gmb.ts"
+    },
+    {
+      "source": "/api/tech-detect",
+      "destination": "/api/tech-detect.ts"
+    },
+    {
+      "source": "/api/canonical",
+      "destination": "/api/canonical.ts"
+    },
+    {
+      "source": "/api/email-auth",
+      "destination": "/api/email-auth.ts"
+    },
+    {
+      "source": "/api/security-headers",
+      "destination": "/api/security-headers.ts"
+    },
+    {
+      "source": "/content/:path*",
+      "destination": "/content/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
@@ -46,5 +85,8 @@
         }
       ]
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": false
+  }
 }

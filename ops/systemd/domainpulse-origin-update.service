@@ -1,0 +1,10 @@
+[Unit]
+Description=Deploy exact-main DomainPulse TLS origin artifact after successful GitHub CI
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=GH_CONFIG_DIR=/root/.config/gh
+ExecStart=/usr/bin/python3 /opt/domainpulse-origin/update.py
+TimeoutStartSec=120

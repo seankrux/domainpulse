@@ -71,7 +71,7 @@ DomainPulse is a React 19 + TypeScript SPA that runs two apps from a single code
             ▼
 ┌───────────────────────────────────┐
 │  LOCAL DEV         PRODUCTION     │
-│  Express proxy     Vercel fns     │
+│  Express proxy     CF Worker      │
 │  port 3001         /api/*.ts      │
 └───────────┬───────────────────────┘
             │
@@ -98,7 +98,7 @@ DomainPulse is a React 19 + TypeScript SPA that runs two apps from a single code
 
 1. `useMonitoring` or `monitoring.worker` calls `checkDomainWithSSL` in `services/domainService.ts`.
 2. `domainService` fires `/api/check` first (liveness probe), then fans out to `/api/ssl`, `/api/whois`, `/api/dns`, `/api/tech-detect` in parallel.
-3. Each Vercel serverless function (prod) / Express route (dev) calls the matching `api/_utils/*.ts` lookup util — the single implementation shared by both environments.
+3. Each Cloudflare Worker handler (prod) / Express route (dev) calls the matching `api/_utils/*.ts` lookup util — the single implementation shared by both environments.
 4. Results are merged into the domain record, appended to `history[]`, and persisted to `localStorage`.
 5. Status transitions trigger webhooks (Slack/Discord) and/or browser notifications.
 
@@ -235,7 +235,7 @@ interface GmbInfo {
 All endpoints share these common behaviours:
 
 - **Auth** — Requires `Authorization: Bearer <token>` when `VITE_PASSWORD_HASH` is configured. Unauthenticated in public/demo mode.
-- **Rate limiting** — 100 requests / 60 s per IP. In-memory in dev; Vercel KV in production when `KV_URL` is set.
+- **Rate limiting** — 600 requests / 60 s per IP across lookup routes. Shared in-memory budget per Worker instance; state resets on cold start.
 - **CORS** — `ALLOWED_ORIGINS` env var controls accepted origins. Development allows localhost.
 - **Response format** — Always JSON.
 
@@ -495,7 +495,7 @@ validateAndNormalizeUrl('javascript:alert(1)')
 
 Runs the full two-phase check:
 
-1. **Phase 1 — liveness** (hard timeout guards this only): calls `/api/check` via Vercel function then local proxy fallback.
+1. **Phase 1 — liveness** (hard timeout guards this only): calls `/api/check` via the same-origin Worker endpoint then local proxy fallback.
 2. **Phase 2 — enrichment** (soft timeout, never throws): calls SSL, WHOIS, DNS, tech-detect in `Promise.allSettled`. Each failure falls back to a safe default. Enrichment can never change the ALIVE/DOWN result.
 
 ```ts
@@ -653,7 +653,7 @@ config.domain.maxDomains             // 1000
 
 | Export | Description |
 |--------|-------------|
-| `checkRateLimit(ip, config)` | Returns true if request is allowed. Uses Vercel KV when `KV_URL` set, in-memory otherwise |
+| `checkRateLimit(ip, config)` | Returns true if request is allowed. Uses the shared per-instance in-memory request budget |
 | `getRateLimitHeaders(ip, config)` | Returns `X-RateLimit-*` headers |
 | `clearRateLimit(ip)` | Test helper |
 | `clearAllRateLimits()` | Test helper |
@@ -726,11 +726,11 @@ Hard timeout wraps only `resolveLiveness()`. Enrichment uses `allSettled` + `rac
 
 ### 7. Auth is opt-in — public when no password configured
 
-`verifyAuth` allows all requests when `VITE_PASSWORD_HASH` is unset. This matches the dev proxy and the `AuthGuard` stub. Setting `VITE_PASSWORD_HASH` enables enforcement on both ends.
+`verifyAuth` allows public requests when neither server-only `PASSWORD_HASH` nor legacy `VITE_PASSWORD_HASH` is configured. `AuthGuard` reads `/api/auth-status`; configuring the server hash enables login and JWT enforcement.
 
 ### One implementation per lookup
 
-Every lookup (`ssl`, `dns`, `whois`, `gmb`, `tech-detect`) lives once in `api/_utils/`. Both the Vercel function and the dev proxy import it. Never reimplement a lookup inline.
+Every lookup (`ssl`, `dns`, `whois`, `gmb`, `tech-detect`) lives once in `api/_utils/`. Both the Worker handler and the dev proxy import it. Never reimplement a lookup inline.
 
 ---
 
@@ -738,7 +738,7 @@ Every lookup (`ssl`, `dns`, `whois`, `gmb`, `tech-detect`) lives once in `api/_u
 
 ### Public / Demo Mode (default)
 
-No env vars needed. `verifyAuth` always returns true. No login UI shown.
+Without a password hash, the source runs in public mode: `verifyAuth` permits requests and no login UI is shown. This describes the source fallback, not the inaccessible original production configuration.
 
 ### Protected Mode
 
@@ -753,10 +753,10 @@ No env vars needed. `verifyAuth` always returns true. No login UI shown.
    ```
 2. Set environment variables:
    ```
-   VITE_PASSWORD_HASH=<hash:salt>
+   PASSWORD_HASH=<hash:salt>
    JWT_SECRET=<openssl rand -hex 32>
    ```
-3. Restore the real `AuthGuard` login flow (the current stub skips login).
+3. Use the manual Cloudflare auth workflow to transfer these repository secrets to Worker secrets. The existing `AuthGuard` detects protected mode through `/api/auth-status`; never put the password hash in a client build.
 
 ### Session Lifecycle
 
@@ -775,21 +775,23 @@ No env vars needed. `verifyAuth` always returns true. No login UI shown.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `VITE_PASSWORD_HASH` | No | — | PBKDF2 `hash:salt`. Enables auth. |
+| `PASSWORD_HASH` | No | — | Server-only PBKDF2 `hash:salt` Worker secret. Enables auth; legacy `VITE_PASSWORD_HASH` remains accepted server-side. |
 | `JWT_SECRET` | When auth on | — | JWT signing secret. Required in production when auth enabled. |
 | `VITE_AUTH_SESSION_TTL_MINUTES` | No | 720 | JWT session lifetime in minutes |
 | `VITE_ALLOW_INITIAL_LOGIN` | No | — | Set `true` to enable dev bootstrap (non-production only) |
 | `ALLOWED_ORIGINS` | No | localhost | Comma-separated CORS origins |
 | `GOOGLE_PLACES_API_KEY` | No | — | Enables GMB monitoring |
-| `KV_URL` | No | — | Vercel KV URL for distributed rate limiting |
+| `SSL_ORIGIN_URL` / `SSL_ORIGIN_TOKEN` | Yes for real certificate metrics | — | Protected Tokyo TLS helper URL and server-only bearer secret. |
 | `VITE_PROXY_URL` | No | `http://localhost:3001` | Local proxy base URL |
 
-### Vercel Deployment Minimum
+### Cloudflare Deployment
 
 ```
-VITE_PASSWORD_HASH=<hash:salt>
-JWT_SECRET=<random-hex>
-ALLOWED_ORIGINS=https://yourdomain.vercel.app
+PASSWORD_HASH=<server-only hash:salt, when protected mode is intended>
+JWT_SECRET=<server-only random-hex, required in protected mode>
+ALLOWED_ORIGINS=https://seankrux-domainpulse.seanllms.workers.dev
+SSL_ORIGIN_URL=https://domainpulse-origin.seanguillermo.com
+SSL_ORIGIN_TOKEN=<server-only origin bearer>
 ```
 
 ---
@@ -837,7 +839,7 @@ npm run build:all
 
 ### Proxy Routes
 
-The Express proxy at `server/proxy.ts` mirrors every `/api/*` route the frontend uses. All lookup logic is imported from `api/_utils/` — the proxy shares the same implementation as the Vercel functions.
+The Express proxy at `server/proxy.ts` mirrors every `/api/*` route the frontend uses. All lookup logic is imported from `api/_utils/` — the proxy shares the same implementation as the Worker handlers.
 
 ---
 
@@ -1046,7 +1048,7 @@ Compute rolling uptime percentage and alert when SLA threshold is breached.
 
 Check from EU, US, and APAC simultaneously to distinguish regional outages from global ones.
 
-- Vercel Edge Functions are the natural fit — deploy the probe logic as an Edge function at multiple regions.
+- Future work: schedule region-specific probes through an explicitly configured edge probe service.
 - Add `region: 'us-east' | 'eu-west' | 'ap-southeast'` to `StatusRecord`.
 - Surface per-region status in the history chart.
 
@@ -1054,7 +1056,7 @@ Check from EU, US, and APAC simultaneously to distinguish regional outages from 
 
 Capture a viewport screenshot when a domain transitions to DOWN.
 
-- Use Vercel's Puppeteer or Playwright browser integration.
+- Future work: use an explicitly configured browser rendering service.
 - Store screenshot URL in `StatusRecord.screenshotUrl`.
 - Surface in the incident timeline and detail modal.
 
@@ -1071,7 +1073,7 @@ Capture a viewport screenshot when a domain transitions to DOWN.
 Settings panel for managing third-party API keys (currently only GMB is supported as an env var).
 
 - New `Settings.apiKeys` section in the settings panel.
-- Keys stored encrypted in `localStorage` (or Vercel KV for multi-device).
+- Future work requires server-side provider secrets; keep credentials out of client storage.
 - Covers: Google Places, PageSpeed, Moz/Ahrefs, Safe Browsing, SerpAPI.
 - Toggle per key — features that require missing keys degrade gracefully (same pattern as GMB).
 

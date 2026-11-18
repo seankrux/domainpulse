@@ -3,6 +3,7 @@
  * proxy. Uses public resolvers (8.8.8.8 / 1.1.1.1) for reliability.
  */
 import * as dns from 'dns';
+import { publicResolver } from './publicDns.js';
 
 export interface DNSResult {
   a: string[];
@@ -47,8 +48,7 @@ function mapCaa(
 }
 
 export async function getDNSInfo(domain: string): Promise<DNSResult> {
-  const resolver = new dns.promises.Resolver();
-  resolver.setServers(['8.8.8.8', '1.1.1.1']);
+  const resolver = publicResolver();
 
   const clean = domain.replace(/^https?:\/\//, '').split('/')[0]!.toLowerCase();
 
@@ -58,10 +58,14 @@ export async function getDNSInfo(domain: string): Promise<DNSResult> {
     resolver.resolveMx(clean),
     resolver.resolveNs(clean),
     resolver.resolveTxt(clean),
-    resolver.resolveCname(clean).catch(() => [] as string[]),
-    resolver.resolveCaa(clean).catch(() => [] as dns.CaaRecord[]),
+    resolver.resolveCname(clean),
+    resolver.resolveCaa(clean),
     resolver.resolveSoa(clean),
   ]);
+
+  if ([a, aaaa, mx, ns, txt, cname, caa, soa].every((result) => result.status === 'rejected')) {
+    throw new Error('DNS lookup unavailable');
+  }
 
   return {
     a: a.status === 'fulfilled' ? a.value : [],

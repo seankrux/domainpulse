@@ -14,6 +14,7 @@ import * as https from 'https';
 import * as tls from 'tls';
 import sslChecker from 'ssl-checker';
 import { validateOutboundUrlResolved } from './ssrfGuard.js';
+import { isWorkerRuntime } from './workerTransport.js';
 
 export interface SSLResult {
   valid: boolean;
@@ -139,6 +140,21 @@ export async function getSSLCertificate(domain: string): Promise<SSLResult> {
 
   const pinnedIp = v.addresses[0];
   if (!pinnedIp) return { valid: false, error: 'Host did not resolve' };
+
+  if (isWorkerRuntime()) {
+    const origin = process.env.SSL_ORIGIN_URL;
+    const token = process.env.SSL_ORIGIN_TOKEN;
+    if (!origin || !token) throw new Error('Certificate probe origin is not configured');
+    const target = new URL('/ssl', origin);
+    target.searchParams.set('domain', host);
+    const response = await fetch(target, {
+      headers: { Authorization: `Bearer ${token}` },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`Certificate probe returned HTTP ${response.status}`);
+    return response.json() as Promise<SSLResult>;
+  }
 
   const enriched = await viaSslChecker(host, pinnedIp);
   if (enriched) return enriched;

@@ -160,9 +160,9 @@ export const checkDomainWithSSL = async (url: string, serviceConfig?: ServiceCon
     token = getSessionToken() || undefined;
   }
 
-  // Try Vercel API first (for production), then fall back to local proxy.
+  // Try same-origin API first (for production), then fall back to local proxy.
   const apiEndpoints = [
-    '/api/check', // Vercel serverless function (port 3000)
+    '/api/check', // same-origin Worker API
     `${proxyUrl}/api/check` // Local proxy server (port 3001)
   ];
 

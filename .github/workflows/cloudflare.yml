@@ -1,0 +1,43 @@
+name: Cloudflare
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cloudflare-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-and-deploy:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ vars.CLOUDFLARE_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run type-check
+      - run: npm run test -- --run
+      - run: python3 -m unittest discover -s ops -p "test_*.py"
+      - run: npm run build:cloudflare
+      - run: npm run build:origin
+      - run: npx wrangler deploy --dry-run
+      - name: Publish TLS origin artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: domainpulse-origin
+          path: |
+            .cloudflare-origin/server.cjs
+            .cloudflare-origin/release.json
+          include-hidden-files: true
+          retention-days: 30
+      - name: Deploy to personal Cloudflare
+        if: github.event_name != 'pull_request'
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 7a7a08127b6d6744c838413b4473ecf1
